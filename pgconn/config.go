@@ -30,6 +30,8 @@ type GetSSLPasswordFunc func(ctx context.Context) string
 // Config is the settings used to establish a connection to a PostgreSQL server. It must be created by [ParseConfig]. A
 // manually initialized Config will cause ConnectConfig to panic.
 type Config struct {
+	minReadBufferSize int64 // The minimum size of the internal read buffer. Default 8192.
+
 	Host           string // host (e.g. localhost) or absolute path to unix domain socket directory (e.g. /private/tmp)
 	Port           uint16
 	Database       string
@@ -248,7 +250,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 	if connString != "" {
 		var err error
 		// connString may be a database URL or in PostgreSQL keyword/value format
-		if strings.HasPrefix(connString, "postgres://") || strings.HasPrefix(connString, "postgresql://") {
+		if strings.HasPrefix(connString, "gaussdb://") {
 			connStringSettings, err = parseURLSettings(connString)
 			if err != nil {
 				return nil, &ParseConfigError{ConnString: connString, msg: "failed to parse as URL", err: err}

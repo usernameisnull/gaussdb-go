@@ -28,6 +28,7 @@ type Frontend struct {
 	authenticationGSS               AuthenticationGSS
 	authenticationGSSContinue       AuthenticationGSSContinue
 	authenticationSASL              AuthenticationSASL
+	authenticationSHA256            AuthenticationSHA256
 	authenticationSASLContinue      AuthenticationSASLContinue
 	authenticationSASLFinal         AuthenticationSASLFinal
 	backendKeyData                  BackendKeyData
@@ -89,6 +90,14 @@ func (f *Frontend) Send(msg FrontendMessage) {
 	if f.tracer != nil {
 		f.tracer.traceMessage('F', int32(len(f.wbuf)-prevLen), msg)
 	}
+}
+
+func (f *Frontend) SendSha256(buf []byte) {
+	if f.encodeError != nil {
+		return
+	}
+
+	f.wbuf = buf
 }
 
 // Flush writes any pending messages to the backend (i.e. the server).
@@ -321,6 +330,7 @@ func (f *Frontend) Receive() (BackendMessage, error) {
 		if f.maxBodyLen > 0 && f.bodyLen > f.maxBodyLen {
 			return nil, &ExceededMaxBodyLenErr{f.maxBodyLen, f.bodyLen}
 		}
+
 		f.partialMsg = true
 	}
 
@@ -410,7 +420,8 @@ const (
 	AuthTypeGSS               = 7
 	AuthTypeGSSCont           = 8
 	AuthTypeSSPI              = 9
-	AuthTypeSASL              = 10
+	AuthTypeSASL              = 100
+	AuthTypeSHA256            = 10
 	AuthTypeSASLContinue      = 11
 	AuthTypeSASLFinal         = 12
 )
@@ -438,6 +449,8 @@ func (f *Frontend) findAuthenticationMessageType(src []byte) (BackendMessage, er
 		return nil, errors.New("AuthTypeSSPI is unimplemented")
 	case AuthTypeSASL:
 		return &f.authenticationSASL, nil
+	case AuthTypeSHA256:
+		return &f.authenticationSHA256, nil
 	case AuthTypeSASLContinue:
 		return &f.authenticationSASLContinue, nil
 	case AuthTypeSASLFinal:

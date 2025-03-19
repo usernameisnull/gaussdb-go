@@ -73,6 +73,8 @@ type NotificationHandler func(*PgConn, *Notification)
 
 // PgConn is a low-level PostgreSQL connection handle. It is not safe for concurrent usage.
 type PgConn struct {
+	scratch []byte
+
 	conn              net.Conn
 	pid               uint32            // backend pid
 	secretKey         uint32            // key to use to send a cancel query message to the server
@@ -319,6 +321,11 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 		return nil, newPerDialConnectError("dial error", err)
 	}
 
+	if config.minReadBufferSize == 0 {
+		config.minReadBufferSize = 8192
+	}
+	pgConn.scratch = make([]byte, config.minReadBufferSize)
+
 	if connectConfig.tlsConfig != nil {
 		pgConn.contextWatcher = ctxwatch.NewContextWatcher(&DeadlineContextWatcherHandler{Conn: pgConn.conn})
 		pgConn.contextWatcher.Watch(ctx)
@@ -404,6 +411,12 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 			if err != nil {
 				pgConn.conn.Close()
 				return nil, newPerDialConnectError("failed SASL auth", err)
+			}
+		case *pgproto3.AuthenticationSHA256:
+			err = pgConn.scramSha256Auth(msg.GetR())
+			if err != nil {
+				pgConn.conn.Close()
+				return nil, newPerDialConnectError("failed SASL SHA256 auth", err)
 			}
 		case *pgproto3.AuthenticationGSS:
 			err = pgConn.gssAuth()
@@ -2482,4 +2495,24 @@ func (h *CancelRequestContextWatcherHandler) HandleUnwatchAfterCancel() {
 	<-h.cancelFinishedChan
 
 	h.Conn.conn.SetDeadline(time.Time{})
+}
+
+const (
+	PlainPassword  = 0
+	Md5Password    = 1
+	Sha256Password = 2
+)
+
+func (pgConn *PgConn) writeBuf(b byte) *writeBuf {
+	pgConn.scratch[0] = b
+	return &writeBuf{
+		buf: pgConn.scratch[:5],
+		pos: 1,
+	}
+}
+
+func md5s(s string) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
