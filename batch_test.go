@@ -22,7 +22,6 @@ func TestConnSendBatch(t *testing.T) {
 	defer cancel()
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		pgxtest.SkipCockroachDB(t, conn, "Server serial type is incompatible with test")
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -160,7 +159,6 @@ func TestConnSendBatchQueuedQuery(t *testing.T) {
 	defer cancel()
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		pgxtest.SkipCockroachDB(t, conn, "Server serial type is incompatible with test")
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -343,7 +341,6 @@ func TestConnSendBatchWithPreparedStatement(t *testing.T) {
 	defer cancel()
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, modes, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		pgxtest.SkipCockroachDB(t, conn, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
 		_, err := conn.Prepare(ctx, "ps1", "select n from generate_series(0,$1::int) n")
 		if err != nil {
 			t.Fatal(err)
@@ -435,8 +432,6 @@ func TestConnSendBatchWithPreparedStatementAndStatementCacheDisabled(t *testing.
 
 	conn := mustConnect(t, config)
 	defer closeConn(t, conn)
-
-	pgxtest.SkipCockroachDB(t, conn, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
 
 	_, err = conn.Prepare(ctx, "ps1", "select n from generate_series(0,$1::int) n")
 	if err != nil {
@@ -761,7 +756,8 @@ func TestTxSendBatch(t *testing.T) {
 	})
 }
 
-func TestTxSendBatchRollback(t *testing.T) {
+// todo GaussDB 暂时不支持 临时表Serial自增序列
+/*func TestTxSendBatchRollback(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -797,7 +793,7 @@ func TestTxSendBatchRollback(t *testing.T) {
 		}
 
 	})
-}
+}*/
 
 // https://github.com/jackc/pgx/issues/1578
 func TestSendBatchErrorWhileReadingResultsWithoutCallback(t *testing.T) {
@@ -855,8 +851,6 @@ func TestConnBeginBatchDeferredError(t *testing.T) {
 	defer cancel()
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-
-		pgxtest.SkipCockroachDB(t, conn, "Server does not support deferred constraint (https://github.com/cockroachdb/cockroach/issues/31632)")
 
 		mustExec(t, conn, `create temporary table t (
 		id text primary key,
@@ -1016,7 +1010,6 @@ func TestConnSendBatchErrorDoesNotLeaveOrphanedPreparedStatement(t *testing.T) {
 	defer cancel()
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		pgxtest.SkipCockroachDB(t, conn, "Server serial type is incompatible with test")
 
 		mustExec(t, conn, `create temporary table foo(col1 text primary key);`)
 
@@ -1024,7 +1017,7 @@ func TestConnSendBatchErrorDoesNotLeaveOrphanedPreparedStatement(t *testing.T) {
 		batch.Queue("select col1 from foo")
 		batch.Queue("select col1 from baz")
 		err := conn.SendBatch(ctx, batch).Close()
-		require.EqualError(t, err, `ERROR: relation "baz" does not exist (SQLSTATE 42P01)`)
+		require.EqualError(t, err, `ERROR: Relation "baz" does not exist on dn_6001_6002_6003. (SQLSTATE 42P01)`)
 
 		mustExec(t, conn, `create temporary table baz(col1 text primary key);`)
 

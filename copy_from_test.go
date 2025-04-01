@@ -48,6 +48,11 @@ func TestConnCopyWithAllQueryExecModes(t *testing.T) {
 				t.Errorf("Expected CopyFrom to return %d copied rows, but got %d", len(inputRows), copyCount)
 			}
 
+			_, offset := tzedTime.Zone()
+			offsetHours := offset / 3600
+			tzOffset := fmt.Sprintf("%+d", offsetHours)
+			mustExec(t, conn, fmt.Sprintf("SET TIME ZONE '%s'", tzOffset))
+
 			rows, err := conn.Query(ctx, "select * from foo")
 			if err != nil {
 				t.Errorf("Unexpected error for Query: %v", err)
@@ -562,8 +567,6 @@ func TestConnCopyFromFailServerSideMidwayAbortsWithoutWaiting(t *testing.T) {
 
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
-
-	pgxtest.SkipCockroachDB(t, conn, "Server copy error does not fail fast")
 
 	mustExec(t, conn, `create temporary table foo(
 		a bytea not null
