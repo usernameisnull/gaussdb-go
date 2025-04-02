@@ -11,16 +11,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/sanitize"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/stmtcache"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
 )
 
 // ConnConfig contains all the options used to establish a connection. It must be created by ParseConfig and
 // then it can be modified. A manually initialized ConnConfig will cause ConnectConfig to panic.
 type ConnConfig struct {
-	pgconn.Config
+	gaussdbconn.Config
 
 	Tracer QueryTracer
 
@@ -46,7 +46,7 @@ type ConnConfig struct {
 
 // ParseConfigOptions contains options that control how a config is built such as getsslpassword.
 type ParseConfigOptions struct {
-	pgconn.ParseConfigOptions
+	gaussdbconn.ParseConfigOptions
 }
 
 // Copy returns a deep copy of the config that is safe to use and modify.
@@ -65,9 +65,9 @@ func (cc *ConnConfig) ConnString() string { return cc.connString }
 // Conn is a PostgreSQL connection handle. It is not safe for concurrent usage. Use a connection pool to manage access
 // to multiple database connections from multiple goroutines.
 type Conn struct {
-	pgConn             *pgconn.PgConn
+	pgConn             *gaussdbconn.PgConn
 	config             *ConnConfig // config used when establishing this connection
-	preparedStatements map[string]*pgconn.StatementDescription
+	preparedStatements map[string]*gaussdbconn.StatementDescription
 	statementCache     stmtcache.Cache
 	descriptionCache   stmtcache.Cache
 
@@ -76,12 +76,12 @@ type Conn struct {
 	copyFromTracer CopyFromTracer
 	prepareTracer  PrepareTracer
 
-	notifications []*pgconn.Notification
+	notifications []*gaussdbconn.Notification
 
 	doneChan   chan struct{}
 	closedChan chan error
 
-	typeMap *pgtype.Map
+	typeMap *gaussdbtype.Map
 
 	wbuf []byte
 	eqb  ExtendedQueryBuilder
@@ -162,7 +162,7 @@ func ConnectConfig(ctx context.Context, connConfig *ConnConfig) (*Conn, error) {
 // ParseConfigWithOptions behaves exactly as ParseConfig does with the addition of options. At the present options is
 // only used to provide a GetSSLPassword function.
 func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*ConnConfig, error) {
-	config, err := pgconn.ParseConfigWithOptions(connString, options.ParseConfigOptions)
+	config, err := gaussdbconn.ParseConfigWithOptions(connString, options.ParseConfigOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func connect(ctx context.Context, config *ConnConfig) (c *Conn, err error) {
 
 	c = &Conn{
 		config:      config,
-		typeMap:     pgtype.NewMap(),
+		typeMap:     gaussdbtype.NewMap(),
 		queryTracer: config.Tracer,
 	}
 
@@ -272,12 +272,12 @@ func connect(ctx context.Context, config *ConnConfig) (c *Conn, err error) {
 		config.Config.OnNotification = c.bufferNotifications
 	}
 
-	c.pgConn, err = pgconn.ConnectConfig(ctx, &config.Config)
+	c.pgConn, err = gaussdbconn.ConnectConfig(ctx, &config.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	c.preparedStatements = make(map[string]*pgconn.StatementDescription)
+	c.preparedStatements = make(map[string]*gaussdbconn.StatementDescription)
 	c.doneChan = make(chan struct{})
 	c.closedChan = make(chan error)
 	c.wbuf = make([]byte, 0, 1024)
@@ -313,7 +313,7 @@ func (c *Conn) Close(ctx context.Context) error {
 //
 // Prepare is idempotent; i.e. it is safe to call Prepare multiple times with the same name and sql arguments. This
 // allows a code path to Prepare and Query/Exec without concern for if the statement has already been prepared.
-func (c *Conn) Prepare(ctx context.Context, name, sql string) (sd *pgconn.StatementDescription, err error) {
+func (c *Conn) Prepare(ctx context.Context, name, sql string) (sd *gaussdbconn.StatementDescription, err error) {
 	if c.prepareTracer != nil {
 		ctx = c.prepareTracer.TracePrepareStart(ctx, c, TracePrepareStartData{Name: name, SQL: sql})
 	}
@@ -380,7 +380,7 @@ func (c *Conn) Deallocate(ctx context.Context, name string) error {
 
 // DeallocateAll releases all previously prepared statements from the server and client, where it also resets the statement and description cache.
 func (c *Conn) DeallocateAll(ctx context.Context) error {
-	c.preparedStatements = map[string]*pgconn.StatementDescription{}
+	c.preparedStatements = map[string]*gaussdbconn.StatementDescription{}
 	if c.config.StatementCacheCapacity > 0 {
 		c.statementCache = stmtcache.NewLRUCache(c.config.StatementCacheCapacity)
 	}
@@ -391,14 +391,14 @@ func (c *Conn) DeallocateAll(ctx context.Context) error {
 	return err
 }
 
-func (c *Conn) bufferNotifications(_ *pgconn.PgConn, n *pgconn.Notification) {
+func (c *Conn) bufferNotifications(_ *gaussdbconn.PgConn, n *gaussdbconn.Notification) {
 	c.notifications = append(c.notifications, n)
 }
 
 // WaitForNotification waits for a PostgreSQL notification. It wraps the underlying pgconn notification system in a
 // slightly more convenient form.
-func (c *Conn) WaitForNotification(ctx context.Context) (*pgconn.Notification, error) {
-	var n *pgconn.Notification
+func (c *Conn) WaitForNotification(ctx context.Context) (*gaussdbconn.Notification, error) {
+	var n *gaussdbconn.Notification
 
 	// Return already received notification immediately
 	if len(c.notifications) > 0 {
@@ -444,23 +444,23 @@ func (c *Conn) Ping(ctx context.Context) error {
 //
 // It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *pgconn.PgConn
 // is used and the connection must be returned to the same state before any *pgx.Conn methods are again used.
-func (c *Conn) PgConn() *pgconn.PgConn { return c.pgConn }
+func (c *Conn) PgConn() *gaussdbconn.PgConn { return c.pgConn }
 
 // TypeMap returns the connection info used for this connection.
-func (c *Conn) TypeMap() *pgtype.Map { return c.typeMap }
+func (c *Conn) TypeMap() *gaussdbtype.Map { return c.typeMap }
 
 // Config returns a copy of config that was used to establish this connection.
 func (c *Conn) Config() *ConnConfig { return c.config.Copy() }
 
 // Exec executes sql. sql can be either a prepared statement name or an SQL string. arguments should be referenced
 // positionally from the sql string as $1, $2, etc.
-func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
+func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (gaussdbconn.CommandTag, error) {
 	if c.queryTracer != nil {
 		ctx = c.queryTracer.TraceQueryStart(ctx, c, TraceQueryStartData{SQL: sql, Args: arguments})
 	}
 
 	if err := c.deallocateInvalidatedCachedStatements(ctx); err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	commandTag, err := c.exec(ctx, sql, arguments...)
@@ -472,7 +472,7 @@ func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.C
 	return commandTag, err
 }
 
-func (c *Conn) exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error) {
+func (c *Conn) exec(ctx context.Context, sql string, arguments ...any) (commandTag gaussdbconn.CommandTag, err error) {
 	mode := c.config.DefaultQueryExecMode
 	var queryRewriter QueryRewriter
 
@@ -493,7 +493,7 @@ optionLoop:
 	if queryRewriter != nil {
 		sql, arguments, err = queryRewriter.RewriteQuery(ctx, c, sql, arguments)
 		if err != nil {
-			return pgconn.CommandTag{}, fmt.Errorf("rewrite query failed: %w", err)
+			return gaussdbconn.CommandTag{}, fmt.Errorf("rewrite query failed: %w", err)
 		}
 	}
 
@@ -509,13 +509,13 @@ optionLoop:
 	switch mode {
 	case QueryExecModeCacheStatement:
 		if c.statementCache == nil {
-			return pgconn.CommandTag{}, errDisabledStatementCache
+			return gaussdbconn.CommandTag{}, errDisabledStatementCache
 		}
 		sd := c.statementCache.Get(sql)
 		if sd == nil {
 			sd, err = c.Prepare(ctx, stmtcache.StatementName(sql), sql)
 			if err != nil {
-				return pgconn.CommandTag{}, err
+				return gaussdbconn.CommandTag{}, err
 			}
 			c.statementCache.Put(sd)
 		}
@@ -523,13 +523,13 @@ optionLoop:
 		return c.execPrepared(ctx, sd, arguments)
 	case QueryExecModeCacheDescribe:
 		if c.descriptionCache == nil {
-			return pgconn.CommandTag{}, errDisabledDescriptionCache
+			return gaussdbconn.CommandTag{}, errDisabledDescriptionCache
 		}
 		sd := c.descriptionCache.Get(sql)
 		if sd == nil {
 			sd, err = c.Prepare(ctx, "", sql)
 			if err != nil {
-				return pgconn.CommandTag{}, err
+				return gaussdbconn.CommandTag{}, err
 			}
 			c.descriptionCache.Put(sd)
 		}
@@ -538,7 +538,7 @@ optionLoop:
 	case QueryExecModeDescribeExec:
 		sd, err := c.Prepare(ctx, "", sql)
 		if err != nil {
-			return pgconn.CommandTag{}, err
+			return gaussdbconn.CommandTag{}, err
 		}
 		return c.execPrepared(ctx, sd, arguments)
 	case QueryExecModeExec:
@@ -546,15 +546,15 @@ optionLoop:
 	case QueryExecModeSimpleProtocol:
 		return c.execSimpleProtocol(ctx, sql, arguments)
 	default:
-		return pgconn.CommandTag{}, fmt.Errorf("unknown QueryExecMode: %v", mode)
+		return gaussdbconn.CommandTag{}, fmt.Errorf("unknown QueryExecMode: %v", mode)
 	}
 }
 
-func (c *Conn) execSimpleProtocol(ctx context.Context, sql string, arguments []any) (commandTag pgconn.CommandTag, err error) {
+func (c *Conn) execSimpleProtocol(ctx context.Context, sql string, arguments []any) (commandTag gaussdbconn.CommandTag, err error) {
 	if len(arguments) > 0 {
 		sql, err = c.sanitizeForSimpleQuery(sql, arguments...)
 		if err != nil {
-			return pgconn.CommandTag{}, err
+			return gaussdbconn.CommandTag{}, err
 		}
 	}
 
@@ -566,10 +566,10 @@ func (c *Conn) execSimpleProtocol(ctx context.Context, sql string, arguments []a
 	return commandTag, err
 }
 
-func (c *Conn) execParams(ctx context.Context, sd *pgconn.StatementDescription, arguments []any) (pgconn.CommandTag, error) {
+func (c *Conn) execParams(ctx context.Context, sd *gaussdbconn.StatementDescription, arguments []any) (gaussdbconn.CommandTag, error) {
 	err := c.eqb.Build(c.typeMap, sd, arguments)
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	result := c.pgConn.ExecParams(ctx, sd.SQL, c.eqb.ParamValues, sd.ParamOIDs, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
@@ -577,10 +577,10 @@ func (c *Conn) execParams(ctx context.Context, sd *pgconn.StatementDescription, 
 	return result.CommandTag, result.Err
 }
 
-func (c *Conn) execPrepared(ctx context.Context, sd *pgconn.StatementDescription, arguments []any) (pgconn.CommandTag, error) {
+func (c *Conn) execPrepared(ctx context.Context, sd *gaussdbconn.StatementDescription, arguments []any) (gaussdbconn.CommandTag, error) {
 	err := c.eqb.Build(c.typeMap, sd, arguments)
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	result := c.pgConn.ExecPrepared(ctx, sd.Name, c.eqb.ParamValues, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
@@ -588,10 +588,10 @@ func (c *Conn) execPrepared(ctx context.Context, sd *pgconn.StatementDescription
 	return result.CommandTag, result.Err
 }
 
-func (c *Conn) execSQLParams(ctx context.Context, sql string, args []any) (pgconn.CommandTag, error) {
+func (c *Conn) execSQLParams(ctx context.Context, sql string, args []any) (gaussdbconn.CommandTag, error) {
 	err := c.eqb.Build(c.typeMap, nil, args)
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	result := c.pgConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
@@ -865,7 +865,7 @@ func (c *Conn) getStatementDescription(
 	ctx context.Context,
 	mode QueryExecMode,
 	sql string,
-) (sd *pgconn.StatementDescription, err error) {
+) (sd *gaussdbconn.StatementDescription, err error) {
 	switch mode {
 	case QueryExecModeCacheStatement:
 		if c.statementCache == nil {
@@ -1005,7 +1005,7 @@ func (c *Conn) sendBatchQueryExecModeSimpleProtocol(ctx context.Context, b *Batc
 }
 
 func (c *Conn) sendBatchQueryExecModeExec(ctx context.Context, b *Batch) *batchResults {
-	batch := &pgconn.Batch{}
+	batch := &gaussdbconn.Batch{}
 
 	for _, bi := range b.QueuedQueries {
 		sd := bi.sd
@@ -1043,7 +1043,7 @@ func (c *Conn) sendBatchQueryExecModeCacheStatement(ctx context.Context, b *Batc
 		return &pipelineBatchResults{ctx: ctx, conn: c, err: errDisabledStatementCache, closed: true}
 	}
 
-	distinctNewQueries := []*pgconn.StatementDescription{}
+	distinctNewQueries := []*gaussdbconn.StatementDescription{}
 	distinctNewQueriesIdxMap := make(map[string]int)
 
 	for _, bi := range b.QueuedQueries {
@@ -1055,7 +1055,7 @@ func (c *Conn) sendBatchQueryExecModeCacheStatement(ctx context.Context, b *Batc
 				if idx, present := distinctNewQueriesIdxMap[bi.SQL]; present {
 					bi.sd = distinctNewQueries[idx]
 				} else {
-					sd = &pgconn.StatementDescription{
+					sd = &gaussdbconn.StatementDescription{
 						Name: stmtcache.StatementName(bi.SQL),
 						SQL:  bi.SQL,
 					}
@@ -1075,7 +1075,7 @@ func (c *Conn) sendBatchQueryExecModeCacheDescribe(ctx context.Context, b *Batch
 		return &pipelineBatchResults{ctx: ctx, conn: c, err: errDisabledDescriptionCache, closed: true}
 	}
 
-	distinctNewQueries := []*pgconn.StatementDescription{}
+	distinctNewQueries := []*gaussdbconn.StatementDescription{}
 	distinctNewQueriesIdxMap := make(map[string]int)
 
 	for _, bi := range b.QueuedQueries {
@@ -1087,7 +1087,7 @@ func (c *Conn) sendBatchQueryExecModeCacheDescribe(ctx context.Context, b *Batch
 				if idx, present := distinctNewQueriesIdxMap[bi.SQL]; present {
 					bi.sd = distinctNewQueries[idx]
 				} else {
-					sd = &pgconn.StatementDescription{
+					sd = &gaussdbconn.StatementDescription{
 						SQL: bi.SQL,
 					}
 					distinctNewQueriesIdxMap[sd.SQL] = len(distinctNewQueries)
@@ -1102,7 +1102,7 @@ func (c *Conn) sendBatchQueryExecModeCacheDescribe(ctx context.Context, b *Batch
 }
 
 func (c *Conn) sendBatchQueryExecModeDescribeExec(ctx context.Context, b *Batch) (pbr *pipelineBatchResults) {
-	distinctNewQueries := []*pgconn.StatementDescription{}
+	distinctNewQueries := []*gaussdbconn.StatementDescription{}
 	distinctNewQueriesIdxMap := make(map[string]int)
 
 	for _, bi := range b.QueuedQueries {
@@ -1110,7 +1110,7 @@ func (c *Conn) sendBatchQueryExecModeDescribeExec(ctx context.Context, b *Batch)
 			if idx, present := distinctNewQueriesIdxMap[bi.SQL]; present {
 				bi.sd = distinctNewQueries[idx]
 			} else {
-				sd := &pgconn.StatementDescription{
+				sd := &gaussdbconn.StatementDescription{
 					SQL: bi.SQL,
 				}
 				distinctNewQueriesIdxMap[sd.SQL] = len(distinctNewQueries)
@@ -1123,7 +1123,7 @@ func (c *Conn) sendBatchQueryExecModeDescribeExec(ctx context.Context, b *Batch)
 	return c.sendBatchExtendedWithDescription(ctx, b, distinctNewQueries, nil)
 }
 
-func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, distinctNewQueries []*pgconn.StatementDescription, sdCache stmtcache.Cache) (pbr *pipelineBatchResults) {
+func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, distinctNewQueries []*gaussdbconn.StatementDescription, sdCache stmtcache.Cache) (pbr *pipelineBatchResults) {
 	pipeline := c.pgConn.StartPipeline(ctx)
 	defer func() {
 		if pbr != nil && pbr.err != nil {
@@ -1166,7 +1166,7 @@ func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, d
 					return err
 				}
 
-				resultSD, ok := results.(*pgconn.StatementDescription)
+				resultSD, ok := results.(*gaussdbconn.StatementDescription)
 				if !ok {
 					return fmt.Errorf("expected statement description, got %T", results)
 				}
@@ -1181,7 +1181,7 @@ func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, d
 				return err
 			}
 
-			_, ok := results.(*pgconn.PipelineSync)
+			_, ok := results.(*gaussdbconn.PipelineSync)
 			if !ok {
 				return fmt.Errorf("expected sync, got %T", results)
 			}
@@ -1252,7 +1252,7 @@ func (c *Conn) sanitizeForSimpleQuery(sql string, args ...any) (string, error) {
 //   - An enum type name.
 //   - A range type name where the element type is already registered.
 //   - A multirange type name where the element type is already registered.
-func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, error) {
+func (c *Conn) LoadType(ctx context.Context, typeName string) (*gaussdbtype.Type, error) {
 	var oid uint32
 
 	err := c.QueryRow(ctx, "select $1::text::regtype::oid;", typeName).Scan(&oid)
@@ -1280,23 +1280,23 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 			return nil, errors.New("array element OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.ArrayCodec{ElementType: dt}}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: &gaussdbtype.ArrayCodec{ElementType: dt}}, nil
 	case "c": // composite
 		fields, err := c.getCompositeFields(ctx, oid)
 		if err != nil {
 			return nil, err
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.CompositeCodec{Fields: fields}}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: &gaussdbtype.CompositeCodec{Fields: fields}}, nil
 	case "d": // domain
 		dt, ok := c.TypeMap().TypeForOID(typbasetype)
 		if !ok {
 			return nil, errors.New("domain base type OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: dt.Codec}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: dt.Codec}, nil
 	case "e": // enum
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.EnumCodec{}}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: &gaussdbtype.EnumCodec{}}, nil
 	case "r": // range
 		elementOID, err := c.getRangeElementOID(ctx, oid)
 		if err != nil {
@@ -1308,7 +1308,7 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 			return nil, errors.New("range element OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.RangeCodec{ElementType: dt}}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: &gaussdbtype.RangeCodec{ElementType: dt}}, nil
 	case "m": // multirange
 		elementOID, err := c.getMultiRangeElementOID(ctx, oid)
 		if err != nil {
@@ -1320,9 +1320,9 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 			return nil, errors.New("multirange element OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.MultirangeCodec{ElementType: dt}}, nil
+		return &gaussdbtype.Type{Name: typeName, OID: oid, Codec: &gaussdbtype.MultirangeCodec{ElementType: dt}}, nil
 	default:
-		return &pgtype.Type{}, errors.New("unknown typtype")
+		return &gaussdbtype.Type{}, errors.New("unknown typtype")
 	}
 }
 
@@ -1359,7 +1359,7 @@ func (c *Conn) getMultiRangeElementOID(ctx context.Context, oid uint32) (uint32,
 	return typelem, nil
 }
 
-func (c *Conn) getCompositeFields(ctx context.Context, oid uint32) ([]pgtype.CompositeCodecField, error) {
+func (c *Conn) getCompositeFields(ctx context.Context, oid uint32) ([]gaussdbtype.CompositeCodecField, error) {
 	var typrelid uint32
 
 	err := c.QueryRow(ctx, "select typrelid from pg_type where oid=$1", oid).Scan(&typrelid)
@@ -1367,7 +1367,7 @@ func (c *Conn) getCompositeFields(ctx context.Context, oid uint32) ([]pgtype.Com
 		return nil, err
 	}
 
-	var fields []pgtype.CompositeCodecField
+	var fields []gaussdbtype.CompositeCodecField
 	var fieldName string
 	var fieldOID uint32
 	rows, _ := c.Query(ctx, `select attname, atttypid
@@ -1383,7 +1383,7 @@ order by attnum`,
 		if !ok {
 			return fmt.Errorf("unknown composite type field OID: %v", fieldOID)
 		}
-		fields = append(fields, pgtype.CompositeCodecField{Name: fieldName, Type: dt})
+		fields = append(fields, gaussdbtype.CompositeCodecField{Name: fieldName, Type: dt})
 		return nil
 	})
 	if err != nil {
@@ -1402,7 +1402,7 @@ func (c *Conn) deallocateInvalidatedCachedStatements(ctx context.Context) error 
 		c.descriptionCache.RemoveInvalidated()
 	}
 
-	var invalidatedStatements []*pgconn.StatementDescription
+	var invalidatedStatements []*gaussdbconn.StatementDescription
 	if c.statementCache != nil {
 		invalidatedStatements = c.statementCache.GetInvalidated()
 	}

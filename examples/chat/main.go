@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 )
 
-var pool *pgxpool.Pool
+var pool *gaussdbxpool.Pool
 
 func main() {
 	var err error
-	pool, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	pool, err = gaussdbxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Unable to connect to database:", err)
 		os.Exit(1)

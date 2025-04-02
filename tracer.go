@@ -3,7 +3,7 @@ package pgx
 import (
 	"context"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 )
 
 // QueryTracer traces Query, QueryRow, and Exec.
@@ -21,7 +21,7 @@ type TraceQueryStartData struct {
 }
 
 type TraceQueryEndData struct {
-	CommandTag pgconn.CommandTag
+	CommandTag gaussdbconn.CommandTag
 	Err        error
 }
 
@@ -42,7 +42,7 @@ type TraceBatchStartData struct {
 type TraceBatchQueryData struct {
 	SQL        string
 	Args       []any
-	CommandTag pgconn.CommandTag
+	CommandTag gaussdbconn.CommandTag
 	Err        error
 }
 
@@ -65,7 +65,7 @@ type TraceCopyFromStartData struct {
 }
 
 type TraceCopyFromEndData struct {
-	CommandTag pgconn.CommandTag
+	CommandTag gaussdbconn.CommandTag
 	Err        error
 }
 

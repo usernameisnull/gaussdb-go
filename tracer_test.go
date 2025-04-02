@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -112,7 +112,7 @@ func TestTraceExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceQueryStartCalled := false
 		tracer.traceQueryStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 			traceQueryStartCalled = true
@@ -152,7 +152,7 @@ func TestTraceQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceQueryStartCalled := false
 		tracer.traceQueryStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 			traceQueryStartCalled = true
@@ -194,7 +194,7 @@ func TestTraceBatchNormal(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceBatchStartCalled := false
 		tracer.traceBatchStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
 			traceBatchStartCalled = true
@@ -257,7 +257,7 @@ func TestTraceBatchClose(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceBatchStartCalled := false
 		tracer.traceBatchStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
 			traceBatchStartCalled = true
@@ -308,7 +308,7 @@ func TestTraceBatchErrorWhileReadingResults(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{pgx.QueryExecModeSimpleProtocol}, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{pgx.QueryExecModeSimpleProtocol}, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceBatchStartCalled := false
 		tracer.traceBatchStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
 			traceBatchStartCalled = true
@@ -377,7 +377,7 @@ func TestTraceBatchErrorWhileReadingResultsWhileClosing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{pgx.QueryExecModeSimpleProtocol}, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{pgx.QueryExecModeSimpleProtocol}, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		traceBatchStartCalled := false
 		tracer.traceBatchStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
 			traceBatchStartCalled = true
@@ -433,7 +433,7 @@ func TestTraceCopyFrom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
@@ -484,7 +484,7 @@ func TestTracePrepare(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		tracePrepareStartCalled := false
 		tracer.tracePrepareStart = func(ctx context.Context, conn *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
 			tracePrepareStartCalled = true

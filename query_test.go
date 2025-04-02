@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -226,7 +226,7 @@ func TestConnQueryArgsAndScanWithUnregisteredOID(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
 		defer tx.Rollback(ctx)
@@ -269,7 +269,7 @@ func TestConnQueryReadRowMultipleTimes(t *testing.T) {
 
 			var a, b string
 			var c int32
-			var d pgtype.Text
+			var d gaussdbtype.Text
 			var e int32
 
 			err = rows.Scan(&a, &b, &c, &d, &e)
@@ -384,7 +384,7 @@ func TestConnQueryCloseEarlyWithErrorOnWire(t *testing.T) {
 	if err != nil {
 		t.Fatalf("conn.Query failed: %v", err)
 	}
-	assert.False(t, pgconn.SafeToRetry(err))
+	assert.False(t, gaussdbconn.SafeToRetry(err))
 	rows.Close()
 
 	ensureConnValid(t, conn)
@@ -526,7 +526,7 @@ insert into t (id, n) values ('a', 1), ('b', 2), ('c', 3);`)
 		t.Fatal("expected error 23505 but got none")
 	}
 
-	if err, ok := rows.Err().(*pgconn.PgError); !ok || err.Code != "23505" {
+	if err, ok := rows.Err().(*gaussdbconn.PgError); !ok || err.Code != "23505" {
 		t.Fatalf("expected error 23505, got %v", err)
 	}
 
@@ -556,7 +556,7 @@ func TestConnQueryErrorWhileReturningRows(t *testing.T) {
 				}
 			}
 
-			if _, ok := rows.Err().(*pgconn.PgError); !ok {
+			if _, ok := rows.Err().(*gaussdbconn.PgError); !ok {
 				t.Fatalf("Expected pgx.PgError, got %v", rows.Err())
 			}
 
@@ -576,7 +576,7 @@ func TestQueryEncodeError(t *testing.T) {
 	if err != nil {
 		t.Errorf("conn.Query failure: %v", err)
 	}
-	assert.False(t, pgconn.SafeToRetry(err))
+	assert.False(t, gaussdbconn.SafeToRetry(err))
 	defer rows.Close()
 
 	rows.Next()
@@ -1032,7 +1032,7 @@ func TestQueryRowEmptyQuery(t *testing.T) {
 	var n int32
 	err := conn.QueryRow(ctx, "").Scan(&n)
 	require.Error(t, err)
-	require.False(t, pgconn.Timeout(err))
+	require.False(t, gaussdbconn.Timeout(err))
 
 	ensureConnValid(t, conn)
 }
@@ -1347,14 +1347,14 @@ func TestConnQueryDatabaseSQLDriverValuerTextWhenBinaryIsPreferred(t *testing.T)
 	defer closeConn(t, conn)
 
 	arg := sql.NullString{String: "1.234", Valid: true}
-	var result pgtype.Numeric
+	var result gaussdbtype.Numeric
 	err := conn.QueryRow(context.Background(), "select $1::numeric", arg).Scan(&result)
 	require.NoError(t, err)
 
 	require.True(t, result.Valid)
 	f64, err := result.Float64Value()
 	require.NoError(t, err)
-	require.Equal(t, pgtype.Float8{Float64: 1.234, Valid: true}, f64)
+	require.Equal(t, gaussdbtype.Float8{Float64: 1.234, Valid: true}, f64)
 
 	ensureConnValid(t, conn)
 }
@@ -1561,7 +1561,7 @@ func TestQueryCloseBefore(t *testing.T) {
 
 	_, err := conn.Query(context.Background(), "select 1")
 	require.Error(t, err)
-	assert.True(t, pgconn.SafeToRetry(err))
+	assert.True(t, gaussdbconn.SafeToRetry(err))
 }
 
 func TestScanRow(t *testing.T) {
@@ -1919,7 +1919,7 @@ func TestConnSimpleProtocol(t *testing.T) {
 	{
 		if conn.PgConn().ParameterStatus("crdb_version") == "" {
 			// CockroachDB doesn't support circle type.
-			expected := pgtype.Circle{P: pgtype.Vec2{X: 1, Y: 2}, R: 1.5, Valid: true}
+			expected := gaussdbtype.Circle{P: gaussdbtype.Vec2{X: 1, Y: 2}, R: 1.5, Valid: true}
 			actual := expected
 			err := conn.QueryRow(
 				context.Background(),
@@ -2064,7 +2064,7 @@ func TestQueryErrorWithDisabledStatementCache(t *testing.T) {
 	rows.Close()
 	err = rows.Err()
 	require.Error(t, err)
-	var pgErr *pgconn.PgError
+	var pgErr *gaussdbconn.PgError
 	if errors.As(err, &pgErr) {
 		assert.Equal(t, "23505", pgErr.Code)
 	} else {
@@ -2138,7 +2138,7 @@ func TestQueryWithQueryRewriter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		qr := testQueryRewriter{sql: "select $1::int", args: []any{42}}
 		rows, err := conn.Query(ctx, "should be replaced", &qr)
 		require.NoError(t, err)

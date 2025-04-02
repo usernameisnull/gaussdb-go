@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ func TestConnSendBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -158,7 +158,7 @@ func TestConnSendBatchQueuedQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -169,17 +169,17 @@ func TestConnSendBatchQueuedQuery(t *testing.T) {
 
 		batch := &pgx.Batch{}
 
-		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q1", 1).Exec(func(ct pgconn.CommandTag) error {
+		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q1", 1).Exec(func(ct gaussdbconn.CommandTag) error {
 			assert.EqualValues(t, 1, ct.RowsAffected())
 			return nil
 		})
 
-		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q2", 2).Exec(func(ct pgconn.CommandTag) error {
+		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q2", 2).Exec(func(ct gaussdbconn.CommandTag) error {
 			assert.EqualValues(t, 1, ct.RowsAffected())
 			return nil
 		})
 
-		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q3", 3).Exec(func(ct pgconn.CommandTag) error {
+		batch.Queue("insert into ledger(description, amount) values($1, $2)", "q3", 3).Exec(func(ct gaussdbconn.CommandTag) error {
 			assert.EqualValues(t, 1, ct.RowsAffected())
 			return nil
 		})
@@ -253,7 +253,7 @@ func TestConnSendBatchMany(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		sql := `create temporary table ledger(
 	  id serial primary key,
 	  description varchar not null,
@@ -295,7 +295,7 @@ func TestConnSendBatchReadResultsWhenNothingQueued(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		batch := &pgx.Batch{}
 		br := conn.SendBatch(ctx, batch)
 		commandTag, err := br.Exec()
@@ -312,7 +312,7 @@ func TestConnSendBatchReadMoreResultsThanQueriesSent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		batch := &pgx.Batch{}
 		batch.Queue("select 1")
 		br := conn.SendBatch(ctx, batch)
@@ -340,7 +340,7 @@ func TestConnSendBatchWithPreparedStatement(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, modes, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, modes, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Prepare(ctx, "ps1", "select n from generate_series(0,$1::int) n")
 		if err != nil {
 			t.Fatal(err)
@@ -389,7 +389,7 @@ func TestConnSendBatchWithQueryRewriter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		batch := &pgx.Batch{}
 		batch.Queue("something to be replaced", &testQueryRewriter{sql: "select $1::int", args: []any{1}})
 		batch.Queue("something else to be replaced", &testQueryRewriter{sql: "select $1::text", args: []any{"hello"}})
@@ -482,7 +482,7 @@ func TestConnSendBatchCloseRowsPartiallyRead(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		batch := &pgx.Batch{}
 		batch.Queue("select n from generate_series(0,5) n")
@@ -544,7 +544,7 @@ func TestConnSendBatchQueryError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		batch := &pgx.Batch{}
 		batch.Queue("select n from generate_series(0,5) n where 100/(5-n) > 0")
@@ -567,12 +567,12 @@ func TestConnSendBatchQueryError(t *testing.T) {
 			}
 		}
 
-		if pgErr, ok := rows.Err().(*pgconn.PgError); !(ok && pgErr.Code == "22012") {
+		if pgErr, ok := rows.Err().(*gaussdbconn.PgError); !(ok && pgErr.Code == "22012") {
 			t.Errorf("rows.Err() => %v, want error code %v", rows.Err(), 22012)
 		}
 
 		err = br.Close()
-		if pgErr, ok := err.(*pgconn.PgError); !(ok && pgErr.Code == "22012") {
+		if pgErr, ok := err.(*gaussdbconn.PgError); !(ok && pgErr.Code == "22012") {
 			t.Errorf("br.Close() => %v, want error code %v", err, 22012)
 		}
 
@@ -585,7 +585,7 @@ func TestConnSendBatchQuerySyntaxError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		batch := &pgx.Batch{}
 		batch.Queue("select 1 1")
@@ -594,7 +594,7 @@ func TestConnSendBatchQuerySyntaxError(t *testing.T) {
 
 		var n int32
 		err := br.QueryRow().Scan(&n)
-		if pgErr, ok := err.(*pgconn.PgError); !(ok && pgErr.Code == "42601") {
+		if pgErr, ok := err.(*gaussdbconn.PgError); !(ok && pgErr.Code == "42601") {
 			t.Errorf("rows.Err() => %v, want error code %v", err, 42601)
 		}
 
@@ -612,7 +612,7 @@ func TestConnSendBatchQueryRowInsert(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -652,7 +652,7 @@ func TestConnSendBatchQueryPartialReadInsert(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		sql := `create temporary table ledger(
 	  id serial primary key,
@@ -692,7 +692,7 @@ func TestTxSendBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		sql := `create temporary table ledger1(
 	  id serial primary key,
@@ -802,7 +802,7 @@ func TestSendBatchErrorWhileReadingResultsWithoutCallback(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		batch := &pgx.Batch{}
 		batch.Queue("select 4 / $1::int", 0)
 
@@ -826,7 +826,7 @@ func TestSendBatchErrorWhileReadingResultsWithExecWhereSomeRowsAreReturned(t *te
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		batch := &pgx.Batch{}
 		batch.Queue("select 4 / n from generate_series(-2, 2) n")
 
@@ -850,7 +850,7 @@ func TestConnBeginBatchDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		mustExec(t, conn, `create temporary table t (
 		id text primary key,
@@ -885,7 +885,7 @@ func TestConnBeginBatchDeferredError(t *testing.T) {
 			t.Fatal("expected error 23505 but got none")
 		}
 
-		if err, ok := err.(*pgconn.PgError); !ok || err.Code != "23505" {
+		if err, ok := err.(*gaussdbconn.PgError); !ok || err.Code != "23505" {
 			t.Fatalf("expected error 23505, got %v", err)
 		}
 
@@ -1009,7 +1009,7 @@ func TestConnSendBatchErrorDoesNotLeaveOrphanedPreparedStatement(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		mustExec(t, conn, `create temporary table foo(col1 text primary key);`)
 

@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 )
 
 type testRowScanner struct {
@@ -60,7 +60,7 @@ func TestForEachRow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		var actualResults []any
 
 		rows, _ := conn.Query(
@@ -91,7 +91,7 @@ func TestForEachRowScanError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		var actualResults []any
 
 		rows, _ := conn.Query(
@@ -105,7 +105,7 @@ func TestForEachRowScanError(t *testing.T) {
 			return nil
 		})
 		require.EqualError(t, err, "can't scan into dest[0]: cannot scan text (OID 25) in text format into *int")
-		require.Equal(t, pgconn.CommandTag{}, ct)
+		require.Equal(t, gaussdbconn.CommandTag{}, ct)
 	})
 }
 
@@ -115,7 +115,7 @@ func TestForEachRowAbort(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		rows, _ := conn.Query(
 			context.Background(),
 			"select n, n * 2 from generate_series(1, $1) n",
@@ -126,7 +126,7 @@ func TestForEachRowAbort(t *testing.T) {
 			return errors.New("abort")
 		})
 		require.EqualError(t, err, "abort")
-		require.Equal(t, pgconn.CommandTag{}, ct)
+		require.Equal(t, gaussdbconn.CommandTag{}, ct)
 	})
 }
 
@@ -283,7 +283,7 @@ func TestCollectOneRowPrefersPostgreSQLErrorOverErrNoRows(t *testing.T) {
 			return n, err
 		})
 		require.Error(t, err)
-		var pgErr *pgconn.PgError
+		var pgErr *gaussdbconn.PgError
 		require.ErrorAs(t, err, &pgErr)
 		require.Equal(t, "23505", pgErr.Code)
 		require.Equal(t, "", name)

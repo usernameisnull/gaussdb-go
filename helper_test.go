@@ -8,15 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
 )
 
-var defaultConnTestRunner pgxtest.ConnTestRunner
+var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 
 func init() {
-	defaultConnTestRunner = pgxtest.DefaultConnTestRunner()
+	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *pgx.ConnConfig {
 		config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func closeConn(t testing.TB, conn *pgx.Conn) {
 	}
 }
 
-func mustExec(t testing.TB, conn *pgx.Conn, sql string, arguments ...any) (commandTag pgconn.CommandTag) {
+func mustExec(t testing.TB, conn *pgx.Conn, sql string, arguments ...any) (commandTag gaussdbconn.CommandTag) {
 	var err error
 	if commandTag, err = conn.Exec(context.Background(), sql, arguments...); err != nil {
 		t.Fatalf("Exec unexpectedly failed with %v: %v", sql, err)

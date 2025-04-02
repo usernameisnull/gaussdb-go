@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +30,7 @@ func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 
 		results, err := pipeline.GetResults()
 		require.NoError(t, err)
-		rr, ok := results.(*pgconn.ResultReader)
+		rr, ok := results.(*gaussdbconn.ResultReader)
 		require.True(t, ok)
 		rows := pgx.RowsFromResultReader(conn.TypeMap(), rr)
 
@@ -48,7 +48,7 @@ func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 
 		results, err = pipeline.GetResults()
 		require.NoError(t, err)
-		rr, ok = results.(*pgconn.ResultReader)
+		rr, ok = results.(*gaussdbconn.ResultReader)
 		require.True(t, ok)
 		rows = pgx.RowsFromResultReader(conn.TypeMap(), rr)
 
@@ -66,7 +66,7 @@ func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 
 		results, err = pipeline.GetResults()
 		require.NoError(t, err)
-		_, ok = results.(*pgconn.PipelineSync)
+		_, ok = results.(*gaussdbconn.PipelineSync)
 		require.True(t, ok)
 
 		results, err = pipeline.GetResults()

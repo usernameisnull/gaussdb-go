@@ -8,10 +8,10 @@ import (
 	"os"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 )
 
-var db *pgxpool.Pool
+var db *gaussdbxpool.Pool
 
 func getUrlHandler(w http.ResponseWriter, req *http.Request) {
 	var url string
@@ -70,12 +70,12 @@ func urlHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	poolConfig, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	poolConfig, err := gaussdbxpool.ParseConfig(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatalln("Unable to parse DATABASE_URL:", err)
 	}
 
-	db, err = pgxpool.NewWithConfig(context.Background(), poolConfig)
+	db, err = gaussdbxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		log.Fatalln("Unable to create connection pool:", err)
 	}

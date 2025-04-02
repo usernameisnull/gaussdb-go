@@ -82,9 +82,9 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 )
 
 // Only intrinsic types should be binary format with database/sql.
@@ -105,19 +105,19 @@ func init() {
 	sql.Register("pgx/v5", pgxDriver)
 
 	databaseSQLResultFormats = pgx.QueryResultFormatsByOID{
-		pgtype.BoolOID:        1,
-		pgtype.ByteaOID:       1,
-		pgtype.CIDOID:         1,
-		pgtype.DateOID:        1,
-		pgtype.Float4OID:      1,
-		pgtype.Float8OID:      1,
-		pgtype.Int2OID:        1,
-		pgtype.Int4OID:        1,
-		pgtype.Int8OID:        1,
-		pgtype.OIDOID:         1,
-		pgtype.TimestampOID:   1,
-		pgtype.TimestamptzOID: 1,
-		pgtype.XIDOID:         1,
+		gaussdbtype.BoolOID:        1,
+		gaussdbtype.ByteaOID:       1,
+		gaussdbtype.CIDOID:         1,
+		gaussdbtype.DateOID:        1,
+		gaussdbtype.Float4OID:      1,
+		gaussdbtype.Float8OID:      1,
+		gaussdbtype.Int2OID:        1,
+		gaussdbtype.Int4OID:        1,
+		gaussdbtype.Int8OID:        1,
+		gaussdbtype.OIDOID:         1,
+		gaussdbtype.TimestampOID:   1,
+		gaussdbtype.TimestamptzOID: 1,
+		gaussdbtype.XIDOID:         1,
 	}
 }
 
@@ -157,7 +157,7 @@ func RandomizeHostOrderFunc(ctx context.Context, connConfig *pgx.ConnConfig) err
 		return nil
 	}
 
-	newFallbacks := append([]*pgconn.FallbackConfig{{
+	newFallbacks := append([]*gaussdbconn.FallbackConfig{{
 		Host:      connConfig.Host,
 		Port:      connConfig.Port,
 		TLSConfig: connConfig.TLSConfig,
@@ -195,7 +195,7 @@ func GetConnector(config pgx.ConnConfig, opts ...OptionOpenDB) driver.Connector 
 // maximum idle connections of the *sql.DB created with this connector to zero since they must be managed from the
 // *pgxpool.Pool. This is required to avoid acquiring all the connections from the pgxpool and starving any direct
 // users of the pgxpool.
-func GetPoolConnector(pool *pgxpool.Pool, opts ...OptionOpenDB) driver.Connector {
+func GetPoolConnector(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) driver.Connector {
 	c := connector{
 		pool:         pool,
 		ResetSession: func(context.Context, *pgx.Conn) error { return nil }, // noop reset session by default
@@ -217,7 +217,7 @@ func OpenDB(config pgx.ConnConfig, opts ...OptionOpenDB) *sql.DB {
 // OpenDBFromPool creates a new *sql.DB from the given *pgxpool.Pool. Note that this method automatically sets the
 // maximum number of idle connections in *sql.DB to zero, since they must be managed from the *pgxpool.Pool. This is
 // required to avoid acquiring all the connections from the pgxpool and starving any direct users of the pgxpool.
-func OpenDBFromPool(pool *pgxpool.Pool, opts ...OptionOpenDB) *sql.DB {
+func OpenDBFromPool(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) *sql.DB {
 	c := GetPoolConnector(pool, opts...)
 	db := sql.OpenDB(c)
 	db.SetMaxIdleConns(0)
@@ -226,7 +226,7 @@ func OpenDBFromPool(pool *pgxpool.Pool, opts ...OptionOpenDB) *sql.DB {
 
 type connector struct {
 	pgx.ConnConfig
-	pool          *pgxpool.Pool
+	pool          *gaussdbxpool.Pool
 	BeforeConnect func(context.Context, *pgx.ConnConfig) error // function to call before creation of every new connection
 	AfterConnect  func(context.Context, *pgx.Conn) error       // function to call after creation of every new connection
 	ResetSession  func(context.Context, *pgx.Conn) error       // function is called before a connection is reused
@@ -260,7 +260,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 
 		close = conn.Close
 	} else {
-		var pconn *pgxpool.Conn
+		var pconn *gaussdbxpool.Conn
 
 		pconn, err = c.pool.Acquire(ctx)
 		if err != nil {
@@ -281,7 +281,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 		driver:           c.driver,
 		connConfig:       connConfig,
 		resetSessionFunc: c.ResetSession,
-		psRefCounts:      make(map[*pgconn.StatementDescription]int),
+		psRefCounts:      make(map[*gaussdbconn.StatementDescription]int),
 	}, nil
 }
 
@@ -363,7 +363,7 @@ func (dc *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 		driver:           dc.driver,
 		connConfig:       *connConfig,
 		resetSessionFunc: func(context.Context, *pgx.Conn) error { return nil },
-		psRefCounts:      make(map[*pgconn.StatementDescription]int),
+		psRefCounts:      make(map[*gaussdbconn.StatementDescription]int),
 	}
 
 	return c, nil
@@ -397,7 +397,7 @@ type Conn struct {
 	// then the underlying prepared statement will be closed even when the underlying prepared statement is still in use
 	// by another database/sql Stmt. To prevent this psRefCounts keeps track of how many database/sql statements are using
 	// the same underlying statement and only closes the underlying statement when the reference count reaches 0.
-	psRefCounts map[*pgconn.StatementDescription]int
+	psRefCounts map[*gaussdbconn.StatementDescription]int
 }
 
 // Conn returns the underlying *pgx.Conn
@@ -475,7 +475,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, argsV []driver.Nam
 	commandTag, err := c.conn.Exec(ctx, query, args...)
 	// if we got a network error before we had a chance to send the query, retry
 	if err != nil {
-		if pgconn.SafeToRetry(err) {
+		if gaussdbconn.SafeToRetry(err) {
 			return nil, driver.ErrBadConn
 		}
 	}
@@ -492,7 +492,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, argsV []driver.Na
 
 	rows, err := c.conn.Query(ctx, query, args...)
 	if err != nil {
-		if pgconn.SafeToRetry(err) {
+		if gaussdbconn.SafeToRetry(err) {
 			return nil, driver.ErrBadConn
 		}
 		return nil, err
@@ -545,7 +545,7 @@ func (c *Conn) ResetSession(ctx context.Context) error {
 }
 
 type Stmt struct {
-	sd   *pgconn.StatementDescription
+	sd   *gaussdbconn.StatementDescription
 	conn *Conn
 }
 
@@ -626,9 +626,9 @@ func (r *Rows) ColumnTypeLength(index int) (int64, bool) {
 	fd := r.rows.FieldDescriptions()[index]
 
 	switch fd.DataTypeOID {
-	case pgtype.TextOID, pgtype.ByteaOID:
+	case gaussdbtype.TextOID, gaussdbtype.ByteaOID:
 		return math.MaxInt64, true
-	case pgtype.VarcharOID, pgtype.BPCharArrayOID:
+	case gaussdbtype.VarcharOID, gaussdbtype.BPCharArrayOID:
 		return int64(fd.TypeModifier - varHeaderSize), true
 	default:
 		return 0, false
@@ -641,7 +641,7 @@ func (r *Rows) ColumnTypePrecisionScale(index int) (precision, scale int64, ok b
 	fd := r.rows.FieldDescriptions()[index]
 
 	switch fd.DataTypeOID {
-	case pgtype.NumericOID:
+	case gaussdbtype.NumericOID:
 		mod := fd.TypeModifier - varHeaderSize
 		precision = int64((mod >> 16) & 0xffff)
 		scale = int64(mod & 0xffff)
@@ -656,23 +656,23 @@ func (r *Rows) ColumnTypeScanType(index int) reflect.Type {
 	fd := r.rows.FieldDescriptions()[index]
 
 	switch fd.DataTypeOID {
-	case pgtype.Float8OID:
+	case gaussdbtype.Float8OID:
 		return reflect.TypeOf(float64(0))
-	case pgtype.Float4OID:
+	case gaussdbtype.Float4OID:
 		return reflect.TypeOf(float32(0))
-	case pgtype.Int8OID:
+	case gaussdbtype.Int8OID:
 		return reflect.TypeOf(int64(0))
-	case pgtype.Int4OID:
+	case gaussdbtype.Int4OID:
 		return reflect.TypeOf(int32(0))
-	case pgtype.Int2OID:
+	case gaussdbtype.Int2OID:
 		return reflect.TypeOf(int16(0))
-	case pgtype.BoolOID:
+	case gaussdbtype.BoolOID:
 		return reflect.TypeOf(false)
-	case pgtype.NumericOID:
+	case gaussdbtype.NumericOID:
 		return reflect.TypeOf(float64(0))
-	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID:
+	case gaussdbtype.DateOID, gaussdbtype.TimestampOID, gaussdbtype.TimestamptzOID:
 		return reflect.TypeOf(time.Time{})
-	case pgtype.ByteaOID:
+	case gaussdbtype.ByteaOID:
 		return reflect.TypeOf([]byte(nil))
 	default:
 		return reflect.TypeOf("")
@@ -696,22 +696,22 @@ func (r *Rows) Next(dest []driver.Value) error {
 			format := fd.Format
 
 			switch fd.DataTypeOID {
-			case pgtype.BoolOID:
+			case gaussdbtype.BoolOID:
 				var d bool
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return d, err
 				}
-			case pgtype.ByteaOID:
+			case gaussdbtype.ByteaOID:
 				var d []byte
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return d, err
 				}
-			case pgtype.CIDOID, pgtype.OIDOID, pgtype.XIDOID:
-				var d pgtype.Uint32
+			case gaussdbtype.CIDOID, gaussdbtype.OIDOID, gaussdbtype.XIDOID:
+				var d gaussdbtype.Uint32
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
@@ -720,8 +720,8 @@ func (r *Rows) Next(dest []driver.Value) error {
 					}
 					return d.Value()
 				}
-			case pgtype.DateOID:
-				var d pgtype.Date
+			case gaussdbtype.DateOID:
+				var d gaussdbtype.Date
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
@@ -730,42 +730,42 @@ func (r *Rows) Next(dest []driver.Value) error {
 					}
 					return d.Value()
 				}
-			case pgtype.Float4OID:
+			case gaussdbtype.Float4OID:
 				var d float32
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return float64(d), err
 				}
-			case pgtype.Float8OID:
+			case gaussdbtype.Float8OID:
 				var d float64
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return d, err
 				}
-			case pgtype.Int2OID:
+			case gaussdbtype.Int2OID:
 				var d int16
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return int64(d), err
 				}
-			case pgtype.Int4OID:
+			case gaussdbtype.Int4OID:
 				var d int32
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return int64(d), err
 				}
-			case pgtype.Int8OID:
+			case gaussdbtype.Int8OID:
 				var d int64
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
 					return d, err
 				}
-			case pgtype.JSONOID, pgtype.JSONBOID:
+			case gaussdbtype.JSONOID, gaussdbtype.JSONBOID:
 				var d []byte
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
@@ -775,8 +775,8 @@ func (r *Rows) Next(dest []driver.Value) error {
 					}
 					return d, nil
 				}
-			case pgtype.TimestampOID:
-				var d pgtype.Timestamp
+			case gaussdbtype.TimestampOID:
+				var d gaussdbtype.Timestamp
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
@@ -785,8 +785,8 @@ func (r *Rows) Next(dest []driver.Value) error {
 					}
 					return d.Value()
 				}
-			case pgtype.TimestamptzOID:
-				var d pgtype.Timestamptz
+			case gaussdbtype.TimestamptzOID:
+				var d gaussdbtype.Timestamptz
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
@@ -795,7 +795,7 @@ func (r *Rows) Next(dest []driver.Value) error {
 					}
 					return d.Value()
 				}
-			case pgtype.XMLOID:
+			case gaussdbtype.XMLOID:
 				var d []byte
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {

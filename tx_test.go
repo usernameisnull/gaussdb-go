@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -132,7 +132,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	}
 
 	err = tx.Commit(context.Background())
-	if pgErr, ok := err.(*pgconn.PgError); !ok || pgErr.Code != "23505" {
+	if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "23505" {
 		t.Fatalf("Expected unique constraint violation 23505, got %#v", err)
 	}
 
@@ -365,7 +365,7 @@ func TestBeginReadOnly(t *testing.T) {
 	defer tx.Rollback(context.Background())
 
 	_, err = conn.Exec(context.Background(), "create table foo(id serial primary key)")
-	if pgErr, ok := err.(*pgconn.PgError); !ok || pgErr.Code != "25006" {
+	if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "25006" {
 		t.Errorf("Expected error SQLSTATE 25006, but got %#v", err)
 	}
 }
@@ -376,7 +376,7 @@ func TestBeginTxBeginQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		tx, err := conn.BeginTx(ctx, pgx.TxOptions{BeginQuery: "begin read only"})
 		require.NoError(t, err)
 		defer tx.Rollback(ctx)

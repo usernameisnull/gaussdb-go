@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 )
 
 // Rows is the result set returned from *Conn.Query. Rows must be closed before
@@ -35,11 +35,11 @@ type Rows interface {
 	Err() error
 
 	// CommandTag returns the command tag from this query. It is only available after Rows is closed.
-	CommandTag() pgconn.CommandTag
+	CommandTag() gaussdbconn.CommandTag
 
 	// FieldDescriptions returns the field descriptions of the columns. It may return nil. In particular this can occur
 	// when there was an error executing the query.
-	FieldDescriptions() []pgconn.FieldDescription
+	FieldDescriptions() []gaussdbconn.FieldDescription
 
 	// Next prepares the next row for reading. It returns true if there is another
 	// row and false if no more rows are available or a fatal error has occurred.
@@ -103,7 +103,7 @@ func (r *connRow) Scan(dest ...any) (err error) {
 	}
 
 	for _, d := range dest {
-		if _, ok := d.(*pgtype.DriverBytes); ok {
+		if _, ok := d.(*gaussdbtype.DriverBytes); ok {
 			rows.Close()
 			return fmt.Errorf("cannot scan into *pgtype.DriverBytes from QueryRow")
 		}
@@ -123,20 +123,20 @@ func (r *connRow) Scan(dest ...any) (err error) {
 
 // baseRows implements the Rows interface for Conn.Query.
 type baseRows struct {
-	typeMap      *pgtype.Map
-	resultReader *pgconn.ResultReader
+	typeMap      *gaussdbtype.Map
+	resultReader *gaussdbconn.ResultReader
 
 	values [][]byte
 
-	commandTag pgconn.CommandTag
+	commandTag gaussdbconn.CommandTag
 	err        error
 	closed     bool
 
-	scanPlans []pgtype.ScanPlan
+	scanPlans []gaussdbtype.ScanPlan
 	scanTypes []reflect.Type
 
 	conn              *Conn
-	multiResultReader *pgconn.MultiResultReader
+	multiResultReader *gaussdbconn.MultiResultReader
 
 	queryTracer QueryTracer
 	batchTracer BatchTracer
@@ -147,7 +147,7 @@ type baseRows struct {
 	rowCount    int
 }
 
-func (rows *baseRows) FieldDescriptions() []pgconn.FieldDescription {
+func (rows *baseRows) FieldDescriptions() []gaussdbconn.FieldDescription {
 	return rows.resultReader.FieldDescriptions()
 }
 
@@ -190,7 +190,7 @@ func (rows *baseRows) Close() {
 	}
 }
 
-func (rows *baseRows) CommandTag() pgconn.CommandTag {
+func (rows *baseRows) CommandTag() gaussdbconn.CommandTag {
 	return rows.commandTag
 }
 
@@ -252,7 +252,7 @@ func (rows *baseRows) Scan(dest ...any) error {
 	}
 
 	if rows.scanPlans == nil {
-		rows.scanPlans = make([]pgtype.ScanPlan, len(values))
+		rows.scanPlans = make([]gaussdbtype.ScanPlan, len(values))
 		rows.scanTypes = make([]reflect.Type, len(values))
 		for i := range dest {
 			rows.scanPlans[i] = m.PlanScan(fieldDescriptions[i].DataTypeOID, fieldDescriptions[i].Format, dest[i])
@@ -356,7 +356,7 @@ func (e ScanArgError) Unwrap() error {
 // fieldDescriptions - OID and format of values
 // values - the raw data as returned from the PostgreSQL server
 // dest - the destination that values will be decoded into
-func ScanRow(typeMap *pgtype.Map, fieldDescriptions []pgconn.FieldDescription, values [][]byte, dest ...any) error {
+func ScanRow(typeMap *gaussdbtype.Map, fieldDescriptions []gaussdbconn.FieldDescription, values [][]byte, dest ...any) error {
 	if len(fieldDescriptions) != len(values) {
 		return fmt.Errorf("number of field descriptions must equal number of values, got %d and %d", len(fieldDescriptions), len(values))
 	}
@@ -380,7 +380,7 @@ func ScanRow(typeMap *pgtype.Map, fieldDescriptions []pgconn.FieldDescription, v
 
 // RowsFromResultReader returns a Rows that will read from values resultReader and decode with typeMap. It can be used
 // to read from the lower level pgconn interface.
-func RowsFromResultReader(typeMap *pgtype.Map, resultReader *pgconn.ResultReader) Rows {
+func RowsFromResultReader(typeMap *gaussdbtype.Map, resultReader *gaussdbconn.ResultReader) Rows {
 	return &baseRows{
 		typeMap:      typeMap,
 		resultReader: resultReader,
@@ -390,23 +390,23 @@ func RowsFromResultReader(typeMap *pgtype.Map, resultReader *pgconn.ResultReader
 // ForEachRow iterates through rows. For each row it scans into the elements of scans and calls fn. If any row
 // fails to scan or fn returns an error the query will be aborted and the error will be returned. Rows will be closed
 // when ForEachRow returns.
-func ForEachRow(rows Rows, scans []any, fn func() error) (pgconn.CommandTag, error) {
+func ForEachRow(rows Rows, scans []any, fn func() error) (gaussdbconn.CommandTag, error) {
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(scans...)
 		if err != nil {
-			return pgconn.CommandTag{}, err
+			return gaussdbconn.CommandTag{}, err
 		}
 
 		err = fn()
 		if err != nil {
-			return pgconn.CommandTag{}, err
+			return gaussdbconn.CommandTag{}, err
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	return rows.CommandTag(), nil
@@ -414,7 +414,7 @@ func ForEachRow(rows Rows, scans []any, fn func() error) (pgconn.CommandTag, err
 
 // CollectableRow is the subset of Rows methods that a RowToFunc is allowed to call.
 type CollectableRow interface {
-	FieldDescriptions() []pgconn.FieldDescription
+	FieldDescriptions() []gaussdbconn.FieldDescription
 	Scan(dest ...any) error
 	Values() ([]any, error)
 	RawValues() [][]byte
@@ -703,7 +703,7 @@ type namedStructFields struct {
 
 func lookupNamedStructFields(
 	t reflect.Type,
-	fldDescs []pgconn.FieldDescription,
+	fldDescs []gaussdbconn.FieldDescription,
 ) (*namedStructFields, error) {
 	key := namedStructFieldsKey{
 		t:        t,
@@ -739,7 +739,7 @@ func lookupNamedStructFields(
 	return fieldsIface.(*namedStructFields), nil
 }
 
-func joinFieldNames(fldDescs []pgconn.FieldDescription) string {
+func joinFieldNames(fldDescs []gaussdbconn.FieldDescription) string {
 	switch len(fldDescs) {
 	case 0:
 		return ""
@@ -762,7 +762,7 @@ func joinFieldNames(fldDescs []pgconn.FieldDescription) string {
 }
 
 func computeNamedStructFields(
-	fldDescs []pgconn.FieldDescription,
+	fldDescs []gaussdbconn.FieldDescription,
 	t reflect.Type,
 	fields []structRowField,
 	fieldStack *[]int,
@@ -821,7 +821,7 @@ func computeNamedStructFields(
 
 const structTagKey = "db"
 
-func fieldPosByName(fldDescs []pgconn.FieldDescription, field string, normalize bool) (i int) {
+func fieldPosByName(fldDescs []gaussdbconn.FieldDescription, field string, normalize bool) (i int) {
 	i = -1
 
 	if normalize {

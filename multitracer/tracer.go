@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 )
 
 // Tracer can combine several tracers into one.
@@ -16,8 +16,8 @@ type Tracer struct {
 	CopyFromTracers    []pgx.CopyFromTracer
 	PrepareTracers     []pgx.PrepareTracer
 	ConnectTracers     []pgx.ConnectTracer
-	PoolAcquireTracers []pgxpool.AcquireTracer
-	PoolReleaseTracers []pgxpool.ReleaseTracer
+	PoolAcquireTracers []gaussdbxpool.AcquireTracer
+	PoolReleaseTracers []gaussdbxpool.ReleaseTracer
 }
 
 // New returns new Tracer from tracers with automatically split tracers by interface.
@@ -43,11 +43,11 @@ func New(tracers ...pgx.QueryTracer) *Tracer {
 			t.ConnectTracers = append(t.ConnectTracers, connectTracer)
 		}
 
-		if poolAcquireTracer, ok := tracer.(pgxpool.AcquireTracer); ok {
+		if poolAcquireTracer, ok := tracer.(gaussdbxpool.AcquireTracer); ok {
 			t.PoolAcquireTracers = append(t.PoolAcquireTracers, poolAcquireTracer)
 		}
 
-		if poolReleaseTracer, ok := tracer.(pgxpool.ReleaseTracer); ok {
+		if poolReleaseTracer, ok := tracer.(gaussdbxpool.ReleaseTracer); ok {
 			t.PoolReleaseTracers = append(t.PoolReleaseTracers, poolReleaseTracer)
 		}
 	}
@@ -131,7 +131,7 @@ func (t *Tracer) TraceConnectEnd(ctx context.Context, data pgx.TraceConnectEndDa
 	}
 }
 
-func (t *Tracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireStartData) context.Context {
+func (t *Tracer) TraceAcquireStart(ctx context.Context, pool *gaussdbxpool.Pool, data gaussdbxpool.TraceAcquireStartData) context.Context {
 	for _, tracer := range t.PoolAcquireTracers {
 		ctx = tracer.TraceAcquireStart(ctx, pool, data)
 	}
@@ -139,13 +139,13 @@ func (t *Tracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, data
 	return ctx
 }
 
-func (t *Tracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireEndData) {
+func (t *Tracer) TraceAcquireEnd(ctx context.Context, pool *gaussdbxpool.Pool, data gaussdbxpool.TraceAcquireEndData) {
 	for _, tracer := range t.PoolAcquireTracers {
 		tracer.TraceAcquireEnd(ctx, pool, data)
 	}
 }
 
-func (t *Tracer) TraceRelease(pool *pgxpool.Pool, data pgxpool.TraceReleaseData) {
+func (t *Tracer) TraceRelease(pool *gaussdbxpool.Pool, data gaussdbxpool.TraceReleaseData) {
 	for _, tracer := range t.PoolReleaseTracers {
 		tracer.TraceRelease(pool, data)
 	}
