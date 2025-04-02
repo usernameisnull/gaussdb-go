@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
 	"github.com/stretchr/testify/require"
 )
 

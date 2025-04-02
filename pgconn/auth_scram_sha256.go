@@ -15,7 +15,7 @@ package pgconn
 import (
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgproto3"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgproto3"
 )
 
 func (c *PgConn) authSha256(r *readBuf) (*writeBuf, error) {

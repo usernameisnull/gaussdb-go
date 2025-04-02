@@ -3,8 +3,8 @@ package pgx
 import (
 	"errors"
 
-	"github.com/jackc/pgx/v5/internal/pgio"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
 )
 
 // PostgreSQL format codes
