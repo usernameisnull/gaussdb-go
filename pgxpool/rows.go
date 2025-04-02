@@ -1,8 +1,8 @@
 package pgxpool
 
 import (
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
 )
 
 type errRows struct {

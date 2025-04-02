@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype/zeronull"
-	"github.com/jackc/pgx/v5/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype/zeronull"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
 )
 
 func TestInt2Transcode(t *testing.T) {
