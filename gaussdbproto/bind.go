@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Bind struct {
@@ -121,31 +121,31 @@ func (src *Bind) Encode(dst []byte) ([]byte, error) {
 	if len(src.ParameterFormatCodes) > math.MaxUint16 {
 		return nil, errors.New("too many parameter format codes")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.ParameterFormatCodes)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.ParameterFormatCodes)))
 	for _, fc := range src.ParameterFormatCodes {
-		dst = pgio.AppendInt16(dst, fc)
+		dst = gaussdbio.AppendInt16(dst, fc)
 	}
 
 	if len(src.Parameters) > math.MaxUint16 {
 		return nil, errors.New("too many parameters")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.Parameters)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.Parameters)))
 	for _, p := range src.Parameters {
 		if p == nil {
-			dst = pgio.AppendInt32(dst, -1)
+			dst = gaussdbio.AppendInt32(dst, -1)
 			continue
 		}
 
-		dst = pgio.AppendInt32(dst, int32(len(p)))
+		dst = gaussdbio.AppendInt32(dst, int32(len(p)))
 		dst = append(dst, p...)
 	}
 
 	if len(src.ResultFormatCodes) > math.MaxUint16 {
 		return nil, errors.New("too many result format codes")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.ResultFormatCodes)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.ResultFormatCodes)))
 	for _, fc := range src.ResultFormatCodes {
-		dst = pgio.AppendInt16(dst, fc)
+		dst = gaussdbio.AppendInt16(dst, fc)
 	}
 
 	return finishMessage(dst, sp)

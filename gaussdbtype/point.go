@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Vec2 struct {
@@ -154,8 +154,8 @@ func (encodePlanPointCodecBinary) Encode(value any, buf []byte) (newBuf []byte, 
 		return nil, nil
 	}
 
-	buf = pgio.AppendUint64(buf, math.Float64bits(point.P.X))
-	buf = pgio.AppendUint64(buf, math.Float64bits(point.P.Y))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(point.P.X))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(point.P.Y))
 	return buf, nil
 }
 

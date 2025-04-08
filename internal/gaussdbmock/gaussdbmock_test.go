@@ -1,4 +1,4 @@
-package pgmock_test
+package gaussdbmock_test
 
 import (
 	"context"
@@ -10,18 +10,18 @@ import (
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgmock"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbmock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestScript(t *testing.T) {
-	script := &pgmock.Script{
-		Steps: pgmock.AcceptUnauthenticatedConnRequestSteps(),
+	script := &gaussdbmock.Script{
+		Steps: gaussdbmock.AcceptUnauthenticatedConnRequestSteps(),
 	}
-	script.Steps = append(script.Steps, pgmock.ExpectMessage(&gaussdbproto.Query{String: "select 42"}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.RowDescription{
+	script.Steps = append(script.Steps, gaussdbmock.ExpectMessage(&gaussdbproto.Query{String: "select 42"}))
+	script.Steps = append(script.Steps, gaussdbmock.SendMessage(&gaussdbproto.RowDescription{
 		Fields: []gaussdbproto.FieldDescription{
 			{
 				Name:                 []byte("?column?"),
@@ -34,12 +34,12 @@ func TestScript(t *testing.T) {
 			},
 		},
 	}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.DataRow{
+	script.Steps = append(script.Steps, gaussdbmock.SendMessage(&gaussdbproto.DataRow{
 		Values: [][]byte{[]byte("42")},
 	}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.CommandComplete{CommandTag: []byte("SELECT 1")}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}))
-	script.Steps = append(script.Steps, pgmock.ExpectMessage(&gaussdbproto.Terminate{}))
+	script.Steps = append(script.Steps, gaussdbmock.SendMessage(&gaussdbproto.CommandComplete{CommandTag: []byte("SELECT 1")}))
+	script.Steps = append(script.Steps, gaussdbmock.SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}))
+	script.Steps = append(script.Steps, gaussdbmock.ExpectMessage(&gaussdbproto.Terminate{}))
 
 	ln, err := net.Listen("tcp", "127.0.0.1:")
 	require.NoError(t, err)
@@ -74,9 +74,9 @@ func TestScript(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	pgConn, err := gaussdbconn.Connect(ctx, connStr)
+	gaussdbConn, err := gaussdbconn.Connect(ctx, connStr)
 	require.NoError(t, err)
-	results, err := pgConn.Exec(ctx, "select 42").ReadAll()
+	results, err := gaussdbConn.Exec(ctx, "select 42").ReadAll()
 	assert.NoError(t, err)
 
 	assert.Len(t, results, 1)
@@ -85,7 +85,7 @@ func TestScript(t *testing.T) {
 	assert.Len(t, results[0].Rows, 1)
 	assert.Equal(t, "42", string(results[0].Rows[0][0]))
 
-	pgConn.Close(ctx)
+	gaussdbConn.Close(ctx)
 
 	assert.NoError(t, <-serverErrChan)
 }

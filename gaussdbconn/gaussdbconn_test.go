@@ -17,18 +17,19 @@ import (
 	"testing"
 	"time"
 
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn/ctxwatch"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgmock"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbmock"
 )
 
+// TODO: remove pgbouncer?
 const pgbouncerConnStringEnvVar = "PGX_TEST_PGBOUNCER_CONN_STRING"
 
 func TestConnect(t *testing.T) {
@@ -178,9 +179,9 @@ func TestConnectTLSPasswordProtectedClientCertWithGetSSLPasswordConfigOption(t *
 	closeConn(t, conn)
 }
 
-type pgmockWaitStep time.Duration
+type gaussdbMockWaitStep time.Duration
 
-func (s pgmockWaitStep) Step(*gaussdbproto.Backend) error {
+func (s gaussdbMockWaitStep) Step(*gaussdbproto.Backend) error {
 	time.Sleep(time.Duration(s))
 	return nil
 }
@@ -215,13 +216,13 @@ func TestConnectTimeout(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			script := &pgmock.Script{
-				Steps: []pgmock.Step{
-					pgmock.ExpectAnyMessage(&gaussdbproto.StartupMessage{ProtocolVersion: gaussdbproto.ProtocolVersionNumber, Parameters: map[string]string{}}),
-					pgmock.SendMessage(&gaussdbproto.AuthenticationOk{}),
-					pgmockWaitStep(time.Millisecond * 500),
-					pgmock.SendMessage(&gaussdbproto.BackendKeyData{ProcessID: 0, SecretKey: 0}),
-					pgmock.SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}),
+			script := &gaussdbmock.Script{
+				Steps: []gaussdbmock.Step{
+					gaussdbmock.ExpectAnyMessage(&gaussdbproto.StartupMessage{ProtocolVersion: gaussdbproto.ProtocolVersionNumber, Parameters: map[string]string{}}),
+					gaussdbmock.SendMessage(&gaussdbproto.AuthenticationOk{}),
+					gaussdbMockWaitStep(time.Millisecond * 500),
+					gaussdbmock.SendMessage(&gaussdbproto.BackendKeyData{ProcessID: 0, SecretKey: 0}),
+					gaussdbmock.SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}),
 				},
 			}
 
@@ -357,10 +358,10 @@ func TestConnectInvalidUser(t *testing.T) {
 
 	_, err = gaussdbconn.ConnectConfig(ctx, config)
 	require.Error(t, err)
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, err, &pgErr)
-	if pgErr.Code != "28000" && pgErr.Code != "28P01" {
-		t.Fatalf("Expected to receive a PgError with code 28000 or 28P01, instead received: %v", pgErr)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.ErrorAs(t, err, &gaussdbErr)
+	if gaussdbErr.Code != "28000" && gaussdbErr.Code != "28P01" {
+		t.Fatalf("Expected to receive a GaussdbError with code 28000 or 28P01, instead received: %v", gaussdbErr)
 	}
 }
 
@@ -559,7 +560,7 @@ func TestConnectWithValidateConnect(t *testing.T) {
 	}
 
 	acceptConnCount := 0
-	config.ValidateConnect = func(ctx context.Context, conn *gaussdbconn.PgConn) error {
+	config.ValidateConnect = func(ctx context.Context, conn *gaussdbconn.GaussdbConn) error {
 		acceptConnCount++
 		if acceptConnCount < 2 {
 			return errors.New("reject first conn")
@@ -612,7 +613,7 @@ func TestConnectWithAfterConnect(t *testing.T) {
 	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	config.AfterConnect = func(ctx context.Context, conn *gaussdbconn.PgConn) error {
+	config.AfterConnect = func(ctx context.Context, conn *gaussdbconn.GaussdbConn) error {
 		_, err := conn.Exec(ctx, "set search_path to foobar;").ReadAll()
 		return err
 	}
@@ -644,15 +645,15 @@ func TestConnPrepareSyntaxError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	psd, err := pgConn.Prepare(ctx, "ps1", "SYNTAX ERROR", nil)
+	psd, err := gaussdbConn.Prepare(ctx, "ps1", "SYNTAX ERROR", nil)
 	require.Nil(t, psd)
 	require.NotNil(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnPrepareContextPrecanceled(t *testing.T) {
@@ -661,19 +662,19 @@ func TestConnPrepareContextPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	cancel()
 
-	psd, err := pgConn.Prepare(ctx, "ps1", "select 1", nil)
+	psd, err := gaussdbConn.Prepare(ctx, "ps1", "select 1", nil)
 	assert.Nil(t, psd)
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(err))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnDeallocate(t *testing.T) {
@@ -682,26 +683,26 @@ func TestConnDeallocate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "select 1", nil)
-	require.NoError(t, err)
-
-	_, err = pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select 1", nil)
 	require.NoError(t, err)
 
-	err = pgConn.Deallocate(ctx, "ps1")
+	_, err = gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
 	require.NoError(t, err)
 
-	_, err = pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
+	err = gaussdbConn.Deallocate(ctx, "ps1")
+	require.NoError(t, err)
+
+	_, err = gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
 	require.Error(t, err)
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, err, &pgErr)
-	require.Equal(t, "26000", pgErr.Code)
+	var gaussdbError *gaussdbconn.GaussdbError
+	require.ErrorAs(t, err, &gaussdbError)
+	require.Equal(t, "26000", gaussdbError.Code)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnDeallocateSucceedsInAbortedTransaction(t *testing.T) {
@@ -710,37 +711,37 @@ func TestConnDeallocateSucceedsInAbortedTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	err = pgConn.Exec(ctx, "begin").Close()
-	require.NoError(t, err)
-
-	_, err = pgConn.Prepare(ctx, "ps1", "select 1", nil)
+	err = gaussdbConn.Exec(ctx, "begin").Close()
 	require.NoError(t, err)
 
-	_, err = pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select 1", nil)
 	require.NoError(t, err)
 
-	err = pgConn.Exec(ctx, "select 1/0").Close() // break transaction with divide by 0 error
+	_, err = gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
+	require.NoError(t, err)
+
+	err = gaussdbConn.Exec(ctx, "select 1/0").Close() // break transaction with divide by 0 error
 	require.Error(t, err)
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, err, &pgErr)
-	require.Equal(t, "22012", pgErr.Code)
+	var gaussdbError *gaussdbconn.GaussdbError
+	require.ErrorAs(t, err, &gaussdbError)
+	require.Equal(t, "22012", gaussdbError.Code)
 
-	err = pgConn.Deallocate(ctx, "ps1")
+	err = gaussdbConn.Deallocate(ctx, "ps1")
 	require.NoError(t, err)
 
-	err = pgConn.Exec(ctx, "rollback").Close()
+	err = gaussdbConn.Exec(ctx, "rollback").Close()
 	require.NoError(t, err)
 
-	_, err = pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
+	_, err = gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Close()
 	require.Error(t, err)
-	require.ErrorAs(t, err, &pgErr)
-	require.Equal(t, "26000", pgErr.Code)
+	require.ErrorAs(t, err, &gaussdbError)
+	require.Equal(t, "26000", gaussdbError.Code)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnDeallocateNonExistantStatementSucceeds(t *testing.T) {
@@ -749,14 +750,14 @@ func TestConnDeallocateNonExistantStatementSucceeds(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	err = pgConn.Deallocate(ctx, "ps1")
+	err = gaussdbConn.Deallocate(ctx, "ps1")
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExec(t *testing.T) {
@@ -765,11 +766,11 @@ func TestConnExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	results, err := pgConn.Exec(ctx, "select 'Hello, world'").ReadAll()
+	results, err := gaussdbConn.Exec(ctx, "select 'Hello, world'").ReadAll()
 	assert.NoError(t, err)
 
 	assert.Len(t, results, 1)
@@ -778,7 +779,7 @@ func TestConnExec(t *testing.T) {
 	assert.Len(t, results[0].Rows, 1)
 	assert.Equal(t, "Hello, world", string(results[0].Rows[0][0]))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecEmpty(t *testing.T) {
@@ -787,11 +788,11 @@ func TestConnExecEmpty(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	multiResult := pgConn.Exec(ctx, ";")
+	multiResult := gaussdbConn.Exec(ctx, ";")
 
 	resultCount := 0
 	for multiResult.NextResult() {
@@ -802,7 +803,7 @@ func TestConnExecEmpty(t *testing.T) {
 	err = multiResult.Close()
 	assert.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecMultipleQueries(t *testing.T) {
@@ -811,11 +812,11 @@ func TestConnExecMultipleQueries(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	results, err := pgConn.Exec(ctx, "select 'Hello, world'; select 1").ReadAll()
+	results, err := gaussdbConn.Exec(ctx, "select 'Hello, world'; select 1").ReadAll()
 	assert.NoError(t, err)
 
 	assert.Len(t, results, 2)
@@ -830,7 +831,7 @@ func TestConnExecMultipleQueries(t *testing.T) {
 	assert.Len(t, results[1].Rows, 1)
 	assert.Equal(t, "1", string(results[1].Rows[0][0]))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecMultipleQueriesEagerFieldDescriptions(t *testing.T) {
@@ -839,11 +840,11 @@ func TestConnExecMultipleQueriesEagerFieldDescriptions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	mrr := pgConn.Exec(ctx, "select 'Hello, world' as msg; select 1 as num")
+	mrr := gaussdbConn.Exec(ctx, "select 'Hello, world' as msg; select 1 as num")
 
 	require.True(t, mrr.NextResult())
 	require.Len(t, mrr.ResultReader().FieldDescriptions(), 1)
@@ -861,7 +862,7 @@ func TestConnExecMultipleQueriesEagerFieldDescriptions(t *testing.T) {
 
 	require.NoError(t, mrr.Close())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecMultipleQueriesError(t *testing.T) {
@@ -870,19 +871,19 @@ func TestConnExecMultipleQueriesError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	results, err := pgConn.Exec(ctx, "select 1; select 1/0; select 1").ReadAll()
+	results, err := gaussdbConn.Exec(ctx, "select 1; select 1/0; select 1").ReadAll()
 	require.NotNil(t, err)
-	if pgErr, ok := err.(*gaussdbconn.PgError); ok {
-		assert.Equal(t, "22012", pgErr.Code)
+	if gaussdbError, ok := err.(*gaussdbconn.GaussdbError); ok {
+		assert.Equal(t, "22012", gaussdbError.Code)
 	} else {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		// CockroachDB starts the second query result set and then sends the divide by zero error.
 		require.Len(t, results, 2)
 		assert.Len(t, results[0].Rows, 1)
@@ -895,7 +896,7 @@ func TestConnExecMultipleQueriesError(t *testing.T) {
 		assert.Equal(t, "1", string(results[0].Rows[0][0]))
 	}
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecDeferredError(t *testing.T) {
@@ -904,11 +905,11 @@ func TestConnExecDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support deferred constraint (https://github.com/cockroachdb/cockroach/issues/31632)")
 	}
 
@@ -920,17 +921,17 @@ func TestConnExecDeferredError(t *testing.T) {
 
 	insert into t (id, n) values ('a', 1), ('b', 2), ('c', 3);`
 
-	_, err = pgConn.Exec(ctx, setupSQL).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, setupSQL).ReadAll()
 	assert.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, `update t set n=n+1 where id='b' returning *`).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, `update t set n=n+1 where id='b' returning *`).ReadAll()
 	require.NotNil(t, err)
 
-	var pgErr *gaussdbconn.PgError
-	require.True(t, errors.As(err, &pgErr))
-	require.Equal(t, "23505", pgErr.Code)
+	var gaussdbError *gaussdbconn.GaussdbError
+	require.True(t, errors.As(err, &gaussdbError))
+	require.Equal(t, "23505", gaussdbError.Code)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecContextCanceled(t *testing.T) {
@@ -939,23 +940,23 @@ func TestConnExecContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 	cancel()
 
 	ctx, cancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	multiResult := pgConn.Exec(ctx, "select 'Hello, world', pg_sleep(1)")
+	multiResult := gaussdbConn.Exec(ctx, "select 'Hello, world', pg_sleep(1)")
 
 	for multiResult.NextResult() {
 	}
 	err = multiResult.Close()
 	assert.True(t, gaussdbconn.Timeout(err))
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -967,17 +968,17 @@ func TestConnExecContextPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	cancel()
-	_, err = pgConn.Exec(ctx, "select 'Hello, world'").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "select 'Hello, world'").ReadAll()
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(err))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParams(t *testing.T) {
@@ -986,11 +987,11 @@ func TestConnExecParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	result := pgConn.ExecParams(ctx, "select $1::text as msg", [][]byte{[]byte("Hello, world")}, nil, nil, nil)
+	result := gaussdbConn.ExecParams(ctx, "select $1::text as msg", [][]byte{[]byte("Hello, world")}, nil, nil, nil)
 	require.Len(t, result.FieldDescriptions(), 1)
 	assert.Equal(t, "msg", result.FieldDescriptions()[0].Name)
 
@@ -1004,7 +1005,7 @@ func TestConnExecParams(t *testing.T) {
 	assert.Equal(t, "SELECT 1", commandTag.String())
 	assert.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParamsDeferredError(t *testing.T) {
@@ -1013,11 +1014,11 @@ func TestConnExecParamsDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support deferred constraint (https://github.com/cockroachdb/cockroach/issues/31632)")
 	}
 
@@ -1029,16 +1030,16 @@ func TestConnExecParamsDeferredError(t *testing.T) {
 
 	insert into t (id, n) values ('a', 1), ('b', 2), ('c', 3);`
 
-	_, err = pgConn.Exec(ctx, setupSQL).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, setupSQL).ReadAll()
 	assert.NoError(t, err)
 
-	result := pgConn.ExecParams(ctx, `update t set n=n+1 where id='b' returning *`, nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, `update t set n=n+1 where id='b' returning *`, nil, nil, nil, nil).Read()
 	require.NotNil(t, result.Err)
-	var pgErr *gaussdbconn.PgError
-	require.True(t, errors.As(result.Err, &pgErr))
-	require.Equal(t, "23505", pgErr.Code)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.True(t, errors.As(result.Err, &gaussdbErr))
+	require.Equal(t, "23505", gaussdbErr.Code)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParamsMaxNumberOfParams(t *testing.T) {
@@ -1047,9 +1048,9 @@ func TestConnExecParamsMaxNumberOfParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	paramCount := math.MaxUint16
 	params := make([]string, 0, paramCount)
@@ -1060,11 +1061,11 @@ func TestConnExecParamsMaxNumberOfParams(t *testing.T) {
 	}
 	sql := "values" + strings.Join(params, ", ")
 
-	result := pgConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 	require.Len(t, result.Rows, paramCount)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParamsTooManyParams(t *testing.T) {
@@ -1073,9 +1074,9 @@ func TestConnExecParamsTooManyParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	paramCount := math.MaxUint16 + 1
 	params := make([]string, 0, paramCount)
@@ -1086,11 +1087,11 @@ func TestConnExecParamsTooManyParams(t *testing.T) {
 	}
 	sql := "values" + strings.Join(params, ", ")
 
-	result := pgConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
 	require.Error(t, result.Err)
 	require.Equal(t, "extended protocol limited to 65535 parameters", result.Err.Error())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParamsCanceled(t *testing.T) {
@@ -1099,13 +1100,13 @@ func TestConnExecParamsCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	result := pgConn.ExecParams(ctx, "select current_database(), pg_sleep(1)", nil, nil, nil, nil)
+	result := gaussdbConn.ExecParams(ctx, "select current_database(), pg_sleep(1)", nil, nil, nil, nil)
 	rowCount := 0
 	for result.NextRow() {
 		rowCount += 1
@@ -1116,9 +1117,9 @@ func TestConnExecParamsCanceled(t *testing.T) {
 	assert.True(t, gaussdbconn.Timeout(err))
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -1130,17 +1131,17 @@ func TestConnExecParamsPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	cancel()
-	result := pgConn.ExecParams(ctx, "select $1::text", [][]byte{[]byte("Hello, world")}, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select $1::text", [][]byte{[]byte("Hello, world")}, nil, nil, nil).Read()
 	require.Error(t, result.Err)
 	assert.True(t, errors.Is(result.Err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(result.Err))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecParamsEmptySQL(t *testing.T) {
@@ -1149,16 +1150,16 @@ func TestConnExecParamsEmptySQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	result := pgConn.ExecParams(ctx, "", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "", nil, nil, nil, nil).Read()
 	assert.Equal(t, gaussdbconn.CommandTag{}, result.CommandTag)
 	assert.Len(t, result.Rows, 0)
 	assert.NoError(t, result.Err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 // https://github.com/jackc/pgx/issues/859
@@ -1168,11 +1169,11 @@ func TestResultReaderValuesHaveSameCapacityAsLength(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	result := pgConn.ExecParams(ctx, "select $1::text as msg", [][]byte{[]byte("Hello, world")}, nil, nil, nil)
+	result := gaussdbConn.ExecParams(ctx, "select $1::text as msg", [][]byte{[]byte("Hello, world")}, nil, nil, nil)
 	require.Len(t, result.FieldDescriptions(), 1)
 	assert.Equal(t, "msg", result.FieldDescriptions()[0].Name)
 
@@ -1187,7 +1188,7 @@ func TestResultReaderValuesHaveSameCapacityAsLength(t *testing.T) {
 	assert.Equal(t, "SELECT 1", commandTag.String())
 	assert.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 // https://github.com/jackc/pgx/issues/1987
@@ -1197,15 +1198,15 @@ func TestResultReaderReadNil(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	result := pgConn.ExecParams(ctx, "select null::text", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select null::text", nil, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 	require.Nil(t, result.Rows[0][0])
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecPrepared(t *testing.T) {
@@ -1214,17 +1215,17 @@ func TestConnExecPrepared(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	psd, err := pgConn.Prepare(ctx, "ps1", "select $1::text as msg", nil)
+	psd, err := gaussdbConn.Prepare(ctx, "ps1", "select $1::text as msg", nil)
 	require.NoError(t, err)
 	require.NotNil(t, psd)
 	assert.Len(t, psd.ParamOIDs, 1)
 	assert.Len(t, psd.Fields, 1)
 
-	result := pgConn.ExecPrepared(ctx, "ps1", [][]byte{[]byte("Hello, world")}, nil, nil)
+	result := gaussdbConn.ExecPrepared(ctx, "ps1", [][]byte{[]byte("Hello, world")}, nil, nil)
 	require.Len(t, result.FieldDescriptions(), 1)
 	assert.Equal(t, "msg", result.FieldDescriptions()[0].Name)
 
@@ -1238,7 +1239,7 @@ func TestConnExecPrepared(t *testing.T) {
 	assert.Equal(t, "SELECT 1", commandTag.String())
 	assert.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecPreparedMaxNumberOfParams(t *testing.T) {
@@ -1247,9 +1248,9 @@ func TestConnExecPreparedMaxNumberOfParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	paramCount := math.MaxUint16
 	params := make([]string, 0, paramCount)
@@ -1260,17 +1261,17 @@ func TestConnExecPreparedMaxNumberOfParams(t *testing.T) {
 	}
 	sql := "values" + strings.Join(params, ", ")
 
-	psd, err := pgConn.Prepare(ctx, "ps1", sql, nil)
+	psd, err := gaussdbConn.Prepare(ctx, "ps1", sql, nil)
 	require.NoError(t, err)
 	require.NotNil(t, psd)
 	assert.Len(t, psd.ParamOIDs, paramCount)
 	assert.Len(t, psd.Fields, 1)
 
-	result := pgConn.ExecPrepared(ctx, "ps1", args, nil, nil).Read()
+	result := gaussdbConn.ExecPrepared(ctx, "ps1", args, nil, nil).Read()
 	require.NoError(t, result.Err)
 	require.Len(t, result.Rows, paramCount)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecPreparedTooManyParams(t *testing.T) {
@@ -1279,9 +1280,9 @@ func TestConnExecPreparedTooManyParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	paramCount := math.MaxUint16 + 1
 	params := make([]string, 0, paramCount)
@@ -1292,8 +1293,8 @@ func TestConnExecPreparedTooManyParams(t *testing.T) {
 	}
 	sql := "values" + strings.Join(params, ", ")
 
-	psd, err := pgConn.Prepare(ctx, "ps1", sql, nil)
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	psd, err := gaussdbConn.Prepare(ctx, "ps1", sql, nil)
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		// CockroachDB rejects preparing a statement with more than 65535 parameters.
 		require.EqualError(t, err, "ERROR: more than 65535 arguments to prepared statement: 65536 (SQLSTATE 08P01)")
 	} else {
@@ -1303,11 +1304,11 @@ func TestConnExecPreparedTooManyParams(t *testing.T) {
 		assert.Len(t, psd.ParamOIDs, paramCount)
 		assert.Len(t, psd.Fields, 1)
 
-		result := pgConn.ExecPrepared(ctx, "ps1", args, nil, nil).Read()
+		result := gaussdbConn.ExecPrepared(ctx, "ps1", args, nil, nil).Read()
 		require.EqualError(t, result.Err, "extended protocol limited to 65535 parameters")
 	}
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecPreparedCanceled(t *testing.T) {
@@ -1316,16 +1317,16 @@ func TestConnExecPreparedCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "select current_database(), pg_sleep(1)", nil)
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select current_database(), pg_sleep(1)", nil)
 	require.NoError(t, err)
 
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	result := pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil)
+	result := gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil)
 	rowCount := 0
 	for result.NextRow() {
 		rowCount += 1
@@ -1334,9 +1335,9 @@ func TestConnExecPreparedCanceled(t *testing.T) {
 	commandTag, err := result.Close()
 	assert.Equal(t, gaussdbconn.CommandTag{}, commandTag)
 	assert.True(t, gaussdbconn.Timeout(err))
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -1348,20 +1349,20 @@ func TestConnExecPreparedPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "select current_database(), pg_sleep(1)", nil)
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select current_database(), pg_sleep(1)", nil)
 	require.NoError(t, err)
 
 	cancel()
-	result := pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Read()
+	result := gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Read()
 	require.Error(t, result.Err)
 	assert.True(t, errors.Is(result.Err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(result.Err))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecPreparedEmptySQL(t *testing.T) {
@@ -1370,19 +1371,19 @@ func TestConnExecPreparedEmptySQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "", nil)
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "", nil)
 	require.NoError(t, err)
 
-	result := pgConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Read()
+	result := gaussdbConn.ExecPrepared(ctx, "ps1", nil, nil, nil).Read()
 	assert.Equal(t, gaussdbconn.CommandTag{}, result.CommandTag)
 	assert.Len(t, result.Rows, 0)
 	assert.NoError(t, result.Err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecBatch(t *testing.T) {
@@ -1391,11 +1392,11 @@ func TestConnExecBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "select $1::text", nil)
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select $1::text", nil)
 	require.NoError(t, err)
 
 	batch := &gaussdbconn.Batch{}
@@ -1403,7 +1404,7 @@ func TestConnExecBatch(t *testing.T) {
 	batch.ExecParams("select $1::text", [][]byte{[]byte("ExecParams 1")}, nil, nil, nil)
 	batch.ExecPrepared("ps1", [][]byte{[]byte("ExecPrepared 1")}, nil, nil)
 	batch.ExecParams("select $1::text", [][]byte{[]byte("ExecParams 2")}, nil, nil, nil)
-	results, err := pgConn.ExecBatch(ctx, batch).ReadAll()
+	results, err := gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	require.NoError(t, err)
 	require.Len(t, results, 3)
 
@@ -1447,23 +1448,23 @@ func TestConnExecBatchWriteError(t *testing.T) {
 		return mockConn, err
 	}
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	batch := &gaussdbconn.Batch{}
-	pgConn.Conn()
+	gaussdbConn.Conn()
 
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel2()
 
 	batch.ExecParams("select $1::text", [][]byte{[]byte("ExecParams 1")}, nil, nil, nil)
 	writeLatency = 2 * time.Second
-	mrr := pgConn.ExecBatch(ctx2, batch)
+	mrr := gaussdbConn.ExecBatch(ctx2, batch)
 	err = mrr.Close()
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
-	require.True(t, pgConn.IsClosed())
+	require.True(t, gaussdbConn.IsClosed())
 }
 
 func TestConnExecBatchDeferredError(t *testing.T) {
@@ -1472,11 +1473,11 @@ func TestConnExecBatchDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support deferred constraint (https://github.com/cockroachdb/cockroach/issues/31632)")
 	}
 
@@ -1488,19 +1489,19 @@ func TestConnExecBatchDeferredError(t *testing.T) {
 
 	insert into t (id, n) values ('a', 1), ('b', 2), ('c', 3);`
 
-	_, err = pgConn.Exec(ctx, setupSQL).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, setupSQL).ReadAll()
 	require.NoError(t, err)
 
 	batch := &gaussdbconn.Batch{}
 
 	batch.ExecParams(`update t set n=n+1 where id='b' returning *`, nil, nil, nil, nil)
-	_, err = pgConn.ExecBatch(ctx, batch).ReadAll()
+	_, err = gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	require.NotNil(t, err)
-	var pgErr *gaussdbconn.PgError
-	require.True(t, errors.As(err, &pgErr))
-	require.Equal(t, "23505", pgErr.Code)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.True(t, errors.As(err, &gaussdbErr))
+	require.Equal(t, "23505", gaussdbErr.Code)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnExecBatchPrecanceled(t *testing.T) {
@@ -1509,11 +1510,11 @@ func TestConnExecBatchPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Prepare(ctx, "ps1", "select $1::text", nil)
+	_, err = gaussdbConn.Prepare(ctx, "ps1", "select $1::text", nil)
 	require.NoError(t, err)
 
 	batch := &gaussdbconn.Batch{}
@@ -1523,12 +1524,12 @@ func TestConnExecBatchPrecanceled(t *testing.T) {
 	batch.ExecParams("select $1::text", [][]byte{[]byte("ExecParams 2")}, nil, nil, nil)
 
 	cancel()
-	_, err = pgConn.ExecBatch(ctx, batch).ReadAll()
+	_, err = gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(err))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 // Without concurrent reading and writing large batches can deadlock.
@@ -1544,9 +1545,9 @@ func TestConnExecBatchHuge(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	batch := &gaussdbconn.Batch{}
 
@@ -1558,7 +1559,7 @@ func TestConnExecBatchHuge(t *testing.T) {
 		batch.ExecParams("select $1::text", [][]byte{[]byte(args[i])}, nil, nil, nil)
 	}
 
-	results, err := pgConn.ExecBatch(ctx, batch).ReadAll()
+	results, err := gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	require.NoError(t, err)
 	require.Len(t, results, queryCount)
 
@@ -1575,15 +1576,15 @@ func TestConnExecBatchImplicitTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Skipping due to known server issue: (https://github.com/cockroachdb/cockroach/issues/44803)")
 	}
 
-	_, err = pgConn.Exec(ctx, "create temporary table t(id int)").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "create temporary table t(id int)").ReadAll()
 	require.NoError(t, err)
 
 	batch := &gaussdbconn.Batch{}
@@ -1592,10 +1593,10 @@ func TestConnExecBatchImplicitTransaction(t *testing.T) {
 	batch.ExecParams("insert into t(id) values(2)", nil, nil, nil, nil)
 	batch.ExecParams("insert into t(id) values(3)", nil, nil, nil, nil)
 	batch.ExecParams("select 1/0", nil, nil, nil, nil)
-	_, err = pgConn.ExecBatch(ctx, batch).ReadAll()
+	_, err = gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	require.Error(t, err)
 
-	result := pgConn.ExecParams(ctx, "select count(*) from t", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select count(*) from t", nil, nil, nil, nil).Read()
 	require.Equal(t, "0", string(result.Rows[0][0]))
 }
 
@@ -1605,12 +1606,12 @@ func TestConnLocking(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	mrr := pgConn.Exec(ctx, "select 'Hello, world'")
-	_, err = pgConn.Exec(ctx, "select 'Hello, world'").ReadAll()
+	mrr := gaussdbConn.Exec(ctx, "select 'Hello, world'")
+	_, err = gaussdbConn.Exec(ctx, "select 'Hello, world'").ReadAll()
 	assert.Error(t, err)
 	assert.Equal(t, "conn busy", err.Error())
 	assert.True(t, gaussdbconn.SafeToRetry(err))
@@ -1623,7 +1624,7 @@ func TestConnLocking(t *testing.T) {
 	assert.Len(t, results[0].Rows, 1)
 	assert.Equal(t, "Hello, world", string(results[0].Rows[0][0]))
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnOnNotice(t *testing.T) {
@@ -1636,20 +1637,20 @@ func TestConnOnNotice(t *testing.T) {
 	require.NoError(t, err)
 
 	var notice *gaussdbconn.Notice
-	config.OnNotice = func(c *gaussdbconn.PgConn, n *gaussdbconn.Notice) {
+	config.OnNotice = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notice) {
 		notice = n
 	}
 	config.RuntimeParams["client_min_messages"] = "notice" // Ensure we only get the message we expect.
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support PL/PGSQL (https://github.com/cockroachdb/cockroach/issues/17511)")
 	}
 
-	multiResult := pgConn.Exec(ctx, `do $$
+	multiResult := gaussdbConn.Exec(ctx, `do $$
 begin
   raise notice 'hello, world';
 end$$;`)
@@ -1658,7 +1659,7 @@ end$$;`)
 	assert.Equal(t, "NOTICE", notice.SeverityUnlocalized)
 	assert.Equal(t, "hello, world", notice.Message)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnOnNotification(t *testing.T) {
@@ -1671,19 +1672,19 @@ func TestConnOnNotification(t *testing.T) {
 	require.NoError(t, err)
 
 	var msg string
-	config.OnNotification = func(c *gaussdbconn.PgConn, n *gaussdbconn.Notification) {
+	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
 		msg = n.Payload
 	}
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support LISTEN / NOTIFY (https://github.com/cockroachdb/cockroach/issues/41522)")
 	}
 
-	_, err = pgConn.Exec(ctx, "listen foo").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
 	require.NoError(t, err)
 
 	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
@@ -1692,12 +1693,12 @@ func TestConnOnNotification(t *testing.T) {
 	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
 	require.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, "select 1").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "select 1").ReadAll()
 	require.NoError(t, err)
 
 	assert.Equal(t, "bar", msg)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnWaitForNotification(t *testing.T) {
@@ -1710,19 +1711,19 @@ func TestConnWaitForNotification(t *testing.T) {
 	require.NoError(t, err)
 
 	var msg string
-	config.OnNotification = func(c *gaussdbconn.PgConn, n *gaussdbconn.Notification) {
+	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
 		msg = n.Payload
 	}
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support LISTEN / NOTIFY (https://github.com/cockroachdb/cockroach/issues/41522)")
 	}
 
-	_, err = pgConn.Exec(ctx, "listen foo").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
 	require.NoError(t, err)
 
 	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
@@ -1731,12 +1732,12 @@ func TestConnWaitForNotification(t *testing.T) {
 	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
 	require.NoError(t, err)
 
-	err = pgConn.WaitForNotification(ctx)
+	err = gaussdbConn.WaitForNotification(ctx)
 	require.NoError(t, err)
 
 	assert.Equal(t, "bar", msg)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnWaitForNotificationPrecanceled(t *testing.T) {
@@ -1748,15 +1749,15 @@ func TestConnWaitForNotificationPrecanceled(t *testing.T) {
 	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	cancel()
-	err = pgConn.WaitForNotification(ctx)
+	err = gaussdbConn.WaitForNotification(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnWaitForNotificationTimeout(t *testing.T) {
@@ -1768,17 +1769,17 @@ func TestConnWaitForNotificationTimeout(t *testing.T) {
 	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	ctx, cancel = context.WithTimeout(ctx, 5*time.Millisecond)
-	err = pgConn.WaitForNotification(ctx)
+	err = gaussdbConn.WaitForNotification(ctx)
 	cancel()
 	assert.True(t, gaussdbconn.Timeout(err))
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyToSmall(t *testing.T) {
@@ -1787,15 +1788,15 @@ func TestConnCopyToSmall(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does support COPY TO")
 	}
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int2,
 		b int4,
 		c int8,
@@ -1806,10 +1807,10 @@ func TestConnCopyToSmall(t *testing.T) {
 	)`).ReadAll()
 	require.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, `insert into foo values (0, 1, 2, 'abc', 'efg', '2000-01-01', '{"abc":"def","foo":"bar"}')`).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, `insert into foo values (0, 1, 2, 'abc', 'efg', '2000-01-01', '{"abc":"def","foo":"bar"}')`).ReadAll()
 	require.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, `insert into foo values (null, null, null, null, null, null, null)`).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, `insert into foo values (null, null, null, null, null, null, null)`).ReadAll()
 	require.NoError(t, err)
 
 	inputBytes := []byte("0\t1\t2\tabc\tefg\t2000-01-01\t{\"abc\":\"def\",\"foo\":\"bar\"}\n" +
@@ -1817,13 +1818,13 @@ func TestConnCopyToSmall(t *testing.T) {
 
 	outputWriter := bytes.NewBuffer(make([]byte, 0, len(inputBytes)))
 
-	res, err := pgConn.CopyTo(ctx, outputWriter, "copy foo to stdout")
+	res, err := gaussdbConn.CopyTo(ctx, outputWriter, "copy foo to stdout")
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(2), res.RowsAffected())
 	assert.Equal(t, inputBytes, outputWriter.Bytes())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyToLarge(t *testing.T) {
@@ -1832,15 +1833,15 @@ func TestConnCopyToLarge(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does support COPY TO")
 	}
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int2,
 		b int4,
 		c int8,
@@ -1855,20 +1856,20 @@ func TestConnCopyToLarge(t *testing.T) {
 	inputBytes := make([]byte, 0)
 
 	for i := 0; i < 1000; i++ {
-		_, err = pgConn.Exec(ctx, `insert into foo values (0, 1, 2, 'abc', 'efg', '2000-01-01', '{"abc":"def","foo":"bar"}', 'oooo')`).ReadAll()
+		_, err = gaussdbConn.Exec(ctx, `insert into foo values (0, 1, 2, 'abc', 'efg', '2000-01-01', '{"abc":"def","foo":"bar"}', 'oooo')`).ReadAll()
 		require.NoError(t, err)
 		inputBytes = append(inputBytes, "0\t1\t2\tabc\tefg\t2000-01-01\t{\"abc\":\"def\",\"foo\":\"bar\"}\t\\\\x6f6f6f6f\n"...)
 	}
 
 	outputWriter := bytes.NewBuffer(make([]byte, 0, len(inputBytes)))
 
-	res, err := pgConn.CopyTo(ctx, outputWriter, "copy foo to stdout")
+	res, err := gaussdbConn.CopyTo(ctx, outputWriter, "copy foo to stdout")
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(1000), res.RowsAffected())
 	assert.Equal(t, inputBytes, outputWriter.Bytes())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyToQueryError(t *testing.T) {
@@ -1877,18 +1878,18 @@ func TestConnCopyToQueryError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	outputWriter := bytes.NewBuffer(make([]byte, 0))
 
-	res, err := pgConn.CopyTo(ctx, outputWriter, "cropy foo to stdout")
+	res, err := gaussdbConn.CopyTo(ctx, outputWriter, "cropy foo to stdout")
 	require.Error(t, err)
-	assert.IsType(t, &gaussdbconn.PgError{}, err)
+	assert.IsType(t, &gaussdbconn.GaussdbError{}, err)
 	assert.Equal(t, int64(0), res.RowsAffected())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyToCanceled(t *testing.T) {
@@ -1897,11 +1898,11 @@ func TestConnCopyToCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support query cancellation (https://github.com/cockroachdb/cockroach/issues/41335)")
 	}
 
@@ -1909,13 +1910,13 @@ func TestConnCopyToCanceled(t *testing.T) {
 
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	res, err := pgConn.CopyTo(ctx, outputWriter, "copy (select *, pg_sleep(0.01) from generate_series(1,1000)) to stdout")
+	res, err := gaussdbConn.CopyTo(ctx, outputWriter, "copy (select *, pg_sleep(0.01) from generate_series(1,1000)) to stdout")
 	assert.Error(t, err)
 	assert.Equal(t, gaussdbconn.CommandTag{}, res)
 
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -1927,20 +1928,20 @@ func TestConnCopyToPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	outputWriter := &bytes.Buffer{}
 
 	cancel()
-	res, err := pgConn.CopyTo(ctx, outputWriter, "copy (select * from generate_series(1,1000)) to stdout")
+	res, err := gaussdbConn.CopyTo(ctx, outputWriter, "copy (select * from generate_series(1,1000)) to stdout")
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(err))
 	assert.Equal(t, gaussdbconn.CommandTag{}, res)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFrom(t *testing.T) {
@@ -1949,11 +1950,11 @@ func TestConnCopyFrom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -1971,19 +1972,19 @@ func TestConnCopyFrom(t *testing.T) {
 	}
 
 	copySql := "COPY foo FROM STDIN WITH (FORMAT csv)"
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		copySql = "COPY foo FROM STDIN WITH CSV"
 	}
-	ct, err := pgConn.CopyFrom(ctx, srcBuf, copySql)
+	ct, err := gaussdbConn.CopyFrom(ctx, srcBuf, copySql)
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(inputRows)), ct.RowsAffected())
 
-	result := pgConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 
 	assert.Equal(t, inputRows, result.Rows)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFromBinary(t *testing.T) {
@@ -1992,11 +1993,11 @@ func TestConnCopyFromBinary(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -2004,25 +2005,25 @@ func TestConnCopyFromBinary(t *testing.T) {
 
 	buf := []byte{}
 	buf = append(buf, "PGCOPY\n\377\r\n\000"...)
-	buf = pgio.AppendInt32(buf, 0)
-	buf = pgio.AppendInt32(buf, 0)
+	buf = gaussdbio.AppendInt32(buf, 0)
+	buf = gaussdbio.AppendInt32(buf, 0)
 
 	inputRows := [][][]byte{}
 	for i := 0; i < 1000; i++ {
 		// Number of elements in the tuple
-		buf = pgio.AppendInt16(buf, int16(2))
+		buf = gaussdbio.AppendInt16(buf, int16(2))
 		a := i
 
 		// Length of element for column `a int4`
-		buf = pgio.AppendInt32(buf, 4)
-		buf, err = gaussdbtype.NewMap().Encode(gaussdbtype.Int4OID, pgx.BinaryFormatCode, a, buf)
+		buf = gaussdbio.AppendInt32(buf, 4)
+		buf, err = gaussdbtype.NewMap().Encode(gaussdbtype.Int4OID, gaussdbgo.BinaryFormatCode, a, buf)
 		require.NoError(t, err)
 
 		b := "foo " + strconv.Itoa(a) + " bar"
 		lenB := int32(len([]byte(b)))
 		// Length of element for column `b varchar`
-		buf = pgio.AppendInt32(buf, lenB)
-		buf, err = gaussdbtype.NewMap().Encode(gaussdbtype.VarcharOID, pgx.BinaryFormatCode, b, buf)
+		buf = gaussdbio.AppendInt32(buf, lenB)
+		buf, err = gaussdbtype.NewMap().Encode(gaussdbtype.VarcharOID, gaussdbgo.BinaryFormatCode, b, buf)
 		require.NoError(t, err)
 
 		inputRows = append(inputRows, [][]byte{[]byte(strconv.Itoa(a)), []byte(b)})
@@ -2030,16 +2031,16 @@ func TestConnCopyFromBinary(t *testing.T) {
 
 	srcBuf := &bytes.Buffer{}
 	srcBuf.Write(buf)
-	ct, err := pgConn.CopyFrom(ctx, srcBuf, "COPY foo (a, b) FROM STDIN BINARY;")
+	ct, err := gaussdbConn.CopyFrom(ctx, srcBuf, "COPY foo (a, b) FROM STDIN BINARY;")
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(inputRows)), ct.RowsAffected())
 
-	result := pgConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 
 	assert.Equal(t, inputRows, result.Rows)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFromCanceled(t *testing.T) {
@@ -2048,11 +2049,11 @@ func TestConnCopyFromCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -2073,17 +2074,17 @@ func TestConnCopyFromCanceled(t *testing.T) {
 
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	copySql := "COPY foo FROM STDIN WITH (FORMAT csv)"
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		copySql = "COPY foo FROM STDIN WITH CSV"
 	}
-	ct, err := pgConn.CopyFrom(ctx, r, copySql)
+	ct, err := gaussdbConn.CopyFrom(ctx, r, copySql)
 	cancel()
 	assert.Equal(t, int64(0), ct.RowsAffected())
 	assert.Error(t, err)
 
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -2095,11 +2096,11 @@ func TestConnCopyFromPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -2120,13 +2121,13 @@ func TestConnCopyFromPrecanceled(t *testing.T) {
 
 	ctx, cancel = context.WithCancel(ctx)
 	cancel()
-	ct, err := pgConn.CopyFrom(ctx, r, "COPY foo FROM STDIN WITH (FORMAT csv)")
+	ct, err := gaussdbConn.CopyFrom(ctx, r, "COPY foo FROM STDIN WITH (FORMAT csv)")
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 	assert.True(t, gaussdbconn.SafeToRetry(err))
 	assert.Equal(t, gaussdbconn.CommandTag{}, ct)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFromGzipReader(t *testing.T) {
@@ -2135,15 +2136,15 @@ func TestConnCopyFromGzipReader(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not fully support COPY FROM (https://www.cockroachlabs.com/docs/v20.2/copy-from.html)")
 	}
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -2174,22 +2175,22 @@ func TestConnCopyFromGzipReader(t *testing.T) {
 	require.NoError(t, err)
 
 	copySql := "COPY foo FROM STDIN WITH (FORMAT csv)"
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		copySql = "COPY foo FROM STDIN WITH CSV"
 	}
-	ct, err := pgConn.CopyFrom(ctx, gr, copySql)
+	ct, err := gaussdbConn.CopyFrom(ctx, gr, copySql)
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(inputRows)), ct.RowsAffected())
 
 	err = gr.Close()
 	require.NoError(t, err)
 
-	result := pgConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select * from foo", nil, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 
 	assert.Equal(t, inputRows, result.Rows)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFromQuerySyntaxError(t *testing.T) {
@@ -2198,11 +2199,11 @@ func TestConnCopyFromQuerySyntaxError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, `create temporary table foo(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table foo(
 		a int4,
 		b varchar
 	)`).ReadAll()
@@ -2211,7 +2212,7 @@ func TestConnCopyFromQuerySyntaxError(t *testing.T) {
 	srcBuf := &bytes.Buffer{}
 
 	// Send data even though the COPY FROM command will be rejected with a syntax error. This ensures that this does not
-	// break the connection. See https://github.com/jackc/pgconn/pull/127 for context.
+	// break the connection. See https://github.com/jackc/gaussdbConn/pull/127 for context.
 	inputRows := [][][]byte{}
 	for i := 0; i < 1000; i++ {
 		a := strconv.Itoa(i)
@@ -2221,12 +2222,12 @@ func TestConnCopyFromQuerySyntaxError(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	res, err := pgConn.CopyFrom(ctx, srcBuf, "cropy foo FROM STDIN WITH (FORMAT csv)")
+	res, err := gaussdbConn.CopyFrom(ctx, srcBuf, "cropy foo FROM STDIN WITH (FORMAT csv)")
 	require.Error(t, err)
-	assert.IsType(t, &gaussdbconn.PgError{}, err)
+	assert.IsType(t, &gaussdbconn.GaussdbError{}, err)
 	assert.Equal(t, int64(0), res.RowsAffected())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCopyFromQueryNoTableError(t *testing.T) {
@@ -2235,42 +2236,42 @@ func TestConnCopyFromQueryNoTableError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	srcBuf := &bytes.Buffer{}
 
-	res, err := pgConn.CopyFrom(ctx, srcBuf, "copy foo to stdout")
+	res, err := gaussdbConn.CopyFrom(ctx, srcBuf, "copy foo to stdout")
 	require.Error(t, err)
-	assert.IsType(t, &gaussdbconn.PgError{}, err)
+	assert.IsType(t, &gaussdbconn.GaussdbError{}, err)
 	assert.Equal(t, int64(0), res.RowsAffected())
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
-// https://github.com/jackc/pgconn/issues/21
+// https://github.com/jackc/gaussdbConn/issues/21
 func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support triggers (https://github.com/cockroachdb/cockroach/issues/28296)")
 	}
 
-	_, err = pgConn.Exec(ctx, `create temporary table sentences(
+	_, err = gaussdbConn.Exec(ctx, `create temporary table sentences(
 		t text,
 		ts tsvector
 	)`).ReadAll()
 	require.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, `create function pg_temp.sentences_trigger() returns trigger as $$
+	_, err = gaussdbConn.Exec(ctx, `create function pg_temp.sentences_trigger() returns trigger as $$
 	begin
 	  new.ts := to_tsvector(new.t);
 		return new;
@@ -2278,7 +2279,7 @@ func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 	$$ language plpgsql;`).ReadAll()
 	require.NoError(t, err)
 
-	_, err = pgConn.Exec(ctx, `create trigger sentences_update before insert on sentences for each row execute procedure pg_temp.sentences_trigger();`).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, `create trigger sentences_update before insert on sentences for each row execute procedure pg_temp.sentences_trigger();`).ReadAll()
 	require.NoError(t, err)
 
 	longString := make([]byte, 10001)
@@ -2291,7 +2292,7 @@ func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 		buf.Write([]byte(fmt.Sprintf("%s\n", string(longString))))
 	}
 
-	_, err = pgConn.CopyFrom(ctx, buf, "COPY sentences(t) FROM STDIN WITH (FORMAT csv)")
+	_, err = gaussdbConn.CopyFrom(ctx, buf, "COPY sentences(t) FROM STDIN WITH (FORMAT csv)")
 	require.NoError(t, err)
 }
 
@@ -2305,7 +2306,7 @@ func (d delayedReader) Read(p []byte) (int, error) {
 	return d.r.Read(p)
 }
 
-// https://github.com/jackc/pgconn/issues/128
+// https://github.com/jackc/gaussdbConn/issues/128
 func TestConnCopyFromDataWriteAfterErrorAndReturn(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -2318,10 +2319,10 @@ func TestConnCopyFromDataWriteAfterErrorAndReturn(t *testing.T) {
 	config, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not fully support COPY FROM")
 	}
 
@@ -2330,16 +2331,16 @@ func TestConnCopyFromDataWriteAfterErrorAndReturn(t *testing.T) {
 		n int not null
 	);`
 
-	_, err = pgConn.Exec(ctx, setupSQL).ReadAll()
+	_, err = gaussdbConn.Exec(ctx, setupSQL).ReadAll()
 	assert.NoError(t, err)
 
 	r1 := delayedReader{r: strings.NewReader(`id	0\n`)}
 	// Generate an error with a bogus COPY command
-	_, err = pgConn.CopyFrom(ctx, r1, "COPY nosuchtable FROM STDIN ")
+	_, err = gaussdbConn.CopyFrom(ctx, r1, "COPY nosuchtable FROM STDIN ")
 	assert.Error(t, err)
 
 	r2 := delayedReader{r: strings.NewReader(`id	0\n`)}
-	_, err = pgConn.CopyFrom(ctx, r2, "COPY t FROM STDIN")
+	_, err = gaussdbConn.CopyFrom(ctx, r2, "COPY t FROM STDIN")
 	assert.NoError(t, err)
 }
 
@@ -2349,9 +2350,9 @@ func TestConnEscapeString(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	tests := []struct {
 		in  string
@@ -2365,13 +2366,13 @@ func TestConnEscapeString(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		value, err := pgConn.EscapeString(tt.in)
+		value, err := gaussdbConn.EscapeString(tt.in)
 		if assert.NoErrorf(t, err, "%d.", i) {
 			assert.Equalf(t, tt.out, value, "%d.", i)
 		}
 	}
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCancelRequest(t *testing.T) {
@@ -2380,15 +2381,15 @@ func TestConnCancelRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	if pgConn.ParameterStatus("crdb_version") != "" {
+	if gaussdbConn.ParameterStatus("crdb_version") != "" {
 		t.Skip("Server does not support query cancellation (https://github.com/cockroachdb/cockroach/issues/41335)")
 	}
 
-	multiResult := pgConn.Exec(ctx, "select 'Hello, world', pg_sleep(25)")
+	multiResult := gaussdbConn.Exec(ctx, "select 'Hello, world', pg_sleep(25)")
 
 	errChan := make(chan error)
 	go func() {
@@ -2396,7 +2397,7 @@ func TestConnCancelRequest(t *testing.T) {
 		// Once Flush is available this could use that instead.
 		time.Sleep(1 * time.Second)
 
-		err := pgConn.CancelRequest(ctx)
+		err := gaussdbConn.CancelRequest(ctx)
 		errChan <- err
 	}()
 
@@ -2404,13 +2405,13 @@ func TestConnCancelRequest(t *testing.T) {
 	}
 	err = multiResult.Close()
 
-	require.IsType(t, &gaussdbconn.PgError{}, err)
-	require.Equal(t, "57014", err.(*gaussdbconn.PgError).Code)
+	require.IsType(t, &gaussdbconn.GaussdbError{}, err)
+	require.Equal(t, "57014", err.(*gaussdbconn.GaussdbError).Code)
 
 	err = <-errChan
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 // https://github.com/jackc/pgx/issues/659
@@ -2439,9 +2440,9 @@ func testConnContextCanceledCancelsRunningQueryOnServer(t *testing.T, connString
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, connString)
+	gaussdbConn, err := gaussdbconn.Connect(ctx, connString)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
@@ -2451,7 +2452,7 @@ func testConnContextCanceledCancelsRunningQueryOnServer(t *testing.T, connString
 	// server process to clients. However, we can check if the query is running by checking the generated query ID.
 	queryID := fmt.Sprintf("%s testConnContextCanceled %d", dbType, time.Now().UnixNano())
 
-	multiResult := pgConn.Exec(ctx, fmt.Sprintf(`
+	multiResult := gaussdbConn.Exec(ctx, fmt.Sprintf(`
 	-- %v
 	select 'Hello, world', pg_sleep(30)
 	`, queryID))
@@ -2460,9 +2461,9 @@ func testConnContextCanceledCancelsRunningQueryOnServer(t *testing.T, connString
 	}
 	err = multiResult.Close()
 	assert.True(t, gaussdbconn.Timeout(err))
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -2534,15 +2535,15 @@ func TestConnCloseWhileCancellableQueryInProgress(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	pgConn.Exec(ctx, "select n from generate_series(1,10) n")
+	gaussdbConn.Exec(ctx, "select n from generate_series(1,10) n")
 
 	closeCtx, _ := context.WithCancel(ctx)
-	pgConn.Close(closeCtx)
+	gaussdbConn.Close(closeCtx)
 	select {
-	case <-pgConn.CleanupDone():
+	case <-gaussdbConn.CleanupDone():
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connection cleanup exceeded maximum time")
 	}
@@ -2555,19 +2556,19 @@ func TestFatalErrorReceivedAfterCommandComplete(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	steps := pgmock.AcceptUnauthenticatedConnRequestSteps()
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Bind{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Execute{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Sync{}))
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.RowDescription{Fields: []gaussdbproto.FieldDescription{
+	steps := gaussdbmock.AcceptUnauthenticatedConnRequestSteps()
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Bind{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Execute{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Sync{}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.RowDescription{Fields: []gaussdbproto.FieldDescription{
 		{Name: []byte("mock")},
 	}}))
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.CommandComplete{CommandTag: []byte("SELECT 0")}))
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.CommandComplete{CommandTag: []byte("SELECT 0")}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
 
-	script := &pgmock.Script{Steps: steps}
+	script := &gaussdbmock.Script{Steps: steps}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:")
 	require.NoError(t, err)
@@ -2614,18 +2615,18 @@ func TestFatalErrorReceivedAfterCommandComplete(t *testing.T) {
 	require.Error(t, err)
 }
 
-// https://github.com/jackc/pgconn/issues/27
+// https://github.com/jackc/gaussdbConn/issues/27
 func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, "set client_min_messages = debug5").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "set client_min_messages = debug5").ReadAll()
 	require.NoError(t, err)
 
 	// The actual contents of this test aren't important. What's important is a large amount of data to be written and
@@ -2640,11 +2641,11 @@ func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 	}
 	sql := "values" + strings.Join(params, ", ")
 
-	result := pgConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, sql, args, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 	require.Len(t, result.Rows, paramCount)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestConnCheckConn(t *testing.T) {
@@ -2734,14 +2735,14 @@ func TestPipelinePrepare(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	result := pgConn.ExecParams(ctx, `create temporary table t (id text primary key)`, nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, `create temporary table t (id text primary key)`, nil, nil, nil, nil).Read()
 	require.NoError(t, result.Err)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendPrepare("selectInt", "select $1::bigint as a", nil)
 	pipeline.SendPrepare("selectText", "select $1::text as b", nil)
 	pipeline.SendPrepare("selectNoParams", "select 42 as c", nil)
@@ -2800,7 +2801,7 @@ func TestPipelinePrepare(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelinePrepareError(t *testing.T) {
@@ -2809,11 +2810,11 @@ func TestPipelinePrepareError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendPrepare("selectInt", "select $1::bigint as a", nil)
 	pipeline.SendPrepare("selectError", "bad", nil)
 	pipeline.SendPrepare("selectText", "select $1::text as b", nil)
@@ -2829,8 +2830,8 @@ func TestPipelinePrepareError(t *testing.T) {
 	require.Equal(t, []uint32{gaussdbtype.Int8OID}, sd.ParamOIDs)
 
 	results, err = pipeline.GetResults()
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, err, &pgErr)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.ErrorAs(t, err, &gaussdbErr)
 	require.Nil(t, results)
 
 	results, err = pipeline.GetResults()
@@ -2845,7 +2846,7 @@ func TestPipelinePrepareError(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelinePrepareAndDeallocate(t *testing.T) {
@@ -2854,11 +2855,11 @@ func TestPipelinePrepareAndDeallocate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendPrepare("selectInt", "select $1::bigint as a", nil)
 	pipeline.SendDeallocate("selectInt")
 	err = pipeline.Sync()
@@ -2889,7 +2890,7 @@ func TestPipelinePrepareAndDeallocate(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineQuery(t *testing.T) {
@@ -2898,11 +2899,11 @@ func TestPipelineQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendQueryParams(`select 1`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 2`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 3`, nil, nil, nil, nil)
@@ -2981,7 +2982,7 @@ func TestPipelineQuery(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelinePrepareQuery(t *testing.T) {
@@ -2990,11 +2991,11 @@ func TestPipelinePrepareQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendPrepare("ps", "select $1::text as msg", nil)
 	pipeline.SendQueryPrepared(`ps`, [][]byte{[]byte("hello")}, nil, nil)
 	pipeline.SendQueryPrepared(`ps`, [][]byte{[]byte("goodbye")}, nil, nil)
@@ -3041,7 +3042,7 @@ func TestPipelinePrepareQuery(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineQueryErrorBetweenSyncs(t *testing.T) {
@@ -3050,11 +3051,11 @@ func TestPipelineQueryErrorBetweenSyncs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendQueryParams(`select 1`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 2`, nil, nil, nil, nil)
 	err = pipeline.Sync()
@@ -3111,9 +3112,9 @@ func TestPipelineQueryErrorBetweenSyncs(t *testing.T) {
 	rr, ok = results.(*gaussdbconn.ResultReader)
 	require.Truef(t, ok, "expected ResultReader, got: %#v", results)
 	readResult = rr.Read()
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, readResult.Err, &pgErr)
-	require.Equal(t, "22012", pgErr.Code)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.ErrorAs(t, readResult.Err, &gaussdbErr)
+	require.Equal(t, "22012", gaussdbErr.Code)
 
 	results, err = pipeline.GetResults()
 	require.NoError(t, err)
@@ -3148,7 +3149,7 @@ func TestPipelineQueryErrorBetweenSyncs(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineFlushForSingleRequests(t *testing.T) {
@@ -3157,11 +3158,11 @@ func TestPipelineFlushForSingleRequests(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 
 	pipeline.SendPrepare("ps", "select $1::text as msg", nil)
 	pipeline.SendFlushRequest()
@@ -3247,7 +3248,7 @@ func TestPipelineFlushForSingleRequests(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineFlushForRequestSeries(t *testing.T) {
@@ -3256,11 +3257,11 @@ func TestPipelineFlushForRequestSeries(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendPrepare("ps", "select $1::bigint as num", nil)
 	err = pipeline.Sync()
 	require.NoError(t, err)
@@ -3396,7 +3397,7 @@ func TestPipelineFlushForRequestSeries(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineFlushWithError(t *testing.T) {
@@ -3405,11 +3406,11 @@ func TestPipelineFlushWithError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendQueryParams(`select 1`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 1/(3-n) from generate_series(1,10) n`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 2`, nil, nil, nil, nil)
@@ -3432,9 +3433,9 @@ func TestPipelineFlushWithError(t *testing.T) {
 	rr, ok = results.(*gaussdbconn.ResultReader)
 	require.Truef(t, ok, "expected ResultReader, got: %#v", results)
 	readResult = rr.Read()
-	var pgErr *gaussdbconn.PgError
-	require.ErrorAs(t, readResult.Err, &pgErr)
-	require.Equal(t, "22012", pgErr.Code)
+	var gaussdbErr *gaussdbconn.GaussdbError
+	require.ErrorAs(t, readResult.Err, &gaussdbErr)
+	require.Equal(t, "22012", gaussdbErr.Code)
 
 	results, err = pipeline.GetResults()
 	require.NoError(t, err)
@@ -3486,7 +3487,7 @@ func TestPipelineFlushWithError(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineCloseReadsUnreadResults(t *testing.T) {
@@ -3495,11 +3496,11 @@ func TestPipelineCloseReadsUnreadResults(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendQueryParams(`select 1`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 2`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 3`, nil, nil, nil, nil)
@@ -3524,7 +3525,7 @@ func TestPipelineCloseReadsUnreadResults(t *testing.T) {
 	err = pipeline.Close()
 	require.NoError(t, err)
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func TestPipelineCloseDetectsUnsyncedRequests(t *testing.T) {
@@ -3533,11 +3534,11 @@ func TestPipelineCloseDetectsUnsyncedRequests(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pipeline := pgConn.StartPipeline(ctx)
+	pipeline := gaussdbConn.StartPipeline(ctx)
 	pipeline.SendQueryParams(`select 1`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 2`, nil, nil, nil, nil)
 	pipeline.SendQueryParams(`select 3`, nil, nil, nil, nil)
@@ -3561,7 +3562,7 @@ func TestPipelineCloseDetectsUnsyncedRequests(t *testing.T) {
 	require.EqualError(t, err, "pipeline has unsynced requests")
 }
 
-func TestConnOnPgError(t *testing.T) {
+func TestConnOngaussdbError(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -3569,31 +3570,31 @@ func TestConnOnPgError(t *testing.T) {
 
 	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	config.OnPgError = func(c *gaussdbconn.PgConn, pgErr *gaussdbconn.PgError) bool {
+	config.OnGaussdbError = func(c *gaussdbconn.GaussdbConn, gaussdbErr *gaussdbconn.GaussdbError) bool {
 		require.NotNil(t, c)
-		require.NotNil(t, pgErr)
+		require.NotNil(t, gaussdbErr)
 		// close connection on undefined tables only
-		if pgErr.Code == "42P01" {
+		if gaussdbErr.Code == "42P01" {
 			return false
 		}
 		return true
 	}
 
-	pgConn, err := gaussdbconn.ConnectConfig(ctx, config)
+	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	_, err = pgConn.Exec(ctx, "select 'Hello, world'").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "select 'Hello, world'").ReadAll()
 	assert.NoError(t, err)
-	assert.False(t, pgConn.IsClosed())
+	assert.False(t, gaussdbConn.IsClosed())
 
-	_, err = pgConn.Exec(ctx, "select 1/0").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "select 1/0").ReadAll()
 	assert.Error(t, err)
-	assert.False(t, pgConn.IsClosed())
+	assert.False(t, gaussdbConn.IsClosed())
 
-	_, err = pgConn.Exec(ctx, "select * from non_existant_table").ReadAll()
+	_, err = gaussdbConn.Exec(ctx, "select * from non_existant_table").ReadAll()
 	assert.Error(t, err)
-	assert.True(t, pgConn.IsClosed())
+	assert.True(t, gaussdbConn.IsClosed())
 }
 
 func TestConnCustomData(t *testing.T) {
@@ -3602,27 +3603,27 @@ func TestConnCustomData(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
-	pgConn.CustomData()["foo"] = "bar"
-	assert.Equal(t, "bar", pgConn.CustomData()["foo"])
+	gaussdbConn.CustomData()["foo"] = "bar"
+	assert.Equal(t, "bar", gaussdbConn.CustomData()["foo"])
 
-	ensureConnValid(t, pgConn)
+	ensureConnValid(t, gaussdbConn)
 }
 
 func Example() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer pgConn.Close(ctx)
+	defer gaussdbConn.Close(ctx)
 
-	result := pgConn.ExecParams(ctx, "select generate_series(1,3)", nil, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select generate_series(1,3)", nil, nil, nil, nil).Read()
 	if result.Err != nil {
 		log.Fatalln(result.Err)
 	}
@@ -3826,22 +3827,22 @@ func TestFatalErrorReceivedInPipelineMode(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	steps := pgmock.AcceptUnauthenticatedConnRequestSteps()
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
-	steps = append(steps, pgmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.RowDescription{Fields: []gaussdbproto.FieldDescription{
+	steps := gaussdbmock.AcceptUnauthenticatedConnRequestSteps()
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Parse{}))
+	steps = append(steps, gaussdbmock.ExpectAnyMessage(&gaussdbproto.Describe{}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.RowDescription{Fields: []gaussdbproto.FieldDescription{
 		{Name: []byte("mock")},
 	}}))
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
 	// We shouldn't get anything after the first fatal error. But the reported issue was with PgBouncer so maybe that
 	// causes the issue. Anyway, a FATAL error after the connection had already been killed could cause a panic.
-	steps = append(steps, pgmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
+	steps = append(steps, gaussdbmock.SendMessage(&gaussdbproto.ErrorResponse{Severity: "FATAL", Code: "57P01"}))
 
-	script := &pgmock.Script{Steps: steps}
+	script := &gaussdbmock.Script{Steps: steps}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:")
 	require.NoError(t, err)
@@ -3915,43 +3916,43 @@ func TestDeadlineContextWatcherHandler(t *testing.T) {
 	t.Run("DeadlineExceeded with zero DeadlineDelay", func(t *testing.T) {
 		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
-		config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.DeadlineContextWatcherHandler{Conn: conn.Conn()}
 		}
 		config.ConnectTimeout = 5 * time.Second
 
-		pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+		gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 		require.NoError(t, err)
-		defer closeConn(t, pgConn)
+		defer closeConn(t, gaussdbConn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
-		_, err = pgConn.Exec(ctx, "select 1, pg_sleep(1)").ReadAll()
+		_, err = gaussdbConn.Exec(ctx, "select 1, pg_sleep(1)").ReadAll()
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.DeadlineExceeded)
-		require.True(t, pgConn.IsClosed())
+		require.True(t, gaussdbConn.IsClosed())
 	})
 
 	t.Run("DeadlineExceeded with DeadlineDelay", func(t *testing.T) {
 		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
-		config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.DeadlineContextWatcherHandler{Conn: conn.Conn(), DeadlineDelay: 500 * time.Millisecond}
 		}
 		config.ConnectTimeout = 5 * time.Second
 
-		pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+		gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 		require.NoError(t, err)
-		defer closeConn(t, pgConn)
+		defer closeConn(t, gaussdbConn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 
-		_, err = pgConn.Exec(ctx, "select 1, pg_sleep(0.250)").ReadAll()
+		_, err = gaussdbConn.Exec(ctx, "select 1, pg_sleep(0.250)").ReadAll()
 		require.NoError(t, err)
 
-		ensureConnValid(t, pgConn)
+		ensureConnValid(t, gaussdbConn)
 	})
 }
 
@@ -3961,7 +3962,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 	t.Run("DeadlineExceeded cancels request after CancelRequestDelay", func(t *testing.T) {
 		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
-		config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
 				Conn:               conn,
 				CancelRequestDelay: 250 * time.Millisecond,
@@ -3970,25 +3971,25 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 		}
 		config.ConnectTimeout = 5 * time.Second
 
-		pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+		gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 		require.NoError(t, err)
-		defer closeConn(t, pgConn)
+		defer closeConn(t, gaussdbConn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
-		_, err = pgConn.Exec(ctx, "select 1, pg_sleep(3)").ReadAll()
+		_, err = gaussdbConn.Exec(ctx, "select 1, pg_sleep(3)").ReadAll()
 		require.Error(t, err)
-		var pgErr *gaussdbconn.PgError
-		require.ErrorAs(t, err, &pgErr)
+		var gaussdbErr *gaussdbconn.GaussdbError
+		require.ErrorAs(t, err, &gaussdbErr)
 
-		ensureConnValid(t, pgConn)
+		ensureConnValid(t, gaussdbConn)
 	})
 
 	t.Run("DeadlineExceeded - do not send cancel request when query finishes in grace period", func(t *testing.T) {
 		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
-		config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
 				Conn:               conn,
 				CancelRequestDelay: 1000 * time.Millisecond,
@@ -3997,23 +3998,23 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 		}
 		config.ConnectTimeout = 5 * time.Second
 
-		pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+		gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 		require.NoError(t, err)
-		defer closeConn(t, pgConn)
+		defer closeConn(t, gaussdbConn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 
-		_, err = pgConn.Exec(ctx, "select 1, pg_sleep(0.250)").ReadAll()
+		_, err = gaussdbConn.Exec(ctx, "select 1, pg_sleep(0.250)").ReadAll()
 		require.NoError(t, err)
 
-		ensureConnValid(t, pgConn)
+		ensureConnValid(t, gaussdbConn)
 	})
 
 	t.Run("DeadlineExceeded sets conn deadline with DeadlineDelay", func(t *testing.T) {
 		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
-		config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
 				Conn:               conn,
 				CancelRequestDelay: 5000 * time.Millisecond, // purposely setting this higher than DeadlineDelay to ensure the cancel request never happens.
@@ -4022,17 +4023,17 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 		}
 		config.ConnectTimeout = 5 * time.Second
 
-		pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+		gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 		require.NoError(t, err)
-		defer closeConn(t, pgConn)
+		defer closeConn(t, gaussdbConn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
-		_, err = pgConn.Exec(ctx, "select 1, pg_sleep(1)").ReadAll()
+		_, err = gaussdbConn.Exec(ctx, "select 1, pg_sleep(1)").ReadAll()
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.DeadlineExceeded)
-		require.True(t, pgConn.IsClosed())
+		require.True(t, gaussdbConn.IsClosed())
 	})
 
 	for i := 0; i < 10; i++ {
@@ -4041,7 +4042,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 
 			config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 			require.NoError(t, err)
-			config.BuildContextWatcherHandler = func(conn *gaussdbconn.PgConn) ctxwatch.Handler {
+			config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 				return &gaussdbconn.CancelRequestContextWatcherHandler{
 					Conn:               conn,
 					CancelRequestDelay: 5 * time.Millisecond,
@@ -4050,17 +4051,17 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 			}
 			config.ConnectTimeout = 5 * time.Second
 
-			pgConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
+			gaussdbConn, err := gaussdbconn.ConnectConfig(context.Background(), config)
 			require.NoError(t, err)
-			defer closeConn(t, pgConn)
+			defer closeConn(t, gaussdbConn)
 
 			for i := 0; i < 20; i++ {
 				func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 4*time.Millisecond)
 					defer cancel()
-					pgConn.Exec(ctx, "select 1, pg_sleep(0.010)").ReadAll()
+					gaussdbConn.Exec(ctx, "select 1, pg_sleep(0.010)").ReadAll()
 					time.Sleep(100 * time.Millisecond) // ensure a cancel request that was a little late doesn't interrupt ensureConnValid.
-					ensureConnValid(t, pgConn)
+					ensureConnValid(t, gaussdbConn)
 				}()
 			}
 		})

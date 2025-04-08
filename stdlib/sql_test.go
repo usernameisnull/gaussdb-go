@@ -25,7 +25,7 @@ import (
 )
 
 func openDB(t testing.TB) *sql.DB {
-	config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	return stdlib.OpenDB(*config)
 }
@@ -42,7 +42,7 @@ func skipCockroachDB(t testing.TB, db *sql.DB, msg string) {
 
 	err = conn.Raw(func(driverConn any) error {
 		conn := driverConn.(*stdlib.Conn).Conn()
-		if conn.PgConn().ParameterStatus("crdb_version") != "" {
+		if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
 			t.Skip(msg)
 		}
 		return nil
@@ -51,16 +51,16 @@ func skipCockroachDB(t testing.TB, db *sql.DB, msg string) {
 }
 
 func testWithAllQueryExecModes(t *testing.T, f func(t *testing.T, db *sql.DB)) {
-	for _, mode := range []pgx.QueryExecMode{
-		pgx.QueryExecModeCacheStatement,
-		pgx.QueryExecModeCacheDescribe,
-		pgx.QueryExecModeDescribeExec,
-		pgx.QueryExecModeExec,
-		pgx.QueryExecModeSimpleProtocol,
+	for _, mode := range []gaussdbgo.QueryExecMode{
+		gaussdbgo.QueryExecModeCacheStatement,
+		gaussdbgo.QueryExecModeCacheDescribe,
+		gaussdbgo.QueryExecModeDescribeExec,
+		gaussdbgo.QueryExecModeExec,
+		gaussdbgo.QueryExecModeSimpleProtocol,
 	} {
 		t.Run(mode.String(),
 			func(t *testing.T) {
-				config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+				config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 				require.NoError(t, err)
 
 				config.DefaultQueryExecMode = mode
@@ -123,8 +123,7 @@ func TestSQLOpen(t *testing.T) {
 	tests := []struct {
 		driverName string
 	}{
-		{driverName: "pgx"},
-		{driverName: "pgx/v5"},
+		{driverName: "gaussdb"},
 	}
 
 	for _, tt := range tests {
@@ -454,7 +453,7 @@ func TestConnQueryFailure(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		_, err := db.Query("select 'foo")
 		require.Error(t, err)
-		require.IsType(t, new(gaussdbconn.PgError), err)
+		require.IsType(t, new(gaussdbconn.GaussdbError), err)
 	})
 }
 
@@ -519,7 +518,7 @@ func TestConnQueryScanRange(t *testing.T) {
 
 // Test type that pgx would handle natively in binary, but since it is not a
 // database/sql native type should be passed through as a string
-func TestConnQueryRowPgxBinary(t *testing.T) {
+func TestConnQueryRowGaussdbBinary(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		sql := "select $1::int4[]"
 		expected := "{1,2,3}"
@@ -648,15 +647,15 @@ func TestConnBeginTxIsolation(t *testing.T) {
 		require.NoError(t, err)
 
 		supportedTests := []struct {
-			sqlIso sql.IsolationLevel
-			pgIso  string
+			sqlIso     sql.IsolationLevel
+			gaussdbIso string
 		}{
-			{sqlIso: sql.LevelDefault, pgIso: defaultIsoLevel},
-			{sqlIso: sql.LevelReadUncommitted, pgIso: "read uncommitted"},
-			{sqlIso: sql.LevelReadCommitted, pgIso: "read committed"},
-			{sqlIso: sql.LevelRepeatableRead, pgIso: "repeatable read"},
-			{sqlIso: sql.LevelSnapshot, pgIso: "repeatable read"},
-			{sqlIso: sql.LevelSerializable, pgIso: "serializable"},
+			{sqlIso: sql.LevelDefault, gaussdbIso: defaultIsoLevel},
+			{sqlIso: sql.LevelReadUncommitted, gaussdbIso: "read uncommitted"},
+			{sqlIso: sql.LevelReadCommitted, gaussdbIso: "read committed"},
+			{sqlIso: sql.LevelRepeatableRead, gaussdbIso: "repeatable read"},
+			{sqlIso: sql.LevelSnapshot, gaussdbIso: "repeatable read"},
+			{sqlIso: sql.LevelSerializable, gaussdbIso: "serializable"},
 		}
 		for i, tt := range supportedTests {
 			func() {
@@ -667,14 +666,14 @@ func TestConnBeginTxIsolation(t *testing.T) {
 				}
 				defer tx.Rollback()
 
-				var pgIso string
-				err = tx.QueryRow("show transaction_isolation").Scan(&pgIso)
+				var gaussdbIso string
+				err = tx.QueryRow("show transaction_isolation").Scan(&gaussdbIso)
 				if err != nil {
 					t.Errorf("%d. QueryRow failed: %v", i, err)
 				}
 
-				if pgIso != tt.pgIso {
-					t.Errorf("%d. pgIso => %s, want %s", i, pgIso, tt.pgIso)
+				if gaussdbIso != tt.gaussdbIso {
+					t.Errorf("%d. gaussdbIso => %s, want %s", i, gaussdbIso, tt.gaussdbIso)
 				}
 			}()
 		}
@@ -701,14 +700,14 @@ func TestConnBeginTxReadOnly(t *testing.T) {
 		require.NoError(t, err)
 		defer tx.Rollback()
 
-		var pgReadOnly string
-		err = tx.QueryRow("show transaction_read_only").Scan(&pgReadOnly)
+		var gaussdbReadOnly string
+		err = tx.QueryRow("show transaction_read_only").Scan(&gaussdbReadOnly)
 		if err != nil {
 			t.Errorf("QueryRow failed: %v", err)
 		}
 
-		if pgReadOnly != "on" {
-			t.Errorf("pgReadOnly => %s, want %s", pgReadOnly, "on")
+		if gaussdbReadOnly != "on" {
+			t.Errorf("gaussdbReadOnly => %s, want %s", gaussdbReadOnly, "on")
 		}
 	})
 }
@@ -735,8 +734,8 @@ func TestBeginTxContextCancel(t *testing.T) {
 
 		var n int
 		err = db.QueryRow("select count(*) from t").Scan(&n)
-		if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "42P01" {
-			t.Fatalf(`err => %v, want PgError{Code: "42P01"}`, err)
+		if gaussdbErr, ok := err.(*gaussdbconn.GaussdbError); !ok || gaussdbErr.Code != "42P01" {
+			t.Fatalf(`err => %v, want GaussdbError{Code: "42P01"}`, err)
 		}
 	})
 }
@@ -1117,7 +1116,7 @@ func (l *testLogger) Log(ctx context.Context, lvl tracelog.LogLevel, msg string,
 }
 
 func TestRegisterConnConfig(t *testing.T) {
-	connConfig, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	connConfig, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
 	logger := &testLogger{}
@@ -1185,17 +1184,17 @@ func TestConnQueryRowConstraintErrors(t *testing.T) {
 }
 
 func TestOptionBeforeAfterConnect(t *testing.T) {
-	config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	var beforeConnConfigs []*pgx.ConnConfig
-	var afterConns []*pgx.Conn
+	var beforeConnConfigs []*gaussdbgo.ConnConfig
+	var afterConns []*gaussdbgo.Conn
 	db := stdlib.OpenDB(*config,
-		stdlib.OptionBeforeConnect(func(ctx context.Context, connConfig *pgx.ConnConfig) error {
+		stdlib.OptionBeforeConnect(func(ctx context.Context, connConfig *gaussdbgo.ConnConfig) error {
 			beforeConnConfigs = append(beforeConnConfigs, connConfig)
 			return nil
 		}),
-		stdlib.OptionAfterConnect(func(ctx context.Context, conn *pgx.Conn) error {
+		stdlib.OptionAfterConnect(func(ctx context.Context, conn *gaussdbgo.Conn) error {
 			afterConns = append(afterConns, conn)
 			return nil
 		}))
@@ -1220,7 +1219,7 @@ func TestOptionBeforeAfterConnect(t *testing.T) {
 }
 
 func TestRandomizeHostOrderFunc(t *testing.T) {
-	config, err := pgx.ParseConfig("postgres://host1,host2,host3")
+	config, err := gaussdbgo.ParseConfig("postgres://host1,host2,host3")
 	require.NoError(t, err)
 
 	// Test that at some point we connect to all 3 hosts
@@ -1260,10 +1259,10 @@ func TestRandomizeHostOrderFunc(t *testing.T) {
 func TestResetSessionHookCalled(t *testing.T) {
 	var mockCalled bool
 
-	connConfig, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	connConfig, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	db := stdlib.OpenDB(*connConfig, stdlib.OptionResetSession(func(ctx context.Context, conn *pgx.Conn) error {
+	db := stdlib.OpenDB(*connConfig, stdlib.OptionResetSession(func(ctx context.Context, conn *gaussdbgo.Conn) error {
 		mockCalled = true
 
 		return nil
@@ -1303,7 +1302,7 @@ func TestCheckIdleConn(t *testing.T) {
 	var pids []uint32
 	for _, c := range conns {
 		err := c.Raw(func(driverConn any) error {
-			pids = append(pids, driverConn.(*stdlib.Conn).Conn().PgConn().PID())
+			pids = append(pids, driverConn.(*stdlib.Conn).Conn().GaussdbConn().PID())
 			return nil
 		})
 		require.NoError(t, err)
@@ -1334,7 +1333,7 @@ func TestCheckIdleConn(t *testing.T) {
 
 	var cPID uint32
 	err = c.Raw(func(driverConn any) error {
-		cPID = driverConn.(*stdlib.Conn).Conn().PgConn().PID()
+		cPID = driverConn.(*stdlib.Conn).Conn().GaussdbConn().PID()
 		return nil
 	})
 	require.NoError(t, err)

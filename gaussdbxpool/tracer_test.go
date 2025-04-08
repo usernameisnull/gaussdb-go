@@ -38,11 +38,11 @@ func (tt *testTracer) TraceRelease(pool *gaussdbxpool.Pool, data gaussdbxpool.Tr
 	}
 }
 
-func (tt *testTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+func (tt *testTracer) TraceQueryStart(ctx context.Context, conn *gaussdbgo.Conn, data gaussdbgo.TraceQueryStartData) context.Context {
 	return ctx
 }
 
-func (tt *testTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
+func (tt *testTracer) TraceQueryEnd(ctx context.Context, conn *gaussdbgo.Conn, data gaussdbgo.TraceQueryEndData) {
 }
 
 func TestTraceAcquire(t *testing.T) {

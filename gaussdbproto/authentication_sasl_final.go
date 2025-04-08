@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // AuthenticationSASLFinal is a message sent from the backend indicating a SASL authentication has completed.
@@ -40,7 +40,7 @@ func (dst *AuthenticationSASLFinal) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *AuthenticationSASLFinal) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'R')
-	dst = pgio.AppendUint32(dst, AuthTypeSASLFinal)
+	dst = gaussdbio.AppendUint32(dst, AuthTypeSASLFinal)
 	dst = append(dst, src.Data...)
 	return finishMessage(dst, sp)
 }

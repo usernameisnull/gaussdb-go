@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 const (
@@ -107,9 +107,9 @@ func (encodePlanIntervalCodecBinary) Encode(value any, buf []byte) (newBuf []byt
 		return nil, nil
 	}
 
-	buf = pgio.AppendInt64(buf, interval.Microseconds)
-	buf = pgio.AppendInt32(buf, interval.Days)
-	buf = pgio.AppendInt32(buf, interval.Months)
+	buf = gaussdbio.AppendInt64(buf, interval.Microseconds)
+	buf = gaussdbio.AppendInt32(buf, interval.Days)
+	buf = gaussdbio.AppendInt32(buf, interval.Months)
 	return buf, nil
 }
 

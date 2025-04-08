@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
@@ -42,7 +42,7 @@ func TestTimestamptzCodecWithLocationUTC(t *testing.T) {
 	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
 
 	connTestRunner := defaultConnTestRunner
-	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{
 			Name:  "timestamptz",
 			OID:   gaussdbtype.TimestamptzOID,
@@ -59,7 +59,7 @@ func TestTimestamptzCodecWithLocationLocal(t *testing.T) {
 	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
 
 	connTestRunner := defaultConnTestRunner
-	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{
 			Name:  "timestamptz",
 			OID:   gaussdbtype.TimestamptzOID,
@@ -74,7 +74,7 @@ func TestTimestamptzCodecWithLocationLocal(t *testing.T) {
 
 // https://github.com/jackc/pgx/v4/pgtype/pull/128
 func TestTimestamptzTranscodeBigTimeBinary(t *testing.T) {
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		in := &gaussdbtype.Timestamptz{Time: time.Date(294276, 12, 31, 23, 59, 59, 999999000, time.UTC), Valid: true}
 		var out gaussdbtype.Timestamptz
 

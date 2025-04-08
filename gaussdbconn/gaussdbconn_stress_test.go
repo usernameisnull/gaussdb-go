@@ -14,9 +14,9 @@ import (
 )
 
 func TestConnStress(t *testing.T) {
-	pgConn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
-	defer closeConn(t, pgConn)
+	defer closeConn(t, gaussdbConn)
 
 	actionCount := 10000
 	if s := os.Getenv("PGX_TEST_STRESS_FACTOR"); s != "" {
@@ -25,11 +25,11 @@ func TestConnStress(t *testing.T) {
 		actionCount *= int(stressFactor)
 	}
 
-	setupStressDB(t, pgConn)
+	setupStressDB(t, gaussdbConn)
 
 	actions := []struct {
 		name string
-		fn   func(*gaussdbconn.PgConn) error
+		fn   func(*gaussdbconn.GaussdbConn) error
 	}{
 		{"Exec Select", stressExecSelect},
 		{"ExecParams Select", stressExecParamsSelect},
@@ -38,7 +38,7 @@ func TestConnStress(t *testing.T) {
 
 	for i := 0; i < actionCount; i++ {
 		action := actions[rand.Intn(len(actions))]
-		err := action.fn(pgConn)
+		err := action.fn(gaussdbConn)
 		require.Nilf(t, err, "%d: %s", i, action.name)
 	}
 
@@ -47,8 +47,8 @@ func TestConnStress(t *testing.T) {
 	require.Truef(t, numGoroutine < 1000, "goroutines appear to be orphaned: %d in process", numGoroutine)
 }
 
-func setupStressDB(t *testing.T, pgConn *gaussdbconn.PgConn) {
-	_, err := pgConn.Exec(context.Background(), `
+func setupStressDB(t *testing.T, gaussdbConn *gaussdbconn.GaussdbConn) {
+	_, err := gaussdbConn.Exec(context.Background(), `
 		create temporary table widgets(
 			id serial primary key,
 			name varchar not null,
@@ -63,21 +63,21 @@ func setupStressDB(t *testing.T, pgConn *gaussdbconn.PgConn) {
 	require.NoError(t, err)
 }
 
-func stressExecSelect(pgConn *gaussdbconn.PgConn) error {
+func stressExecSelect(gaussdbConn *gaussdbconn.GaussdbConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, err := pgConn.Exec(ctx, "select * from widgets").ReadAll()
+	_, err := gaussdbConn.Exec(ctx, "select * from widgets").ReadAll()
 	return err
 }
 
-func stressExecParamsSelect(pgConn *gaussdbconn.PgConn) error {
+func stressExecParamsSelect(gaussdbConn *gaussdbconn.GaussdbConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	result := pgConn.ExecParams(ctx, "select * from widgets where id < $1", [][]byte{[]byte("10")}, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select * from widgets where id < $1", [][]byte{[]byte("10")}, nil, nil, nil).Read()
 	return result.Err
 }
 
-func stressBatch(pgConn *gaussdbconn.PgConn) error {
+func stressBatch(gaussdbConn *gaussdbconn.GaussdbConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -85,6 +85,6 @@ func stressBatch(pgConn *gaussdbconn.PgConn) error {
 
 	batch.ExecParams("select * from widgets", nil, nil, nil, nil)
 	batch.ExecParams("select * from widgets where id < $1", [][]byte{[]byte("10")}, nil, nil, nil)
-	_, err := pgConn.ExecBatch(ctx, batch).ReadAll()
+	_, err := gaussdbConn.ExecBatch(ctx, batch).ReadAll()
 	return err
 }

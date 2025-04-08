@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // maxMessageBodyLen is the maximum length of a message body in bytes. See PG_LARGE_MESSAGE_LIMIT in the PostgreSQL
@@ -104,7 +104,7 @@ func getValueFromJSON(v map[string]string) ([]byte, error) {
 func beginMessage(dst []byte, t byte) ([]byte, int) {
 	dst = append(dst, t)
 	sp := len(dst)
-	dst = pgio.AppendInt32(dst, -1)
+	dst = gaussdbio.AppendInt32(dst, -1)
 	return dst, sp
 }
 
@@ -115,6 +115,6 @@ func finishMessage(dst []byte, sp int) ([]byte, error) {
 	if messageBodyLen > maxMessageBodyLen {
 		return nil, errors.New("message body too large")
 	}
-	pgio.SetInt32(dst[sp:], int32(messageBodyLen))
+	gaussdbio.SetInt32(dst[sp:], int32(messageBodyLen))
 	return dst, nil
 }

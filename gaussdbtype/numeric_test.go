@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
@@ -195,7 +195,7 @@ func TestNumericCodecFuzz(t *testing.T) {
 func TestNumericMarshalJSON(t *testing.T) {
 	skipCockroachDB(t, "server formats numeric text format differently")
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		for i, tt := range []struct {
 			decString string
@@ -220,14 +220,14 @@ func TestNumericMarshalJSON(t *testing.T) {
 			{"-0.001"}, // failed with "invalid character '-' after top-level value"
 		} {
 			var num gaussdbtype.Numeric
-			var pgJSON string
-			err := conn.QueryRow(ctx, `select $1::numeric, to_json($1::numeric)`, tt.decString).Scan(&num, &pgJSON)
+			var gaussdbJSON string
+			err := conn.QueryRow(ctx, `select $1::numeric, to_json($1::numeric)`, tt.decString).Scan(&num, &gaussdbJSON)
 			require.NoErrorf(t, err, "%d", i)
 
 			goJSON, err := json.Marshal(num)
 			require.NoErrorf(t, err, "%d", i)
 
-			require.Equal(t, pgJSON, string(goJSON))
+			require.Equal(t, gaussdbJSON, string(goJSON))
 		}
 	})
 }

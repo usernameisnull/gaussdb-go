@@ -40,14 +40,14 @@ func (src *Point) String() string {
 }
 
 func Example_customType() {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return
 	}
 	defer conn.Close(context.Background())
 
-	if conn.PgConn().ParameterStatus("crdb_version") != "" {
+	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
 		// Skip test / example when running on CockroachDB which doesn't support the point type. Since an example can't be
 		// skipped fake success instead.
 		fmt.Println("null point")

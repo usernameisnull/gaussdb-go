@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 const ProtocolVersionNumber = 196659 // (3, 51)
@@ -66,9 +66,9 @@ func (dst *StartupMessage) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *StartupMessage) Encode(dst []byte) ([]byte, error) {
 	sp := len(dst)
-	dst = pgio.AppendInt32(dst, -1)
+	dst = gaussdbio.AppendInt32(dst, -1)
 
-	dst = pgio.AppendUint32(dst, src.ProtocolVersion)
+	dst = gaussdbio.AppendUint32(dst, src.ProtocolVersion)
 	for k, v := range src.Parameters {
 		dst = append(dst, k...)
 		dst = append(dst, 0)

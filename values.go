@@ -1,10 +1,10 @@
-package pgx
+package gaussdbgo
 
 import (
 	"errors"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // PostgreSQL format codes
@@ -26,7 +26,7 @@ func convertSimpleArgument(m *gaussdbtype.Map, arg any) (any, error) {
 
 func encodeCopyValue(m *gaussdbtype.Map, buf []byte, oid uint32, arg any) ([]byte, error) {
 	sp := len(buf)
-	buf = pgio.AppendInt32(buf, -1)
+	buf = gaussdbio.AppendInt32(buf, -1)
 	argBuf, err := m.Encode(oid, BinaryFormatCode, arg, buf)
 	if err != nil {
 		if argBuf2, err2 := tryScanStringCopyValueThenEncode(m, buf, oid, arg); err2 == nil {
@@ -38,7 +38,7 @@ func encodeCopyValue(m *gaussdbtype.Map, buf []byte, oid uint32, arg any) ([]byt
 
 	if argBuf != nil {
 		buf = argBuf
-		pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+		gaussdbio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
 	}
 	return buf, nil
 }

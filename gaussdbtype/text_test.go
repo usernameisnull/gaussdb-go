@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
@@ -17,8 +17,8 @@ func (someFmtStringer) String() string {
 }
 
 func TestTextCodec(t *testing.T) {
-	for _, pgTypeName := range []string{"text", "varchar"} {
-		gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, pgTypeName, []gaussdbxtest.ValueRoundTripTest{
+	for _, gaussdbTypeName := range []string{"text", "varchar"} {
+		gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, gaussdbTypeName, []gaussdbxtest.ValueRoundTripTest{
 			{
 				gaussdbtype.Text{String: "", Valid: true},
 				new(gaussdbtype.Text),
@@ -95,7 +95,7 @@ func TestTextCodecBPChar(t *testing.T) {
 // It only supports the text format.
 func TestTextCodecACLItem(t *testing.T) {
 	ctr := defaultConnTestRunner
-	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {}
+	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {}
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, ctr, nil, "aclitem", []gaussdbxtest.ValueRoundTripTest{
 		{
@@ -110,7 +110,7 @@ func TestTextCodecACLItem(t *testing.T) {
 
 func TestTextCodecACLItemRoleWithSpecialCharacters(t *testing.T) {
 	ctr := defaultConnTestRunner
-	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		// The tricky test user, below, has to actually exist so that it can be used in a test
 		// of aclitem formatting. It turns out aclitems cannot contain non-existing users/roles.

@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 // todo GaussDB 暂时不支持 Domain域类型
 /*func TestCompositeCodecTranscodeWithLoadTypes(t *testing.T) {

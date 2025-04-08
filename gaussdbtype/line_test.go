@@ -4,19 +4,20 @@ import (
 	"context"
 	"testing"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 )
 
 func TestLineTranscode(t *testing.T) {
 	ctr := defaultConnTestRunner
-	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		if _, ok := conn.TypeMap().TypeForName("line"); !ok {
 			t.Skip("Skipping due to no line type")
 		}
 
+		// TODO: remove specific version test?
 		// line may exist but not be usable on 9.3 :(
 		var isPG93 bool
 		err := conn.QueryRow(context.Background(), "select version() ~ '9.3'").Scan(&isPG93)

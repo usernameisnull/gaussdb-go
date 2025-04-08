@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // MultirangeGetter is a type that can be converted into a PostgreSQL multirange.
@@ -147,13 +147,13 @@ func (p *encodePlanMultirangeCodecBinary) Encode(value any, buf []byte) (newBuf 
 
 	elementCount := multirange.Len()
 
-	buf = pgio.AppendInt32(buf, int32(elementCount))
+	buf = gaussdbio.AppendInt32(buf, int32(elementCount))
 
 	var encodePlan EncodePlan
 	var lastElemType reflect.Type
 	for i := 0; i < elementCount; i++ {
 		sp := len(buf)
-		buf = pgio.AppendInt32(buf, -1)
+		buf = gaussdbio.AppendInt32(buf, -1)
 
 		elem := multirange.Index(i)
 		var elemBuf []byte
@@ -176,7 +176,7 @@ func (p *encodePlanMultirangeCodecBinary) Encode(value any, buf []byte) (newBuf 
 			return nil, fmt.Errorf("multirange cannot contain NULL element")
 		} else {
 			buf = elemBuf
-			pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+			gaussdbio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
 		}
 	}
 

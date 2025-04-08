@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +44,7 @@ func TestTimestampCodecWithScanLocationUTC(t *testing.T) {
 	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
 
 	connTestRunner := defaultConnTestRunner
-	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{
 			Name:  "timestamp",
 			OID:   gaussdbtype.TimestampOID,
@@ -63,7 +63,7 @@ func TestTimestampCodecWithScanLocationLocal(t *testing.T) {
 	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
 
 	connTestRunner := defaultConnTestRunner
-	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{
 			Name:  "timestamp",
 			OID:   gaussdbtype.TimestampOID,
@@ -78,7 +78,7 @@ func TestTimestampCodecWithScanLocationLocal(t *testing.T) {
 
 // https://github.com/jackc/pgx/v4/pgtype/pull/128
 func TestTimestampTranscodeBigTimeBinary(t *testing.T) {
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		in := &gaussdbtype.Timestamp{Time: time.Date(294276, 12, 31, 23, 59, 59, 999999000, time.UTC), Valid: true}
 		var out gaussdbtype.Timestamp
 
@@ -109,8 +109,8 @@ func TestTimestampMarshalJSON(t *testing.T) {
 
 	tm := time.Date(2012, 3, 29, 10, 5, 45, 0, time.UTC)
 	tsString := "\"" + tm.Format("2006-01-02T15:04:05") + "\"" //  `"2012-03-29T10:05:45"`
-	var pgt gaussdbtype.Timestamp
-	_ = pgt.Scan(tm)
+	var gaussdbType gaussdbtype.Timestamp
+	_ = gaussdbType.Scan(tm)
 
 	successfulTests := []struct {
 		source gaussdbtype.Timestamp
@@ -118,7 +118,7 @@ func TestTimestampMarshalJSON(t *testing.T) {
 	}{
 		{source: gaussdbtype.Timestamp{}, result: "null"},
 		{source: gaussdbtype.Timestamp{Time: tm, Valid: true}, result: tsString},
-		{source: pgt, result: tsString},
+		{source: gaussdbType, result: tsString},
 		{source: gaussdbtype.Timestamp{Time: tm.Add(time.Second * 555 / 1000), Valid: true}, result: `"2012-03-29T10:05:45.555"`},
 		{source: gaussdbtype.Timestamp{InfinityModifier: gaussdbtype.Infinity, Valid: true}, result: "\"infinity\""},
 		{source: gaussdbtype.Timestamp{InfinityModifier: gaussdbtype.NegativeInfinity, Valid: true}, result: "\"-infinity\""},

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type DataRow struct {
@@ -71,14 +71,14 @@ func (src *DataRow) Encode(dst []byte) ([]byte, error) {
 	if len(src.Values) > math.MaxUint16 {
 		return nil, errors.New("too many values")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.Values)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.Values)))
 	for _, v := range src.Values {
 		if v == nil {
-			dst = pgio.AppendInt32(dst, -1)
+			dst = gaussdbio.AppendInt32(dst, -1)
 			continue
 		}
 
-		dst = pgio.AppendInt32(dst, int32(len(v)))
+		dst = gaussdbio.AppendInt32(dst, int32(len(v)))
 		dst = append(dst, v...)
 	}
 

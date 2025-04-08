@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 const gssEncReqNumber = 80877104
@@ -32,8 +32,8 @@ func (dst *GSSEncRequest) Decode(src []byte) error {
 
 // Encode encodes src into dst. dst will include the 4 byte message length.
 func (src *GSSEncRequest) Encode(dst []byte) ([]byte, error) {
-	dst = pgio.AppendInt32(dst, 8)
-	dst = pgio.AppendInt32(dst, gssEncReqNumber)
+	dst = gaussdbio.AppendInt32(dst, 8)
+	dst = gaussdbio.AppendInt32(dst, gssEncReqNumber)
 	return dst, nil
 }
 

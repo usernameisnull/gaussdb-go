@@ -37,7 +37,7 @@ func main() {
 		}
 		log.Println("Accepted connection from", conn.RemoteAddr())
 
-		b := NewPgFortuneBackend(conn, func() ([]byte, error) {
+		b := NewGaussdbFortuneBackend(conn, func() ([]byte, error) {
 			return exec.Command("sh", "-c", options.responseCommand).CombinedOutput()
 		})
 		go func() {

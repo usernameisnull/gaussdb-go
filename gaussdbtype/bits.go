@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type BitsScanner interface {
@@ -97,7 +97,7 @@ func (encodePlanBitsCodecBinary) Encode(value any, buf []byte) (newBuf []byte, e
 		return nil, nil
 	}
 
-	buf = pgio.AppendInt32(buf, bits.Len)
+	buf = gaussdbio.AppendInt32(buf, bits.Len)
 	return append(buf, bits.Bytes...), nil
 }
 

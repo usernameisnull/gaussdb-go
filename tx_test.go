@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 import (
 	"context"
@@ -87,8 +87,8 @@ func TestTxCommitWhenTxBroken(t *testing.T) {
 	}
 
 	err = tx.Commit(context.Background())
-	if err != pgx.ErrTxCommitRollback {
-		t.Fatalf("Expected error %v, got %v", pgx.ErrTxCommitRollback, err)
+	if err != gaussdbgo.ErrTxCommitRollback {
+		t.Fatalf("Expected error %v, got %v", gaussdbgo.ErrTxCommitRollback, err)
 	}
 
 	var n int64
@@ -132,7 +132,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	}
 
 	err = tx.Commit(context.Background())
-	if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "23505" {
+	if gaussdbError, ok := err.(*gaussdbconn.GaussdbError); !ok || gaussdbError.Code != "23505" {
 		t.Fatalf("Expected unique constraint violation 23505, got %#v", err)
 	}
 
@@ -153,7 +153,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	c1 := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, c1)
 
-	if c1.PgConn().ParameterStatus("crdb_version") != "" {
+	if c1.GaussdbConn().ParameterStatus("crdb_version") != "" {
 		t.Skip("Skipping due to known server issue: (https://github.com/cockroachdb/cockroach/issues/60754)")
 	}
 
@@ -170,13 +170,13 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	}
 	defer c1.Exec(ctx, `drop table tx_serializable_sums`)
 
-	tx1, err := c1.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	tx1, err := c1.BeginTx(ctx, gaussdbgo.TxOptions{IsoLevel: gaussdbgo.Serializable})
 	if err != nil {
 		t.Fatalf("Begin failed: %v", err)
 	}
 	defer tx1.Rollback(ctx)
 
-	tx2, err := c2.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	tx2, err := c2.BeginTx(ctx, gaussdbgo.TxOptions{IsoLevel: gaussdbgo.Serializable})
 	if err != nil {
 		t.Fatalf("Begin failed: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	}
 
 	err = tx2.Commit(ctx)
-	if pgErr, ok := err.(*pgconn.PgError); !ok || pgErr.Code != "40001" {
+	if gaussdbErr, ok := err.(*pgconn.gaussdbError); !ok || gaussdbErr.Code != "40001" {
 		t.Fatalf("Expected serialization error 40001, got %#v", err)
 	}
 
@@ -274,14 +274,14 @@ func TestBeginIsoLevels(t *testing.T) {
 	defer closeConn(t, conn)
 
 	// todo GaussDB目前功能上不支持此隔离级别，等价于REPEATABLE READ (参考：https://support.huaweicloud.com/intl/zh-cn/centralized-devg-v2-gaussdb/gaussdb_42_0501.html)
-	isoLevels := []pgx.TxIsoLevel{pgx.ReadCommitted, pgx.RepeatableRead /*pgx.Serializable,*/, pgx.ReadUncommitted}
+	isoLevels := []gaussdbgo.TxIsoLevel{gaussdbgo.ReadCommitted, gaussdbgo.RepeatableRead /*gaussdbgo.Serializable,*/, gaussdbgo.ReadUncommitted}
 	for _, iso := range isoLevels {
-		tx, err := conn.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: iso})
+		tx, err := conn.BeginTx(context.Background(), gaussdbgo.TxOptions{IsoLevel: iso})
 		if err != nil {
 			t.Fatalf("conn.Begin failed: %v", err)
 		}
 
-		var level pgx.TxIsoLevel
+		var level gaussdbgo.TxIsoLevel
 		conn.QueryRow(context.Background(), "select current_setting('transaction_isolation')").Scan(&level)
 		if level != iso {
 			t.Errorf("Expected to be in isolation level %v but was %v", iso, level)
@@ -310,7 +310,7 @@ func TestBeginFunc(t *testing.T) {
 	_, err := conn.Exec(context.Background(), createSql)
 	require.NoError(t, err)
 
-	err = pgx.BeginFunc(context.Background(), conn, func(tx pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(context.Background(), conn, func(tx gaussdbgo.Tx) error {
 		_, err := tx.Exec(context.Background(), "insert into foo(id) values (1)")
 		require.NoError(t, err)
 		return nil
@@ -339,7 +339,7 @@ func TestBeginFuncRollbackOnError(t *testing.T) {
 	_, err := conn.Exec(context.Background(), createSql)
 	require.NoError(t, err)
 
-	err = pgx.BeginFunc(context.Background(), conn, func(tx pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(context.Background(), conn, func(tx gaussdbgo.Tx) error {
 		_, err := tx.Exec(context.Background(), "insert into foo(id) values (1)")
 		require.NoError(t, err)
 		return errors.New("some error")
@@ -358,14 +358,14 @@ func TestBeginReadOnly(t *testing.T) {
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
 
-	tx, err := conn.BeginTx(context.Background(), pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	tx, err := conn.BeginTx(context.Background(), gaussdbgo.TxOptions{AccessMode: gaussdbgo.ReadOnly})
 	if err != nil {
 		t.Fatalf("conn.Begin failed: %v", err)
 	}
 	defer tx.Rollback(context.Background())
 
 	_, err = conn.Exec(context.Background(), "create table foo(id serial primary key)")
-	if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "25006" {
+	if gaussdbErr, ok := err.(*gaussdbconn.GaussdbError); !ok || gaussdbErr.Code != "25006" {
 		t.Errorf("Expected error SQLSTATE 25006, but got %#v", err)
 	}
 }
@@ -376,8 +376,8 @@ func TestBeginTxBeginQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		tx, err := conn.BeginTx(ctx, pgx.TxOptions{BeginQuery: "begin read only"})
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
+		tx, err := conn.BeginTx(ctx, gaussdbgo.TxOptions{BeginQuery: "begin read only"})
 		require.NoError(t, err)
 		defer tx.Rollback(ctx)
 
@@ -540,15 +540,15 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	_, err := db.Exec(context.Background(), createSql)
 	require.NoError(t, err)
 
-	err = pgx.BeginFunc(context.Background(), db, func(db pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(context.Background(), db, func(db gaussdbgo.Tx) error {
 		_, err := db.Exec(context.Background(), "insert into foo(id) values (1)")
 		require.NoError(t, err)
 
-		err = pgx.BeginFunc(context.Background(), db, func(db pgx.Tx) error {
+		err = gaussdbgo.BeginFunc(context.Background(), db, func(db gaussdbgo.Tx) error {
 			_, err := db.Exec(context.Background(), "insert into foo(id) values (2)")
 			require.NoError(t, err)
 
-			err = pgx.BeginFunc(context.Background(), db, func(db pgx.Tx) error {
+			err = gaussdbgo.BeginFunc(context.Background(), db, func(db gaussdbgo.Tx) error {
 				_, err := db.Exec(context.Background(), "insert into foo(id) values (3)")
 				require.NoError(t, err)
 				return nil
@@ -584,11 +584,11 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	_, err := db.Exec(context.Background(), createSql)
 	require.NoError(t, err)
 
-	err = pgx.BeginFunc(context.Background(), db, func(db pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(context.Background(), db, func(db gaussdbgo.Tx) error {
 		_, err := db.Exec(context.Background(), "insert into foo(id) values (1)")
 		require.NoError(t, err)
 
-		err = pgx.BeginFunc(context.Background(), db, func(db pgx.Tx) error {
+		err = gaussdbgo.BeginFunc(context.Background(), db, func(db gaussdbgo.Tx) error {
 			_, err := db.Exec(context.Background(), "insert into foo(id) values (2)")
 			require.NoError(t, err)
 			return errors.New("do a rollback")
@@ -621,7 +621,7 @@ func TestTxSendBatchClosed(t *testing.T) {
 	err = tx.Commit(context.Background())
 	require.NoError(t, err)
 
-	batch := &pgx.Batch{}
+	batch := &gaussdbgo.Batch{}
 	batch.Queue("select 1")
 	batch.Queue("select 2")
 	batch.Queue("select 3")

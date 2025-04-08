@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-const pgTimestamptzHourFormat = "2006-01-02 15:04:05.999999999Z07"
-const pgTimestamptzMinuteFormat = "2006-01-02 15:04:05.999999999Z07:00"
-const pgTimestamptzSecondFormat = "2006-01-02 15:04:05.999999999Z07:00:00"
+const gaussdbTimestamptzHourFormat = "2006-01-02 15:04:05.999999999Z07"
+const gaussdbTimestamptzMinuteFormat = "2006-01-02 15:04:05.999999999Z07:00"
+const gaussdbTimestamptzSecondFormat = "2006-01-02 15:04:05.999999999Z07:00:00"
 const microsecFromUnixEpochToY2K = 946684800 * 1000000
 
 const (
@@ -176,7 +176,7 @@ func (encodePlanTimestamptzCodecBinary) Encode(value any, buf []byte) (newBuf []
 		microsecSinceY2K = negativeInfinityMicrosecondOffset
 	}
 
-	buf = pgio.AppendInt64(buf, microsecSinceY2K)
+	buf = gaussdbio.AppendInt64(buf, microsecSinceY2K)
 
 	return buf, nil
 }
@@ -208,7 +208,7 @@ func (encodePlanTimestamptzCodecText) Encode(value any, buf []byte) (newBuf []by
 			bc = true
 		}
 
-		s = t.Format(pgTimestamptzSecondFormat)
+		s = t.Format(gaussdbTimestamptzSecondFormat)
 
 		if bc {
 			s = s + " BC"
@@ -302,11 +302,11 @@ func (plan *scanPlanTextTimestamptzToTimestamptzScanner) Scan(src []byte, dst an
 
 		var format string
 		if len(sbuf) >= 9 && (sbuf[len(sbuf)-9] == '-' || sbuf[len(sbuf)-9] == '+') {
-			format = pgTimestamptzSecondFormat
+			format = gaussdbTimestamptzSecondFormat
 		} else if len(sbuf) >= 6 && (sbuf[len(sbuf)-6] == '-' || sbuf[len(sbuf)-6] == '+') {
-			format = pgTimestamptzMinuteFormat
+			format = gaussdbTimestamptzMinuteFormat
 		} else {
-			format = pgTimestamptzHourFormat
+			format = gaussdbTimestamptzHourFormat
 		}
 
 		tim, err := time.Parse(format, sbuf)

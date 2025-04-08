@@ -8,7 +8,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Float64Scanner interface {
@@ -136,7 +136,7 @@ type encodePlanFloat8CodecBinaryFloat64 struct{}
 
 func (encodePlanFloat8CodecBinaryFloat64) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	n := value.(float64)
-	return pgio.AppendUint64(buf, math.Float64bits(n)), nil
+	return gaussdbio.AppendUint64(buf, math.Float64bits(n)), nil
 }
 
 type encodePlanTextFloat64 struct{}
@@ -158,7 +158,7 @@ func (encodePlanFloat8CodecBinaryFloat64Valuer) Encode(value any, buf []byte) (n
 		return nil, nil
 	}
 
-	return pgio.AppendUint64(buf, math.Float64bits(n.Float64)), nil
+	return gaussdbio.AppendUint64(buf, math.Float64bits(n.Float64)), nil
 }
 
 type encodePlanTextFloat64Valuer struct{}
@@ -189,7 +189,7 @@ func (encodePlanFloat8CodecBinaryInt64Valuer) Encode(value any, buf []byte) (new
 	}
 
 	f := float64(n.Int64)
-	return pgio.AppendUint64(buf, math.Float64bits(f)), nil
+	return gaussdbio.AppendUint64(buf, math.Float64bits(f)), nil
 }
 
 type encodePlanTextInt64Valuer struct{}

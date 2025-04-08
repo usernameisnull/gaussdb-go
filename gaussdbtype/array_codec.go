@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // ArrayGetter is a type that can be converted into a PostgreSQL array.
@@ -191,7 +191,7 @@ func (p *encodePlanArrayCodecBinary) Encode(value any, buf []byte) (newBuf []byt
 	var lastElemType reflect.Type
 	for i := 0; i < elementCount; i++ {
 		sp := len(buf)
-		buf = pgio.AppendInt32(buf, -1)
+		buf = gaussdbio.AppendInt32(buf, -1)
 
 		elem := array.Index(i)
 		var elemBuf []byte
@@ -211,10 +211,10 @@ func (p *encodePlanArrayCodecBinary) Encode(value any, buf []byte) (newBuf []byt
 		}
 
 		if elemBuf == nil {
-			pgio.SetInt32(buf[containsNullIndex:], 1)
+			gaussdbio.SetInt32(buf[containsNullIndex:], 1)
 		} else {
 			buf = elemBuf
-			pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+			gaussdbio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
 		}
 	}
 

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type ReadBuf []byte
@@ -54,7 +54,7 @@ func (dst *AuthenticationSHA256) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *AuthenticationSHA256) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'R')
-	dst = pgio.AppendUint32(dst, AuthTypeSASL)
+	dst = gaussdbio.AppendUint32(dst, AuthTypeSASL)
 
 	for _, s := range src.AuthMechanisms {
 		dst = append(dst, []byte(s)...)

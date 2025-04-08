@@ -8,7 +8,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Float4 struct {
@@ -128,7 +128,7 @@ type encodePlanFloat4CodecBinaryFloat32 struct{}
 
 func (encodePlanFloat4CodecBinaryFloat32) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	n := value.(float32)
-	return pgio.AppendUint32(buf, math.Float32bits(n)), nil
+	return gaussdbio.AppendUint32(buf, math.Float32bits(n)), nil
 }
 
 type encodePlanTextFloat32 struct{}
@@ -150,7 +150,7 @@ func (encodePlanFloat4CodecBinaryFloat64Valuer) Encode(value any, buf []byte) (n
 		return nil, nil
 	}
 
-	return pgio.AppendUint32(buf, math.Float32bits(float32(n.Float64))), nil
+	return gaussdbio.AppendUint32(buf, math.Float32bits(float32(n.Float64))), nil
 }
 
 type encodePlanFloat4CodecBinaryInt64Valuer struct{}
@@ -166,7 +166,7 @@ func (encodePlanFloat4CodecBinaryInt64Valuer) Encode(value any, buf []byte) (new
 	}
 
 	f := float32(n.Int64)
-	return pgio.AppendUint32(buf, math.Float32bits(f)), nil
+	return gaussdbio.AppendUint32(buf, math.Float32bits(f)), nil
 }
 
 func (Float4Codec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
