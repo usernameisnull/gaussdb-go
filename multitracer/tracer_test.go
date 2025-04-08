@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/multitracer"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,14 +50,14 @@ func (tt *testFullTracer) TraceConnectStart(ctx context.Context, data pgx.TraceC
 func (tt *testFullTracer) TraceConnectEnd(ctx context.Context, data pgx.TraceConnectEndData) {
 }
 
-func (tt *testFullTracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireStartData) context.Context {
+func (tt *testFullTracer) TraceAcquireStart(ctx context.Context, pool *gaussdbxpool.Pool, data gaussdbxpool.TraceAcquireStartData) context.Context {
 	return ctx
 }
 
-func (tt *testFullTracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireEndData) {
+func (tt *testFullTracer) TraceAcquireEnd(ctx context.Context, pool *gaussdbxpool.Pool, data gaussdbxpool.TraceAcquireEndData) {
 }
 
-func (tt *testFullTracer) TraceRelease(pool *pgxpool.Pool, data pgxpool.TraceReleaseData) {
+func (tt *testFullTracer) TraceRelease(pool *gaussdbxpool.Pool, data gaussdbxpool.TraceReleaseData) {
 }
 
 type testCopyTracer struct{}
@@ -103,10 +103,10 @@ func TestNew(t *testing.T) {
 			ConnectTracers: []pgx.ConnectTracer{
 				fullTracer,
 			},
-			PoolAcquireTracers: []pgxpool.AcquireTracer{
+			PoolAcquireTracers: []gaussdbxpool.AcquireTracer{
 				fullTracer,
 			},
-			PoolReleaseTracers: []pgxpool.ReleaseTracer{
+			PoolReleaseTracers: []gaussdbxpool.ReleaseTracer{
 				fullTracer,
 			},
 		},

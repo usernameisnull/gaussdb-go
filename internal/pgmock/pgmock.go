@@ -6,18 +6,18 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgproto3"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 )
 
 type Step interface {
-	Step(*pgproto3.Backend) error
+	Step(*gaussdbproto.Backend) error
 }
 
 type Script struct {
 	Steps []Step
 }
 
-func (s *Script) Run(backend *pgproto3.Backend) error {
+func (s *Script) Run(backend *gaussdbproto.Backend) error {
 	for _, step := range s.Steps {
 		err := step.Step(backend)
 		if err != nil {
@@ -28,16 +28,16 @@ func (s *Script) Run(backend *pgproto3.Backend) error {
 	return nil
 }
 
-func (s *Script) Step(backend *pgproto3.Backend) error {
+func (s *Script) Step(backend *gaussdbproto.Backend) error {
 	return s.Run(backend)
 }
 
 type expectMessageStep struct {
-	want pgproto3.FrontendMessage
+	want gaussdbproto.FrontendMessage
 	any  bool
 }
 
-func (e *expectMessageStep) Step(backend *pgproto3.Backend) error {
+func (e *expectMessageStep) Step(backend *gaussdbproto.Backend) error {
 	msg, err := backend.Receive()
 	if err != nil {
 		return err
@@ -55,11 +55,11 @@ func (e *expectMessageStep) Step(backend *pgproto3.Backend) error {
 }
 
 type expectStartupMessageStep struct {
-	want *pgproto3.StartupMessage
+	want *gaussdbproto.StartupMessage
 	any  bool
 }
 
-func (e *expectStartupMessageStep) Step(backend *pgproto3.Backend) error {
+func (e *expectStartupMessageStep) Step(backend *gaussdbproto.Backend) error {
 	msg, err := backend.ReceiveStartupMessage()
 	if err != nil {
 		return err
@@ -76,16 +76,16 @@ func (e *expectStartupMessageStep) Step(backend *pgproto3.Backend) error {
 	return nil
 }
 
-func ExpectMessage(want pgproto3.FrontendMessage) Step {
+func ExpectMessage(want gaussdbproto.FrontendMessage) Step {
 	return expectMessage(want, false)
 }
 
-func ExpectAnyMessage(want pgproto3.FrontendMessage) Step {
+func ExpectAnyMessage(want gaussdbproto.FrontendMessage) Step {
 	return expectMessage(want, true)
 }
 
-func expectMessage(want pgproto3.FrontendMessage, any bool) Step {
-	if want, ok := want.(*pgproto3.StartupMessage); ok {
+func expectMessage(want gaussdbproto.FrontendMessage, any bool) Step {
+	if want, ok := want.(*gaussdbproto.StartupMessage); ok {
 		return &expectStartupMessageStep{want: want, any: any}
 	}
 
@@ -93,21 +93,21 @@ func expectMessage(want pgproto3.FrontendMessage, any bool) Step {
 }
 
 type sendMessageStep struct {
-	msg pgproto3.BackendMessage
+	msg gaussdbproto.BackendMessage
 }
 
-func (e *sendMessageStep) Step(backend *pgproto3.Backend) error {
+func (e *sendMessageStep) Step(backend *gaussdbproto.Backend) error {
 	backend.Send(e.msg)
 	return backend.Flush()
 }
 
-func SendMessage(msg pgproto3.BackendMessage) Step {
+func SendMessage(msg gaussdbproto.BackendMessage) Step {
 	return &sendMessageStep{msg: msg}
 }
 
 type waitForCloseMessageStep struct{}
 
-func (e *waitForCloseMessageStep) Step(backend *pgproto3.Backend) error {
+func (e *waitForCloseMessageStep) Step(backend *gaussdbproto.Backend) error {
 	for {
 		msg, err := backend.Receive()
 		if err == io.EOF {
@@ -116,7 +116,7 @@ func (e *waitForCloseMessageStep) Step(backend *pgproto3.Backend) error {
 			return err
 		}
 
-		if _, ok := msg.(*pgproto3.Terminate); ok {
+		if _, ok := msg.(*gaussdbproto.Terminate); ok {
 			return nil
 		}
 	}
@@ -128,9 +128,9 @@ func WaitForClose() Step {
 
 func AcceptUnauthenticatedConnRequestSteps() []Step {
 	return []Step{
-		ExpectAnyMessage(&pgproto3.StartupMessage{ProtocolVersion: pgproto3.ProtocolVersionNumber, Parameters: map[string]string{}}),
-		SendMessage(&pgproto3.AuthenticationOk{}),
-		SendMessage(&pgproto3.BackendKeyData{ProcessID: 0, SecretKey: 0}),
-		SendMessage(&pgproto3.ReadyForQuery{TxStatus: 'I'}),
+		ExpectAnyMessage(&gaussdbproto.StartupMessage{ProtocolVersion: gaussdbproto.ProtocolVersionNumber, Parameters: map[string]string{}}),
+		SendMessage(&gaussdbproto.AuthenticationOk{}),
+		SendMessage(&gaussdbproto.BackendKeyData{ProcessID: 0, SecretKey: 0}),
+		SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}),
 	}
 }

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -358,12 +358,12 @@ func newBenchmarkWriteTableCopyFromSrc(count int) pgx.CopyFromSource {
 		row: []any{
 			"varchar_1",
 			"varchar_2",
-			&pgtype.Text{},
+			&gaussdbtype.Text{},
 			time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local),
-			&pgtype.Date{},
+			&gaussdbtype.Date{},
 			1,
 			2,
-			&pgtype.Int4{},
+			&gaussdbtype.Int4{},
 			time.Date(2001, 1, 1, 0, 0, 0, 0, time.Local),
 			time.Date(2002, 1, 1, 0, 0, 0, 0, time.Local),
 			true,
@@ -881,7 +881,7 @@ func BenchmarkSelectManyRegisteredEnum(b *testing.B) {
 	err = conn.QueryRow(context.Background(), "select oid from pg_type where typname=$1;", "color").Scan(&oid)
 	require.NoError(b, err)
 
-	conn.TypeMap().RegisterType(&pgtype.Type{Name: "color", OID: oid, Codec: &pgtype.EnumCodec{}})
+	conn.TypeMap().RegisterType(&gaussdbtype.Type{Name: "color", OID: oid, Codec: &gaussdbtype.EnumCodec{}})
 
 	b.ResetTimer()
 	var x, y, z string
@@ -1013,14 +1013,14 @@ func BenchmarkSelectRowsScanStringBytes(b *testing.B) {
 }
 
 type BenchRowDecoder struct {
-	ID         pgtype.Int4
-	FirstName  pgtype.Text
-	LastName   pgtype.Text
-	Sex        pgtype.Text
-	BirthDate  pgtype.Date
-	Weight     pgtype.Int4
-	Height     pgtype.Int4
-	UpdateTime pgtype.Timestamptz
+	ID         gaussdbtype.Int4
+	FirstName  gaussdbtype.Text
+	LastName   gaussdbtype.Text
+	Sex        gaussdbtype.Text
+	BirthDate  gaussdbtype.Date
+	Weight     gaussdbtype.Int4
+	Height     gaussdbtype.Int4
+	UpdateTime gaussdbtype.Timestamptz
 }
 
 func BenchmarkSelectRowsScanDecoder(b *testing.B) {
@@ -1349,7 +1349,7 @@ func BenchmarkSelectRowsRawPrepared(b *testing.B) {
 
 					hijackedConn.Conn = qr
 					hijackedConn.Frontend = hijackedConn.Config.BuildFrontend(qr, qr)
-					conn, err = pgconn.Construct(hijackedConn)
+					conn, err = gaussdbconn.Construct(hijackedConn)
 					require.NoError(b, err)
 
 					{

@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/stdlib"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/tracelog"
 	"github.com/stretchr/testify/assert"
@@ -139,7 +139,7 @@ func TestSQLOpen(t *testing.T) {
 }
 
 func TestSQLOpenFromPool(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
 
@@ -364,7 +364,7 @@ func TestConnConcurrency(t *testing.T) {
 
 				var id int
 				var str string
-				var duration pgtype.Interval
+				var duration gaussdbtype.Interval
 				err := db.QueryRowContext(ctx, "select id,str,dur_str from t where id = $1", idx).Scan(&id, &str, &duration)
 				if err != nil {
 					errChan <- fmt.Errorf("select failed: %d %w", idx, err)
@@ -378,7 +378,7 @@ func TestConnConcurrency(t *testing.T) {
 					errChan <- fmt.Errorf("str mismatch: %d %s", idx, str)
 					return
 				}
-				expectedDuration := pgtype.Interval{
+				expectedDuration := gaussdbtype.Interval{
 					Microseconds: int64(idx) * time.Second.Microseconds(),
 					Valid:        true,
 				}
@@ -454,7 +454,7 @@ func TestConnQueryFailure(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		_, err := db.Query("select 'foo")
 		require.Error(t, err)
-		require.IsType(t, new(pgconn.PgError), err)
+		require.IsType(t, new(gaussdbconn.PgError), err)
 	})
 }
 
@@ -471,7 +471,7 @@ func TestConnSimpleSlicePassThrough(t *testing.T) {
 
 func TestConnQueryScanGoArray(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		m := pgtype.NewMap()
+		m := gaussdbtype.NewMap()
 
 		var a []int64
 		err := db.QueryRow("select '{1,2,3}'::bigint[]").Scan(m.SQLScanner(&a))
@@ -482,16 +482,16 @@ func TestConnQueryScanGoArray(t *testing.T) {
 
 func TestConnQueryScanArray(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		m := pgtype.NewMap()
+		m := gaussdbtype.NewMap()
 
-		var a pgtype.Array[int64]
+		var a gaussdbtype.Array[int64]
 		err := db.QueryRow("select '{1,2,3}'::bigint[]").Scan(m.SQLScanner(&a))
 		require.NoError(t, err)
-		assert.Equal(t, pgtype.Array[int64]{Elements: []int64{1, 2, 3}, Dims: []pgtype.ArrayDimension{{Length: 3, LowerBound: 1}}, Valid: true}, a)
+		assert.Equal(t, gaussdbtype.Array[int64]{Elements: []int64{1, 2, 3}, Dims: []gaussdbtype.ArrayDimension{{Length: 3, LowerBound: 1}}, Valid: true}, a)
 
 		err = db.QueryRow("select null::bigint[]").Scan(m.SQLScanner(&a))
 		require.NoError(t, err)
-		assert.Equal(t, pgtype.Array[int64]{Elements: nil, Dims: nil, Valid: false}, a)
+		assert.Equal(t, gaussdbtype.Array[int64]{Elements: nil, Dims: nil, Valid: false}, a)
 	})
 }
 
@@ -499,18 +499,18 @@ func TestConnQueryScanRange(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		skipCockroachDB(t, db, "Server does not support int4range")
 
-		m := pgtype.NewMap()
+		m := gaussdbtype.NewMap()
 
-		var r pgtype.Range[pgtype.Int4]
+		var r gaussdbtype.Range[gaussdbtype.Int4]
 		err := db.QueryRow("select int4range(1, 5)").Scan(m.SQLScanner(&r))
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			pgtype.Range[pgtype.Int4]{
-				Lower:     pgtype.Int4{Int32: 1, Valid: true},
-				Upper:     pgtype.Int4{Int32: 5, Valid: true},
-				LowerType: pgtype.Inclusive,
-				UpperType: pgtype.Exclusive,
+			gaussdbtype.Range[gaussdbtype.Int4]{
+				Lower:     gaussdbtype.Int4{Int32: 1, Valid: true},
+				Upper:     gaussdbtype.Int4{Int32: 5, Valid: true},
+				LowerType: gaussdbtype.Inclusive,
+				UpperType: gaussdbtype.Exclusive,
 				Valid:     true,
 			},
 			r)
@@ -735,7 +735,7 @@ func TestBeginTxContextCancel(t *testing.T) {
 
 		var n int
 		err = db.QueryRow("select count(*) from t").Scan(&n)
-		if pgErr, ok := err.(*pgconn.PgError); !ok || pgErr.Code != "42P01" {
+		if pgErr, ok := err.(*gaussdbconn.PgError); !ok || pgErr.Code != "42P01" {
 			t.Fatalf(`err => %v, want PgError{Code: "42P01"}`, err)
 		}
 	})
@@ -871,7 +871,7 @@ func TestStmtExecContextCancel(t *testing.T) {
 	defer cancel()
 
 	_, err = stmt.ExecContext(ctx, 42)
-	if !pgconn.Timeout(err) {
+	if !gaussdbconn.Timeout(err) {
 		t.Errorf("expected timeout error, got %v", err)
 	}
 

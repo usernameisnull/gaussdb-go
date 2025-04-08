@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 )
 
 // QueuedQuery is a query that has been queued for execution via a Batch.
@@ -13,7 +13,7 @@ type QueuedQuery struct {
 	SQL       string
 	Arguments []any
 	Fn        batchItemFunc
-	sd        *pgconn.StatementDescription
+	sd        *gaussdbconn.StatementDescription
 }
 
 type batchItemFunc func(br BatchResults) error
@@ -43,7 +43,7 @@ func (qq *QueuedQuery) QueryRow(fn func(row Row) error) {
 }
 
 // Exec sets fn to be called when the response to qq is received.
-func (qq *QueuedQuery) Exec(fn func(ct pgconn.CommandTag) error) {
+func (qq *QueuedQuery) Exec(fn func(ct gaussdbconn.CommandTag) error) {
 	qq.Fn = func(br BatchResults) error {
 		ct, err := br.Exec()
 		if err != nil {
@@ -84,7 +84,7 @@ func (b *Batch) Len() int {
 type BatchResults interface {
 	// Exec reads the results from the next query in the batch as if the query has been sent with Conn.Exec. Prefer
 	// calling Exec on the QueuedQuery.
-	Exec() (pgconn.CommandTag, error)
+	Exec() (gaussdbconn.CommandTag, error)
 
 	// Query reads the results from the next query in the batch as if the query has been sent with Conn.Query. Prefer
 	// calling Query on the QueuedQuery.
@@ -110,7 +110,7 @@ type BatchResults interface {
 type batchResults struct {
 	ctx       context.Context
 	conn      *Conn
-	mrr       *pgconn.MultiResultReader
+	mrr       *gaussdbconn.MultiResultReader
 	err       error
 	b         *Batch
 	qqIdx     int
@@ -119,12 +119,12 @@ type batchResults struct {
 }
 
 // Exec reads the results from the next query in the batch as if the query has been sent with Exec.
-func (br *batchResults) Exec() (pgconn.CommandTag, error) {
+func (br *batchResults) Exec() (gaussdbconn.CommandTag, error) {
 	if br.err != nil {
-		return pgconn.CommandTag{}, br.err
+		return gaussdbconn.CommandTag{}, br.err
 	}
 	if br.closed {
-		return pgconn.CommandTag{}, fmt.Errorf("batch already closed")
+		return gaussdbconn.CommandTag{}, fmt.Errorf("batch already closed")
 	}
 
 	query, arguments, _ := br.nextQueryAndArgs()
@@ -141,7 +141,7 @@ func (br *batchResults) Exec() (pgconn.CommandTag, error) {
 				Err:  err,
 			})
 		}
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	commandTag, err := br.mrr.ResultReader().Close()
@@ -270,7 +270,7 @@ func (br *batchResults) nextQueryAndArgs() (query string, args []any, ok bool) {
 type pipelineBatchResults struct {
 	ctx       context.Context
 	conn      *Conn
-	pipeline  *pgconn.Pipeline
+	pipeline  *gaussdbconn.Pipeline
 	lastRows  *baseRows
 	err       error
 	b         *Batch
@@ -280,33 +280,33 @@ type pipelineBatchResults struct {
 }
 
 // Exec reads the results from the next query in the batch as if the query has been sent with Exec.
-func (br *pipelineBatchResults) Exec() (pgconn.CommandTag, error) {
+func (br *pipelineBatchResults) Exec() (gaussdbconn.CommandTag, error) {
 	if br.err != nil {
-		return pgconn.CommandTag{}, br.err
+		return gaussdbconn.CommandTag{}, br.err
 	}
 	if br.closed {
-		return pgconn.CommandTag{}, fmt.Errorf("batch already closed")
+		return gaussdbconn.CommandTag{}, fmt.Errorf("batch already closed")
 	}
 	if br.lastRows != nil && br.lastRows.err != nil {
-		return pgconn.CommandTag{}, br.err
+		return gaussdbconn.CommandTag{}, br.err
 	}
 
 	query, arguments, err := br.nextQueryAndArgs()
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return gaussdbconn.CommandTag{}, err
 	}
 
 	results, err := br.pipeline.GetResults()
 	if err != nil {
 		br.err = err
-		return pgconn.CommandTag{}, br.err
+		return gaussdbconn.CommandTag{}, br.err
 	}
-	var commandTag pgconn.CommandTag
+	var commandTag gaussdbconn.CommandTag
 	switch results := results.(type) {
-	case *pgconn.ResultReader:
+	case *gaussdbconn.ResultReader:
 		commandTag, br.err = results.Close()
 	default:
-		return pgconn.CommandTag{}, fmt.Errorf("unexpected pipeline result: %T", results)
+		return gaussdbconn.CommandTag{}, fmt.Errorf("unexpected pipeline result: %T", results)
 	}
 
 	if br.conn.batchTracer != nil {
@@ -361,7 +361,7 @@ func (br *pipelineBatchResults) Query() (Rows, error) {
 		}
 	} else {
 		switch results := results.(type) {
-		case *pgconn.ResultReader:
+		case *gaussdbconn.ResultReader:
 			rows.resultReader = results
 		default:
 			err = fmt.Errorf("unexpected pipeline result: %T", results)

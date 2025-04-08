@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConnCopyWithAllQueryExecModes(t *testing.T) {
-	for _, mode := range pgxtest.AllQueryExecModes {
+	for _, mode := range gaussdbxtest.AllQueryExecModes {
 		t.Run(mode.String(), func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 			defer cancel()
@@ -82,7 +82,7 @@ func TestConnCopyWithAllQueryExecModes(t *testing.T) {
 
 func TestConnCopyWithKnownOIDQueryExecModes(t *testing.T) {
 
-	for _, mode := range pgxtest.KnownOIDQueryExecModes {
+	for _, mode := range gaussdbxtest.KnownOIDQueryExecModes {
 		t.Run(mode.String(), func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 			defer cancel()
@@ -504,7 +504,7 @@ func TestConnCopyFromFailServerSideMidway(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected CopyFrom return error, but it did not")
 	}
-	if _, ok := err.(*pgconn.PgError); !ok {
+	if _, ok := err.(*gaussdbconn.PgError); !ok {
 		t.Errorf("Expected CopyFrom return pgx.PgError, but instead it returned: %v", err)
 	}
 	if copyCount != 0 {
@@ -578,7 +578,7 @@ func TestConnCopyFromFailServerSideMidwayAbortsWithoutWaiting(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected CopyFrom return error, but it did not")
 	}
-	if _, ok := err.(*pgconn.PgError); !ok {
+	if _, ok := err.(*gaussdbconn.PgError); !ok {
 		t.Errorf("Expected CopyFrom return pgx.PgError, but instead it returned: %v", err)
 	}
 	if copyCount != 0 {
@@ -655,7 +655,7 @@ func TestConnCopyFromSlowFailRace(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected CopyFrom return error, but it did not")
 	}
-	if _, ok := err.(*pgconn.PgError); !ok {
+	if _, ok := err.(*gaussdbconn.PgError); !ok {
 		t.Errorf("Expected CopyFrom return pgx.PgError, but instead it returned: %v", err)
 	}
 	if copyCount != 0 {

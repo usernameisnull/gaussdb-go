@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 )
 
 // TxIsoLevel is the transaction isolation level (serializable, repeatable read, read committed or read uncommitted)
@@ -140,9 +140,9 @@ type Tx interface {
 	SendBatch(ctx context.Context, b *Batch) BatchResults
 	LargeObjects() LargeObjects
 
-	Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error)
+	Prepare(ctx context.Context, name, sql string) (*gaussdbconn.StatementDescription, error)
 
-	Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error)
+	Exec(ctx context.Context, sql string, arguments ...any) (commandTag gaussdbconn.CommandTag, err error)
 	Query(ctx context.Context, sql string, args ...any) (Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) Row
 
@@ -223,16 +223,16 @@ func (tx *dbTx) Rollback(ctx context.Context) error {
 }
 
 // Exec delegates to the underlying *Conn
-func (tx *dbTx) Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error) {
+func (tx *dbTx) Exec(ctx context.Context, sql string, arguments ...any) (commandTag gaussdbconn.CommandTag, err error) {
 	if tx.closed {
-		return pgconn.CommandTag{}, ErrTxClosed
+		return gaussdbconn.CommandTag{}, ErrTxClosed
 	}
 
 	return tx.conn.Exec(ctx, sql, arguments...)
 }
 
 // Prepare delegates to the underlying *Conn
-func (tx *dbTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+func (tx *dbTx) Prepare(ctx context.Context, name, sql string) (*gaussdbconn.StatementDescription, error) {
 	if tx.closed {
 		return nil, ErrTxClosed
 	}
@@ -325,16 +325,16 @@ func (sp *dbSimulatedNestedTx) Rollback(ctx context.Context) error {
 }
 
 // Exec delegates to the underlying Tx
-func (sp *dbSimulatedNestedTx) Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error) {
+func (sp *dbSimulatedNestedTx) Exec(ctx context.Context, sql string, arguments ...any) (commandTag gaussdbconn.CommandTag, err error) {
 	if sp.closed {
-		return pgconn.CommandTag{}, ErrTxClosed
+		return gaussdbconn.CommandTag{}, ErrTxClosed
 	}
 
 	return sp.tx.Exec(ctx, sql, arguments...)
 }
 
 // Prepare delegates to the underlying Tx
-func (sp *dbSimulatedNestedTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+func (sp *dbSimulatedNestedTx) Prepare(ctx context.Context, name, sql string) (*gaussdbconn.StatementDescription, error) {
 	if sp.closed {
 		return nil, ErrTxClosed
 	}

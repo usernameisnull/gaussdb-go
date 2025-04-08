@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,10 +91,10 @@ func TestConnectWithPreferSimpleProtocol(t *testing.T) {
 	// If simple protocol is used we should be able to correctly scan the result
 	// into a pgtype.Text as the integer will have been encoded in text.
 
-	var s pgtype.Text
+	var s gaussdbtype.Text
 	err := conn.QueryRow(context.Background(), "select $1::int4", 42).Scan(&s)
 	require.NoError(t, err)
-	require.Equal(t, pgtype.Text{String: "42", Valid: true}, s)
+	require.Equal(t, gaussdbtype.Text{String: "42", Valid: true}, s)
 
 	ensureConnValid(t, conn)
 }
@@ -219,7 +219,7 @@ func TestExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		if results := mustExec(t, conn, "create temporary table foo(id integer primary key);"); results.String() != "CREATE TABLE" {
 			t.Error("Unexpected results from Exec")
 		}
@@ -266,7 +266,7 @@ func TestExecWithQueryRewriter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		qr := testQueryRewriter{sql: "select $1::int", args: []any{42}}
 		_, err := conn.Exec(ctx, "should be replaced", &qr)
 		require.NoError(t, err)
@@ -279,7 +279,7 @@ func TestExecFailure(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		if _, err := conn.Exec(context.Background(), "selct;"); err == nil {
 			t.Fatal("Expected SQL syntax error")
 		}
@@ -298,12 +298,12 @@ func TestExecFailureWithArguments(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Exec(context.Background(), "selct $1;", 1)
 		if err == nil {
 			t.Fatal("Expected SQL syntax error")
 		}
-		assert.False(t, pgconn.SafeToRetry(err))
+		assert.False(t, gaussdbconn.SafeToRetry(err))
 
 		_, err = conn.Exec(context.Background(), "select $1::varchar(1);", "1", "2")
 		require.Error(t, err)
@@ -316,7 +316,7 @@ func TestExecContextWithoutCancelation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		ctx, cancelFunc := context.WithCancel(ctx)
 		defer cancelFunc()
 
@@ -327,7 +327,7 @@ func TestExecContextWithoutCancelation(t *testing.T) {
 		if commandTag.String() != "CREATE TABLE" {
 			t.Fatalf("Unexpected results from Exec: %v", commandTag)
 		}
-		assert.False(t, pgconn.SafeToRetry(err))
+		assert.False(t, gaussdbconn.SafeToRetry(err))
 	})
 }
 
@@ -337,7 +337,7 @@ func TestExecContextFailureWithoutCancelation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		ctx, cancelFunc := context.WithCancel(ctx)
 		defer cancelFunc()
 
@@ -345,14 +345,14 @@ func TestExecContextFailureWithoutCancelation(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected SQL syntax error")
 		}
-		assert.False(t, pgconn.SafeToRetry(err))
+		assert.False(t, gaussdbconn.SafeToRetry(err))
 
 		rows, _ := conn.Query(context.Background(), "select 1")
 		rows.Close()
 		if rows.Err() != nil {
 			t.Fatalf("ExecEx failure appears to have broken connection: %v", rows.Err())
 		}
-		assert.False(t, pgconn.SafeToRetry(err))
+		assert.False(t, gaussdbconn.SafeToRetry(err))
 	})
 }
 
@@ -362,7 +362,7 @@ func TestExecContextFailureWithoutCancelationWithArguments(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		ctx, cancelFunc := context.WithCancel(ctx)
 		defer cancelFunc()
 
@@ -370,7 +370,7 @@ func TestExecContextFailureWithoutCancelationWithArguments(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected SQL syntax error")
 		}
-		assert.False(t, pgconn.SafeToRetry(err))
+		assert.False(t, gaussdbconn.SafeToRetry(err))
 	})
 }
 
@@ -382,7 +382,7 @@ func TestExecFailureCloseBefore(t *testing.T) {
 
 	_, err := conn.Exec(context.Background(), "select 1")
 	require.Error(t, err)
-	assert.True(t, pgconn.SafeToRetry(err))
+	assert.True(t, gaussdbconn.SafeToRetry(err))
 }
 
 func TestExecPerQuerySimpleProtocol(t *testing.T) {
@@ -487,7 +487,7 @@ func TestPrepareIdempotency(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		for i := 0; i < 2; i++ {
 			_, err := conn.Prepare(context.Background(), "test", "select 42::integer")
 			if err != nil {
@@ -519,7 +519,7 @@ func TestPrepareStatementCacheModes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Prepare(context.Background(), "test", "select $1::text")
 		require.NoError(t, err)
 
@@ -536,7 +536,7 @@ func TestPrepareWithDigestedName(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		sql := "select $1::text"
 		sd, err := conn.Prepare(ctx, sql, sql)
 		require.NoError(t, err)
@@ -559,7 +559,7 @@ func TestDeallocateInAbortedTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
 
@@ -594,7 +594,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Prepare(ctx, "ps", "select $1::text")
 		require.NoError(t, err)
 
@@ -788,7 +788,7 @@ func TestFatalRxError(t *testing.T) {
 		var n int32
 		var s string
 		err := conn.QueryRow(context.Background(), "select 1::int4, pg_sleep(10)::varchar").Scan(&n, &s)
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Severity == "FATAL" {
+		if pgErr, ok := err.(*gaussdbconn.PgError); ok && pgErr.Severity == "FATAL" {
 		} else {
 			t.Errorf("Expected QueryRow Scan to return fatal PgError, but instead received %v", err)
 			return
@@ -844,7 +844,7 @@ func TestInsertBoolArray(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		if results := mustExec(t, conn, "create temporary table foo(spice bool[]);"); results.String() != "CREATE TABLE" {
 			t.Error("Unexpected results from Exec")
 		}
@@ -862,7 +862,7 @@ func TestInsertTimestampArray(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		if results := mustExec(t, conn, "create temporary table foo(spice timestamp[]);"); results.String() != "CREATE TABLE" {
 			t.Error("Unexpected results from Exec")
 		}
@@ -921,10 +921,10 @@ func TestConnInitTypeMap(t *testing.T) {
 
 	// spot check that the standard postgres type names aren't qualified
 	nameOIDs := map[string]uint32{
-		"_int8": pgtype.Int8ArrayOID,
-		"int8":  pgtype.Int8OID,
-		"json":  pgtype.JSONOID,
-		"text":  pgtype.TextOID,
+		"_int8": gaussdbtype.Int8ArrayOID,
+		"int8":  gaussdbtype.Int8OID,
+		"json":  gaussdbtype.JSONOID,
+		"text":  gaussdbtype.TextOID,
 	}
 	for name, oid := range nameOIDs {
 		dtByName, ok := conn.TypeMap().TypeForName(name)
@@ -947,7 +947,7 @@ func TestUnregisteredTypeUsableAsStringArgumentAndBaseResult(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		var n uint64
 		err := conn.QueryRow(context.Background(), "select $1::uint64", "42").Scan(&n)
@@ -1002,7 +1002,7 @@ func TestLoadTypeSameNameInDifferentSchemas(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
@@ -1046,7 +1046,7 @@ func TestLoadCompositeType(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
@@ -1067,7 +1067,7 @@ func TestLoadRangeType(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
@@ -1080,16 +1080,16 @@ func TestLoadRangeType(t *testing.T) {
 		newRangeType, err := conn.LoadType(ctx, "examplefloatrange")
 		require.NoError(t, err)
 		conn.TypeMap().RegisterType(newRangeType)
-		conn.TypeMap().RegisterDefaultPgType(pgtype.Range[float64]{}, "examplefloatrange")
+		conn.TypeMap().RegisterDefaultPgType(gaussdbtype.Range[float64]{}, "examplefloatrange")
 
-		var inputRangeType = pgtype.Range[float64]{
+		var inputRangeType = gaussdbtype.Range[float64]{
 			Lower:     1.0,
 			Upper:     2.0,
-			LowerType: pgtype.Inclusive,
-			UpperType: pgtype.Inclusive,
+			LowerType: gaussdbtype.Inclusive,
+			UpperType: gaussdbtype.Inclusive,
 			Valid:     true,
 		}
-		var outputRangeType pgtype.Range[float64]
+		var outputRangeType gaussdbtype.Range[float64]
 		err = tx.QueryRow(ctx, "SELECT $1::examplefloatrange", inputRangeType).Scan(&outputRangeType)
 		require.NoError(t, err)
 		require.Equal(t, inputRangeType, outputRangeType)
@@ -1289,7 +1289,7 @@ func TestInsertDurationInterval(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Exec(context.Background(), "create temporary table t(duration INTERVAL(0) NOT NULL)")
 		require.NoError(t, err)
 
@@ -1337,7 +1337,7 @@ func TestConnDeallocateInvalidatedCachedStatementsWhenCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 
 		var n int32
 		err := conn.QueryRow(ctx, "select 1 / $1::int", 1).Scan(&n)

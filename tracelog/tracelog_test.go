@@ -11,18 +11,18 @@ import (
 	"time"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxpool"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgxtest"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/tracelog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
-var defaultConnTestRunner pgxtest.ConnTestRunner
+var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 
 func init() {
-	defaultConnTestRunner = pgxtest.DefaultConnTestRunner()
+	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *pgx.ConnConfig {
 		config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestContextGetsPassedToLogMethod(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		ctx = context.WithValue(ctx, "ctxdata", "foo")
@@ -157,7 +157,7 @@ func TestLogQuery(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		_, err := conn.Exec(ctx, `select $1::text`, "testing")
@@ -199,7 +199,7 @@ func TestLogQueryArgsHandlesUTF8(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		var s string
@@ -247,7 +247,7 @@ func TestLogCopyFrom(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, pgxtest.KnownOIDQueryExecModes, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, gaussdbxtest.KnownOIDQueryExecModes, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		_, err := conn.Exec(ctx, `create temporary table foo(a int4)`)
 		require.NoError(t, err)
 
@@ -338,7 +338,7 @@ func TestLogBatchStatementsOnExec(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		batch := &pgx.Batch{}
@@ -385,7 +385,7 @@ func TestLogBatchStatementsOnBatchResultClose(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		batch := &pgx.Batch{}
@@ -424,7 +424,7 @@ func TestLogPrepare(t *testing.T) {
 		return config
 	}
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, []pgx.QueryExecMode{
 		pgx.QueryExecModeCacheStatement,
 		pgx.QueryExecModeCacheDescribe,
 		pgx.QueryExecModeDescribeExec,
@@ -451,7 +451,7 @@ func TestLogPrepare(t *testing.T) {
 	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, ctr, nil, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
 		logger.Clear() // Clear any logs written when establishing connection
 
 		_, err := conn.Prepare(ctx, "test_query_1", `select $1::int`)
@@ -485,13 +485,13 @@ func TestConcurrentUsage(t *testing.T) {
 		LogLevel: tracelog.LogLevelTrace,
 	}
 
-	config, err := pgxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	config.ConnConfig.Tracer = tracer
 
 	for i := 0; i < 50; i++ {
 		func() {
-			pool, err := pgxpool.NewWithConfig(ctx, config)
+			pool, err := gaussdbxpool.NewWithConfig(ctx, config)
 			require.NoError(t, err)
 
 			defer pool.Close()

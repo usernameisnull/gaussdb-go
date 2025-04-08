@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgmock"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/pgproto3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,9 +20,9 @@ func TestScript(t *testing.T) {
 	script := &pgmock.Script{
 		Steps: pgmock.AcceptUnauthenticatedConnRequestSteps(),
 	}
-	script.Steps = append(script.Steps, pgmock.ExpectMessage(&pgproto3.Query{String: "select 42"}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&pgproto3.RowDescription{
-		Fields: []pgproto3.FieldDescription{
+	script.Steps = append(script.Steps, pgmock.ExpectMessage(&gaussdbproto.Query{String: "select 42"}))
+	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.RowDescription{
+		Fields: []gaussdbproto.FieldDescription{
 			{
 				Name:                 []byte("?column?"),
 				TableOID:             0,
@@ -34,12 +34,12 @@ func TestScript(t *testing.T) {
 			},
 		},
 	}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&pgproto3.DataRow{
+	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.DataRow{
 		Values: [][]byte{[]byte("42")},
 	}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&pgproto3.CommandComplete{CommandTag: []byte("SELECT 1")}))
-	script.Steps = append(script.Steps, pgmock.SendMessage(&pgproto3.ReadyForQuery{TxStatus: 'I'}))
-	script.Steps = append(script.Steps, pgmock.ExpectMessage(&pgproto3.Terminate{}))
+	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.CommandComplete{CommandTag: []byte("SELECT 1")}))
+	script.Steps = append(script.Steps, pgmock.SendMessage(&gaussdbproto.ReadyForQuery{TxStatus: 'I'}))
+	script.Steps = append(script.Steps, pgmock.ExpectMessage(&gaussdbproto.Terminate{}))
 
 	ln, err := net.Listen("tcp", "127.0.0.1:")
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestScript(t *testing.T) {
 			return
 		}
 
-		err = script.Run(pgproto3.NewBackend(conn, conn))
+		err = script.Run(gaussdbproto.NewBackend(conn, conn))
 		if err != nil {
 			serverErrChan <- err
 			return
@@ -74,7 +74,7 @@ func TestScript(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	pgConn, err := pgconn.Connect(ctx, connStr)
+	pgConn, err := gaussdbconn.Connect(ctx, connStr)
 	require.NoError(t, err)
 	results, err := pgConn.Exec(ctx, "select 42").ReadAll()
 	assert.NoError(t, err)
