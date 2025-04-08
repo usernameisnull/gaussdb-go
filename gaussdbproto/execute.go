@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Execute struct {
@@ -40,7 +40,7 @@ func (src *Execute) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'E')
 	dst = append(dst, src.Portal...)
 	dst = append(dst, 0)
-	dst = pgio.AppendUint32(dst, src.MaxRows)
+	dst = gaussdbio.AppendUint32(dst, src.MaxRows)
 	return finishMessage(dst, sp)
 }
 

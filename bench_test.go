@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 
 func BenchmarkConnectClose(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		conn, err := pgx.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+		conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -34,7 +34,7 @@ func BenchmarkConnectClose(b *testing.B) {
 
 func BenchmarkMinimalUnpreparedSelectWithoutStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
 
@@ -58,7 +58,7 @@ func BenchmarkMinimalUnpreparedSelectWithoutStatementCache(b *testing.B) {
 
 func BenchmarkMinimalUnpreparedSelectWithStatementCacheModeDescribe(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
 
@@ -82,7 +82,7 @@ func BenchmarkMinimalUnpreparedSelectWithStatementCacheModeDescribe(b *testing.B
 
 func BenchmarkMinimalUnpreparedSelectWithStatementCacheModePrepare(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
 
@@ -128,13 +128,13 @@ func BenchmarkMinimalPreparedSelect(b *testing.B) {
 	}
 }
 
-func BenchmarkMinimalPgConnPreparedSelect(b *testing.B) {
+func BenchmarkMinimalGaussdbConnPreparedSelect(b *testing.B) {
 	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
 	defer closeConn(b, conn)
 
-	pgConn := conn.PgConn()
+	gaussdbConn := conn.GaussdbConn()
 
-	_, err := pgConn.Prepare(context.Background(), "ps1", "select $1::int8", nil)
+	_, err := gaussdbConn.Prepare(context.Background(), "ps1", "select $1::int8", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func BenchmarkMinimalPgConnPreparedSelect(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 
-		rr := pgConn.ExecPrepared(context.Background(), "ps1", [][]byte{encodedBytes}, []int16{1}, []int16{1})
+		rr := gaussdbConn.ExecPrepared(context.Background(), "ps1", [][]byte{encodedBytes}, []int16{1}, []int16{1})
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -352,7 +352,7 @@ func (s *benchmarkWriteTableCopyFromSrc) Err() error {
 	return nil
 }
 
-func newBenchmarkWriteTableCopyFromSrc(count int) pgx.CopyFromSource {
+func newBenchmarkWriteTableCopyFromSrc(count int) gaussdbgo.CopyFromSource {
 	return &benchmarkWriteTableCopyFromSrc{
 		count: count,
 		row: []any{
@@ -422,7 +422,7 @@ func benchmarkWriteNRowsViaBatchInsert(b *testing.B, n int) {
 	for i := 0; i < b.N; i++ {
 		src := newBenchmarkWriteTableCopyFromSrc(n)
 
-		batch := &pgx.Batch{}
+		batch := &gaussdbgo.Batch{}
 		for src.Next() {
 			values, _ := src.Values()
 			batch.Queue("insert_t", values...)
@@ -444,7 +444,7 @@ func (qa *queryArgs) Append(v any) string {
 
 // note this function is only used for benchmarks -- it doesn't escape tableName
 // or columnNames
-func multiInsert(conn *pgx.Conn, tableName string, columnNames []string, rowSrc pgx.CopyFromSource) (int, error) {
+func multiInsert(conn *gaussdbgo.Conn, tableName string, columnNames []string, rowSrc gaussdbgo.CopyFromSource) (int, error) {
 	maxRowsPerInsert := 65535 / len(columnNames)
 	rowsThisInsert := 0
 	rowCount := 0
@@ -567,7 +567,7 @@ func benchmarkWriteNRowsViaCopy(b *testing.B, n int) {
 		src := newBenchmarkWriteTableCopyFromSrc(n)
 
 		_, err := conn.CopyFrom(context.Background(),
-			pgx.Identifier{"t"},
+			gaussdbgo.Identifier{"t"},
 			[]string{"varchar_1",
 				"varchar_2",
 				"varchar_null_1",
@@ -682,7 +682,7 @@ func BenchmarkWrite10000RowsViaCopy(b *testing.B) {
 
 func BenchmarkMultipleQueriesNonBatchNoStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
 
@@ -694,7 +694,7 @@ func BenchmarkMultipleQueriesNonBatchNoStatementCache(b *testing.B) {
 
 func BenchmarkMultipleQueriesNonBatchPrepareStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
 
@@ -706,7 +706,7 @@ func BenchmarkMultipleQueriesNonBatchPrepareStatementCache(b *testing.B) {
 
 func BenchmarkMultipleQueriesNonBatchDescribeStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
 
@@ -716,7 +716,7 @@ func BenchmarkMultipleQueriesNonBatchDescribeStatementCache(b *testing.B) {
 	benchmarkMultipleQueriesNonBatch(b, conn, 3)
 }
 
-func benchmarkMultipleQueriesNonBatch(b *testing.B, conn *pgx.Conn, queryCount int) {
+func benchmarkMultipleQueriesNonBatch(b *testing.B, conn *gaussdbgo.Conn, queryCount int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < queryCount; j++ {
@@ -744,7 +744,7 @@ func benchmarkMultipleQueriesNonBatch(b *testing.B, conn *pgx.Conn, queryCount i
 
 func BenchmarkMultipleQueriesBatchNoStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
 
@@ -756,7 +756,7 @@ func BenchmarkMultipleQueriesBatchNoStatementCache(b *testing.B) {
 
 func BenchmarkMultipleQueriesBatchPrepareStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
 
@@ -768,7 +768,7 @@ func BenchmarkMultipleQueriesBatchPrepareStatementCache(b *testing.B) {
 
 func BenchmarkMultipleQueriesBatchDescribeStatementCache(b *testing.B) {
 	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
 
@@ -778,10 +778,10 @@ func BenchmarkMultipleQueriesBatchDescribeStatementCache(b *testing.B) {
 	benchmarkMultipleQueriesBatch(b, conn, 3)
 }
 
-func benchmarkMultipleQueriesBatch(b *testing.B, conn *pgx.Conn, queryCount int) {
+func benchmarkMultipleQueriesBatch(b *testing.B, conn *gaussdbgo.Conn, queryCount int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		batch := &pgx.Batch{}
+		batch := &gaussdbgo.Batch{}
 		for j := 0; j < queryCount; j++ {
 			batch.Queue("select n from generate_series(0,5) n")
 		}
@@ -1035,8 +1035,8 @@ func BenchmarkSelectRowsScanDecoder(b *testing.B) {
 				name string
 				code int16
 			}{
-				{"text", pgx.TextFormatCode},
-				{"binary", pgx.BinaryFormatCode},
+				{"text", gaussdbgo.TextFormatCode},
+				{"binary", gaussdbgo.BinaryFormatCode},
 			}
 			for _, format := range formats {
 				b.Run(format.name, func(b *testing.B) {
@@ -1046,7 +1046,7 @@ func BenchmarkSelectRowsScanDecoder(b *testing.B) {
 						rows, err := conn.Query(
 							context.Background(),
 							"select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n",
-							pgx.QueryResultFormats{format.code},
+							gaussdbgo.QueryResultFormats{format.code},
 							rowCount,
 						)
 						if err != nil {
@@ -1067,7 +1067,7 @@ func BenchmarkSelectRowsScanDecoder(b *testing.B) {
 	}
 }
 
-func BenchmarkSelectRowsPgConnExecText(b *testing.B) {
+func BenchmarkSelectRowsGaussdbConnExecText(b *testing.B) {
 	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(b, conn)
 
@@ -1076,7 +1076,7 @@ func BenchmarkSelectRowsPgConnExecText(b *testing.B) {
 	for _, rowCount := range rowCounts {
 		b.Run(fmt.Sprintf("%d rows", rowCount), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				mrr := conn.PgConn().Exec(context.Background(), fmt.Sprintf("select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + %d) n", rowCount))
+				mrr := conn.GaussdbConn().Exec(context.Background(), fmt.Sprintf("select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + %d) n", rowCount))
 				for mrr.NextResult() {
 					rr := mrr.ResultReader()
 					for rr.NextRow() {
@@ -1093,7 +1093,7 @@ func BenchmarkSelectRowsPgConnExecText(b *testing.B) {
 	}
 }
 
-func BenchmarkSelectRowsPgConnExecParams(b *testing.B) {
+func BenchmarkSelectRowsGaussdbConnExecParams(b *testing.B) {
 	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(b, conn)
 
@@ -1105,19 +1105,19 @@ func BenchmarkSelectRowsPgConnExecParams(b *testing.B) {
 				name string
 				code int16
 			}{
-				{"text", pgx.TextFormatCode},
-				{"binary - mostly", pgx.BinaryFormatCode},
+				{"text", gaussdbgo.TextFormatCode},
+				{"binary - mostly", gaussdbgo.BinaryFormatCode},
 			}
 			for _, format := range formats {
 				b.Run(format.name, func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						rr := conn.PgConn().ExecParams(
+						rr := conn.GaussdbConn().ExecParams(
 							context.Background(),
 							"select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n",
 							[][]byte{[]byte(strconv.FormatInt(rowCount, 10))},
 							nil,
 							nil,
-							[]int16{format.code, pgx.TextFormatCode, pgx.TextFormatCode, pgx.TextFormatCode, format.code, format.code, format.code, format.code},
+							[]int16{format.code, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, format.code, format.code, format.code, format.code},
 						)
 						for rr.NextRow() {
 							rr.Values()
@@ -1144,7 +1144,7 @@ func BenchmarkSelectRowsSimpleCollectRowsRowToStructByPos(b *testing.B) {
 		b.Run(fmt.Sprintf("%d rows", rowCount), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				rows, _ := conn.Query(context.Background(), "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", rowCount)
-				benchRows, err := pgx.CollectRows(rows, pgx.RowToStructByPos[BenchRowSimple])
+				benchRows, err := gaussdbgo.CollectRows(rows, gaussdbgo.RowToStructByPos[BenchRowSimple])
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1169,7 +1169,7 @@ func BenchmarkSelectRowsSimpleAppendRowsRowToStructByPos(b *testing.B) {
 				benchRows = benchRows[:0]
 				rows, _ := conn.Query(context.Background(), "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", rowCount)
 				var err error
-				benchRows, err = pgx.AppendRows(benchRows, rows, pgx.RowToStructByPos[BenchRowSimple])
+				benchRows, err = gaussdbgo.AppendRows(benchRows, rows, gaussdbgo.RowToStructByPos[BenchRowSimple])
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1191,7 +1191,7 @@ func BenchmarkSelectRowsSimpleCollectRowsRowToStructByName(b *testing.B) {
 		b.Run(fmt.Sprintf("%d rows", rowCount), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				rows, _ := conn.Query(context.Background(), "select n as id, 'Adam' as first_name, 'Smith ' || n as last_name, 'male' as sex, '1952-06-16'::date as birth_date, 258 as weight, 72 as height, '2001-01-28 01:02:03-05'::timestamptz as update_time from generate_series(100001, 100000 + $1) n", rowCount)
-				benchRows, err := pgx.CollectRows(rows, pgx.RowToStructByName[BenchRowSimple])
+				benchRows, err := gaussdbgo.CollectRows(rows, gaussdbgo.RowToStructByName[BenchRowSimple])
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1216,7 +1216,7 @@ func BenchmarkSelectRowsSimpleAppendRowsRowToStructByName(b *testing.B) {
 				benchRows = benchRows[:0]
 				rows, _ := conn.Query(context.Background(), "select n as id, 'Adam' as first_name, 'Smith ' || n as last_name, 'male' as sex, '1952-06-16'::date as birth_date, 258 as weight, 72 as height, '2001-01-28 01:02:03-05'::timestamptz as update_time from generate_series(100001, 100000 + $1) n", rowCount)
 				var err error
-				benchRows, err = pgx.AppendRows(benchRows, rows, pgx.RowToStructByPos[BenchRowSimple])
+				benchRows, err = gaussdbgo.AppendRows(benchRows, rows, gaussdbgo.RowToStructByPos[BenchRowSimple])
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1228,13 +1228,13 @@ func BenchmarkSelectRowsSimpleAppendRowsRowToStructByName(b *testing.B) {
 	}
 }
 
-func BenchmarkSelectRowsPgConnExecPrepared(b *testing.B) {
+func BenchmarkSelectRowsGaussdbConnExecPrepared(b *testing.B) {
 	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
 
-	_, err := conn.PgConn().Prepare(context.Background(), "ps1", "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", nil)
+	_, err := conn.GaussdbConn().Prepare(context.Background(), "ps1", "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1245,18 +1245,18 @@ func BenchmarkSelectRowsPgConnExecPrepared(b *testing.B) {
 				name string
 				code int16
 			}{
-				{"text", pgx.TextFormatCode},
-				{"binary - mostly", pgx.BinaryFormatCode},
+				{"text", gaussdbgo.TextFormatCode},
+				{"binary - mostly", gaussdbgo.BinaryFormatCode},
 			}
 			for _, format := range formats {
 				b.Run(format.name, func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						rr := conn.PgConn().ExecPrepared(
+						rr := conn.GaussdbConn().ExecPrepared(
 							context.Background(),
 							"ps1",
 							[][]byte{[]byte(strconv.FormatInt(rowCount, 10))},
 							nil,
-							[]int16{format.code, pgx.TextFormatCode, pgx.TextFormatCode, pgx.TextFormatCode, format.code, format.code, format.code, format.code},
+							[]int16{format.code, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, format.code, format.code, format.code, format.code},
 						)
 						for rr.NextRow() {
 							rr.Values()
@@ -1327,12 +1327,12 @@ func BenchmarkSelectRowsRawPrepared(b *testing.B) {
 				name string
 				code int16
 			}{
-				{"text", pgx.TextFormatCode},
-				{"binary - mostly", pgx.BinaryFormatCode},
+				{"text", gaussdbgo.TextFormatCode},
+				{"binary - mostly", gaussdbgo.BinaryFormatCode},
 			}
 			for _, format := range formats {
 				b.Run(format.name, func(b *testing.B) {
-					conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE")).PgConn()
+					conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE")).GaussdbConn()
 					defer conn.Close(context.Background())
 
 					_, err := conn.Prepare(context.Background(), "ps1", "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", nil)
@@ -1358,7 +1358,7 @@ func BenchmarkSelectRowsRawPrepared(b *testing.B) {
 							"ps1",
 							[][]byte{[]byte(strconv.FormatInt(rowCount, 10))},
 							nil,
-							[]int16{format.code, pgx.TextFormatCode, pgx.TextFormatCode, pgx.TextFormatCode, format.code, format.code, format.code, format.code},
+							[]int16{format.code, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, gaussdbgo.TextFormatCode, format.code, format.code, format.code, format.code},
 						)
 						_, err := rr.Close()
 						require.NoError(b, err)

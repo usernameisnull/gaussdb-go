@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // CompositeIndexGetter is a type accessed by index that can be converted into a PostgreSQL composite.
@@ -478,8 +478,8 @@ func (b *CompositeBinaryBuilder) AppendValue(oid uint32, field any) {
 	}
 
 	if field == nil {
-		b.buf = pgio.AppendUint32(b.buf, oid)
-		b.buf = pgio.AppendInt32(b.buf, -1)
+		b.buf = gaussdbio.AppendUint32(b.buf, oid)
+		b.buf = gaussdbio.AppendInt32(b.buf, -1)
 		b.fieldCount++
 		return
 	}
@@ -490,9 +490,9 @@ func (b *CompositeBinaryBuilder) AppendValue(oid uint32, field any) {
 		return
 	}
 
-	b.buf = pgio.AppendUint32(b.buf, oid)
+	b.buf = gaussdbio.AppendUint32(b.buf, oid)
 	lengthPos := len(b.buf)
-	b.buf = pgio.AppendInt32(b.buf, -1)
+	b.buf = gaussdbio.AppendInt32(b.buf, -1)
 	fieldBuf, err := plan.Encode(field, b.buf)
 	if err != nil {
 		b.err = err

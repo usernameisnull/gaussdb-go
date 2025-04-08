@@ -13,11 +13,11 @@ func (br errBatchResults) Exec() (gaussdbconn.CommandTag, error) {
 	return gaussdbconn.CommandTag{}, br.err
 }
 
-func (br errBatchResults) Query() (pgx.Rows, error) {
+func (br errBatchResults) Query() (gaussdbgo.Rows, error) {
 	return errRows{err: br.err}, br.err
 }
 
-func (br errBatchResults) QueryRow() pgx.Row {
+func (br errBatchResults) QueryRow() gaussdbgo.Row {
 	return errRow{err: br.err}
 }
 
@@ -26,7 +26,7 @@ func (br errBatchResults) Close() error {
 }
 
 type poolBatchResults struct {
-	br pgx.BatchResults
+	br gaussdbgo.BatchResults
 	c  *Conn
 }
 
@@ -34,11 +34,11 @@ func (br *poolBatchResults) Exec() (gaussdbconn.CommandTag, error) {
 	return br.br.Exec()
 }
 
-func (br *poolBatchResults) Query() (pgx.Rows, error) {
+func (br *poolBatchResults) Query() (gaussdbgo.Rows, error) {
 	return br.br.Query()
 }
 
-func (br *poolBatchResults) QueryRow() pgx.Row {
+func (br *poolBatchResults) QueryRow() gaussdbgo.Row {
 	return br.br.QueryRow()
 }
 

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type PolygonScanner interface {
@@ -99,11 +99,11 @@ func (encodePlanPolygonCodecBinary) Encode(value any, buf []byte) (newBuf []byte
 		return nil, nil
 	}
 
-	buf = pgio.AppendInt32(buf, int32(len(polygon.P)))
+	buf = gaussdbio.AppendInt32(buf, int32(len(polygon.P)))
 
 	for _, p := range polygon.P {
-		buf = pgio.AppendUint64(buf, math.Float64bits(p.X))
-		buf = pgio.AppendUint64(buf, math.Float64bits(p.Y))
+		buf = gaussdbio.AppendUint64(buf, math.Float64bits(p.X))
+		buf = gaussdbio.AppendUint64(buf, math.Float64bits(p.Y))
 	}
 
 	return buf, nil

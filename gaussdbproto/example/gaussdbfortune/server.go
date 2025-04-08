@@ -7,16 +7,16 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 )
 
-type PgFortuneBackend struct {
+type GaussdbFortuneBackend struct {
 	backend   *gaussdbproto.Backend
 	conn      net.Conn
 	responder func() ([]byte, error)
 }
 
-func NewPgFortuneBackend(conn net.Conn, responder func() ([]byte, error)) *PgFortuneBackend {
+func NewGaussdbFortuneBackend(conn net.Conn, responder func() ([]byte, error)) *GaussdbFortuneBackend {
 	backend := gaussdbproto.NewBackend(conn, conn)
 
-	connHandler := &PgFortuneBackend{
+	connHandler := &GaussdbFortuneBackend{
 		backend:   backend,
 		conn:      conn,
 		responder: responder,
@@ -25,7 +25,7 @@ func NewPgFortuneBackend(conn net.Conn, responder func() ([]byte, error)) *PgFor
 	return connHandler
 }
 
-func (p *PgFortuneBackend) Run() error {
+func (p *GaussdbFortuneBackend) Run() error {
 	defer p.Close()
 
 	err := p.handleStartup()
@@ -72,7 +72,7 @@ func (p *PgFortuneBackend) Run() error {
 	}
 }
 
-func (p *PgFortuneBackend) handleStartup() error {
+func (p *GaussdbFortuneBackend) handleStartup() error {
 	startupMessage, err := p.backend.ReceiveStartupMessage()
 	if err != nil {
 		return fmt.Errorf("error receiving startup message: %w", err)
@@ -99,7 +99,7 @@ func (p *PgFortuneBackend) handleStartup() error {
 	return nil
 }
 
-func (p *PgFortuneBackend) Close() error {
+func (p *GaussdbFortuneBackend) Close() error {
 	return p.conn.Close()
 }
 

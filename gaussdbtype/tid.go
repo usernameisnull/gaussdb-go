@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type TIDScanner interface {
@@ -109,8 +109,8 @@ func (encodePlanTIDCodecBinary) Encode(value any, buf []byte) (newBuf []byte, er
 		return nil, nil
 	}
 
-	buf = pgio.AppendUint32(buf, tid.BlockNumber)
-	buf = pgio.AppendUint16(buf, tid.OffsetNumber)
+	buf = gaussdbio.AppendUint32(buf, tid.BlockNumber)
+	buf = gaussdbio.AppendUint16(buf, tid.OffsetNumber)
 	return buf, nil
 }
 

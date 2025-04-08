@@ -25,8 +25,8 @@ func skipOnWindows(t *testing.T) {
 }
 
 func getDefaultPort(t *testing.T) uint16 {
-	if envPGPORT := os.Getenv("PGPORT"); envPGPORT != "" {
-		p, err := strconv.ParseUint(envPGPORT, 10, 16)
+	if envGaussdbPORT := os.Getenv("PGPORT"); envGaussdbPORT != "" {
+		p, err := strconv.ParseUint(envGaussdbPORT, 10, 16)
 		require.NoError(t, err)
 		return uint16(p)
 	}
@@ -34,8 +34,8 @@ func getDefaultPort(t *testing.T) uint16 {
 }
 
 func getDefaultUser(t *testing.T) string {
-	if pguser := os.Getenv("PGUSER"); pguser != "" {
-		return pguser
+	if gaussdbUser := os.Getenv("PGUSER"); gaussdbUser != "" {
+		return gaussdbUser
 	}
 
 	var osUserName string
@@ -931,8 +931,8 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 			osUserName = osUser.Username
 		}
 	}
-
-	pgEnvvars := []string{"PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGAPPNAME", "PGSSLMODE", "PGCONNECT_TIMEOUT", "PGSSLSNI"}
+	// TODO: What are the corresponding environment variable names for these in GaussDB?
+	gaussdbEnvvars := []string{"PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGAPPNAME", "PGSSLMODE", "PGCONNECT_TIMEOUT", "PGSSLSNI"}
 
 	tests := []struct {
 		name    string
@@ -1003,7 +1003,7 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		for _, env := range pgEnvvars {
+		for _, env := range gaussdbEnvvars {
 			t.Setenv(env, tt.envvars[env])
 		}
 
@@ -1016,7 +1016,7 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 	}
 }
 
-func TestParseConfigReadsPgPassfile(t *testing.T) {
+func TestParseConfigReadsGaussdbPassfile(t *testing.T) {
 	skipOnWindows(t)
 	t.Parallel()
 
@@ -1041,7 +1041,7 @@ func TestParseConfigReadsPgPassfile(t *testing.T) {
 	assertConfigsEqual(t, expected, actual, "passfile")
 }
 
-func TestParseConfigReadsPgServiceFile(t *testing.T) {
+func TestParseConfigReadsGaussdbServiceFile(t *testing.T) {
 	skipOnWindows(t)
 	t.Parallel()
 

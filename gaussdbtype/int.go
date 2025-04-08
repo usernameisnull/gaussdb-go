@@ -10,7 +10,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Int64Scanner interface {
@@ -153,7 +153,7 @@ type encodePlanInt2CodecBinaryInt16 struct{}
 
 func (encodePlanInt2CodecBinaryInt16) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	n := value.(int16)
-	return pgio.AppendInt16(buf, int16(n)), nil
+	return gaussdbio.AppendInt16(buf, int16(n)), nil
 }
 
 type encodePlanInt2CodecTextInt16 struct{}
@@ -182,7 +182,7 @@ func (encodePlanInt2CodecBinaryInt64Valuer) Encode(value any, buf []byte) (newBu
 		return nil, fmt.Errorf("%d is less than minimum value for int2", n.Int64)
 	}
 
-	return pgio.AppendInt16(buf, int16(n.Int64)), nil
+	return gaussdbio.AppendInt16(buf, int16(n.Int64)), nil
 }
 
 type encodePlanInt2CodecTextInt64Valuer struct{}
@@ -713,7 +713,7 @@ type encodePlanInt4CodecBinaryInt32 struct{}
 
 func (encodePlanInt4CodecBinaryInt32) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	n := value.(int32)
-	return pgio.AppendInt32(buf, int32(n)), nil
+	return gaussdbio.AppendInt32(buf, int32(n)), nil
 }
 
 type encodePlanInt4CodecTextInt32 struct{}
@@ -742,7 +742,7 @@ func (encodePlanInt4CodecBinaryInt64Valuer) Encode(value any, buf []byte) (newBu
 		return nil, fmt.Errorf("%d is less than minimum value for int4", n.Int64)
 	}
 
-	return pgio.AppendInt32(buf, int32(n.Int64)), nil
+	return gaussdbio.AppendInt32(buf, int32(n.Int64)), nil
 }
 
 type encodePlanInt4CodecTextInt64Valuer struct{}
@@ -1284,7 +1284,7 @@ type encodePlanInt8CodecBinaryInt64 struct{}
 
 func (encodePlanInt8CodecBinaryInt64) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	n := value.(int64)
-	return pgio.AppendInt64(buf, int64(n)), nil
+	return gaussdbio.AppendInt64(buf, int64(n)), nil
 }
 
 type encodePlanInt8CodecTextInt64 struct{}
@@ -1313,7 +1313,7 @@ func (encodePlanInt8CodecBinaryInt64Valuer) Encode(value any, buf []byte) (newBu
 		return nil, fmt.Errorf("%d is less than minimum value for int8", n.Int64)
 	}
 
-	return pgio.AppendInt64(buf, int64(n.Int64)), nil
+	return gaussdbio.AppendInt64(buf, int64(n.Int64)), nil
 }
 
 type encodePlanInt8CodecTextInt64Valuer struct{}

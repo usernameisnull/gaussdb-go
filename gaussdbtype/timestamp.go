@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-const pgTimestampFormat = "2006-01-02 15:04:05.999999999"
+const gaussdbTimestampFormat = "2006-01-02 15:04:05.999999999"
 const jsonISO8601 = "2006-01-02T15:04:05.999999999"
 
 type TimestampScanner interface {
@@ -178,7 +178,7 @@ func (encodePlanTimestampCodecBinary) Encode(value any, buf []byte) (newBuf []by
 		microsecSinceY2K = negativeInfinityMicrosecondOffset
 	}
 
-	buf = pgio.AppendInt64(buf, microsecSinceY2K)
+	buf = gaussdbio.AppendInt64(buf, microsecSinceY2K)
 
 	return buf, nil
 }
@@ -209,7 +209,7 @@ func (encodePlanTimestampCodecText) Encode(value any, buf []byte) (newBuf []byte
 			bc = true
 		}
 
-		s = t.Truncate(time.Microsecond).Format(pgTimestampFormat)
+		s = t.Truncate(time.Microsecond).Format(gaussdbTimestampFormat)
 
 		if bc {
 			s = s + " BC"
@@ -307,7 +307,7 @@ func (plan *scanPlanTextTimestampToTimestampScanner) Scan(src []byte, dst any) e
 			sbuf = sbuf[:len(sbuf)-3]
 			bc = true
 		}
-		tim, err := time.Parse(pgTimestampFormat, sbuf)
+		tim, err := time.Parse(gaussdbTimestampFormat, sbuf)
 		if err != nil {
 			return err
 		}

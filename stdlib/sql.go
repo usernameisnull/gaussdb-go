@@ -23,11 +23,11 @@
 //
 //	db := stdlib.OpenDBFromPool(pool)
 //
-// Or a pgx.ConnConfig can be used to set configuration not accessible via connection string. In this case the
-// pgx.ConnConfig must first be registered with the driver. This registration returns a connection string which is used
+// Or a gaussdbgo.ConnConfig can be used to set configuration not accessible via connection string. In this case the
+// gaussdbgo.ConnConfig must first be registered with the driver. This registration returns a connection string which is used
 // with sql.Open.
 //
-//	connConfig, _ := pgx.ParseConfig(os.Getenv("DATABASE_URL"))
+//	connConfig, _ := gaussdbgo.ParseConfig(os.Getenv("DATABASE_URL"))
 //	connConfig.Tracer = &tracelog.TraceLog{Logger: myLogger, LogLevel: tracelog.LogLevelInfo}
 //	connStr := stdlib.RegisterConnConfig(connConfig)
 //	db, _ := sql.Open("pgx", connStr)
@@ -36,7 +36,7 @@
 //
 //	db.QueryRow("select * from users where id=$1", userID)
 //
-// (*sql.Conn) Raw() can be used to get a *pgx.Conn from the standard database/sql.DB connection pool. This allows
+// (*sql.Conn) Raw() can be used to get a *gaussdbgo.Conn from the standard database/sql.DB connection pool. This allows
 // operations that use pgx specific functionality.
 //
 //	// Given db is a *sql.DB
@@ -46,13 +46,13 @@
 //	}
 //
 //	err = conn.Raw(func(driverConn any) error {
-//	  conn := driverConn.(*stdlib.Conn).Conn() // conn is a *pgx.Conn
+//	  conn := driverConn.(*stdlib.Conn).Conn() // conn is a *gaussdbgo.Conn
 //	  // Do pgx specific stuff with conn
 //	  conn.CopyFrom(...)
 //	  return nil
 //	})
 //	if err != nil {
-//	  // handle error that occurred while using *pgx.Conn
+//	  // handle error that occurred while using *gaussdbgo.Conn
 //	}
 //
 // # PostgreSQL Specific Data Types
@@ -88,23 +88,22 @@ import (
 )
 
 // Only intrinsic types should be binary format with database/sql.
-var databaseSQLResultFormats pgx.QueryResultFormatsByOID
+var databaseSQLResultFormats gaussdbgo.QueryResultFormatsByOID
 
-var pgxDriver *Driver
+var gaussdbDriver *Driver
 
 func init() {
-	pgxDriver = &Driver{
-		configs: make(map[string]*pgx.ConnConfig),
+	gaussdbDriver = &Driver{
+		configs: make(map[string]*gaussdbgo.ConnConfig),
 	}
 
-	// if pgx driver was already registered by different pgx major version then we
+	// if gaussdb driver was already registered by different gaussdb major version then we
 	// skip registration under the default name.
-	if !slices.Contains(sql.Drivers(), "pgx") {
-		sql.Register("pgx", pgxDriver)
+	if !slices.Contains(sql.Drivers(), "gaussdb") {
+		sql.Register("gaussdb", gaussdbDriver)
 	}
-	sql.Register("pgx/v5", pgxDriver)
 
-	databaseSQLResultFormats = pgx.QueryResultFormatsByOID{
+	databaseSQLResultFormats = gaussdbgo.QueryResultFormatsByOID{
 		gaussdbtype.BoolOID:        1,
 		gaussdbtype.ByteaOID:       1,
 		gaussdbtype.CIDOID:         1,
@@ -125,15 +124,15 @@ func init() {
 type OptionOpenDB func(*connector)
 
 // OptionBeforeConnect provides a callback for before connect. It is passed a shallow copy of the ConnConfig that will
-// be used to connect, so only its immediate members should be modified. Used only if db is opened with *pgx.ConnConfig.
-func OptionBeforeConnect(bc func(context.Context, *pgx.ConnConfig) error) OptionOpenDB {
+// be used to connect, so only its immediate members should be modified. Used only if db is opened with *gaussdbgo.ConnConfig.
+func OptionBeforeConnect(bc func(context.Context, *gaussdbgo.ConnConfig) error) OptionOpenDB {
 	return func(dc *connector) {
 		dc.BeforeConnect = bc
 	}
 }
 
-// OptionAfterConnect provides a callback for after connect. Used only if db is opened with *pgx.ConnConfig.
-func OptionAfterConnect(ac func(context.Context, *pgx.Conn) error) OptionOpenDB {
+// OptionAfterConnect provides a callback for after connect. Used only if db is opened with *gaussdbgo.ConnConfig.
+func OptionAfterConnect(ac func(context.Context, *gaussdbgo.Conn) error) OptionOpenDB {
 	return func(dc *connector) {
 		dc.AfterConnect = ac
 	}
@@ -142,7 +141,7 @@ func OptionAfterConnect(ac func(context.Context, *pgx.Conn) error) OptionOpenDB 
 // OptionResetSession provides a callback that can be used to add custom logic prior to executing a query on the
 // connection if the connection has been used before.
 // If ResetSessionFunc returns ErrBadConn error the connection will be discarded.
-func OptionResetSession(rs func(context.Context, *pgx.Conn) error) OptionOpenDB {
+func OptionResetSession(rs func(context.Context, *gaussdbgo.Conn) error) OptionOpenDB {
 	return func(dc *connector) {
 		dc.ResetSession = rs
 	}
@@ -152,7 +151,7 @@ func OptionResetSession(rs func(context.Context, *pgx.Conn) error) OptionOpenDB 
 // new host becomes primary each time. This is useful to distribute connections for multi-master databases like
 // CockroachDB. If you use this you likely should set https://golang.org/pkg/database/sql/#DB.SetConnMaxLifetime as well
 // to ensure that connections are periodically rebalanced across your nodes.
-func RandomizeHostOrderFunc(ctx context.Context, connConfig *pgx.ConnConfig) error {
+func RandomizeHostOrderFunc(ctx context.Context, connConfig *gaussdbgo.ConnConfig) error {
 	if len(connConfig.Fallbacks) == 0 {
 		return nil
 	}
@@ -176,13 +175,13 @@ func RandomizeHostOrderFunc(ctx context.Context, connConfig *pgx.ConnConfig) err
 	return nil
 }
 
-func GetConnector(config pgx.ConnConfig, opts ...OptionOpenDB) driver.Connector {
+func GetConnector(config gaussdbgo.ConnConfig, opts ...OptionOpenDB) driver.Connector {
 	c := connector{
 		ConnConfig:    config,
-		BeforeConnect: func(context.Context, *pgx.ConnConfig) error { return nil }, // noop before connect by default
-		AfterConnect:  func(context.Context, *pgx.Conn) error { return nil },       // noop after connect by default
-		ResetSession:  func(context.Context, *pgx.Conn) error { return nil },       // noop reset session by default
-		driver:        pgxDriver,
+		BeforeConnect: func(context.Context, *gaussdbgo.ConnConfig) error { return nil }, // noop before connect by default
+		AfterConnect:  func(context.Context, *gaussdbgo.Conn) error { return nil },       // noop after connect by default
+		ResetSession:  func(context.Context, *gaussdbgo.Conn) error { return nil },       // noop reset session by default
+		driver:        gaussdbDriver,
 	}
 
 	for _, opt := range opts {
@@ -198,8 +197,8 @@ func GetConnector(config pgx.ConnConfig, opts ...OptionOpenDB) driver.Connector 
 func GetPoolConnector(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) driver.Connector {
 	c := connector{
 		pool:         pool,
-		ResetSession: func(context.Context, *pgx.Conn) error { return nil }, // noop reset session by default
-		driver:       pgxDriver,
+		ResetSession: func(context.Context, *gaussdbgo.Conn) error { return nil }, // noop reset session by default
+		driver:       gaussdbDriver,
 	}
 
 	for _, opt := range opts {
@@ -209,7 +208,7 @@ func GetPoolConnector(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) driver.Conn
 	return c
 }
 
-func OpenDB(config pgx.ConnConfig, opts ...OptionOpenDB) *sql.DB {
+func OpenDB(config gaussdbgo.ConnConfig, opts ...OptionOpenDB) *sql.DB {
 	c := GetConnector(config, opts...)
 	return sql.OpenDB(c)
 }
@@ -225,19 +224,19 @@ func OpenDBFromPool(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) *sql.DB {
 }
 
 type connector struct {
-	pgx.ConnConfig
+	gaussdbgo.ConnConfig
 	pool          *gaussdbxpool.Pool
-	BeforeConnect func(context.Context, *pgx.ConnConfig) error // function to call before creation of every new connection
-	AfterConnect  func(context.Context, *pgx.Conn) error       // function to call after creation of every new connection
-	ResetSession  func(context.Context, *pgx.Conn) error       // function is called before a connection is reused
+	BeforeConnect func(context.Context, *gaussdbgo.ConnConfig) error // function to call before creation of every new connection
+	AfterConnect  func(context.Context, *gaussdbgo.Conn) error       // function to call after creation of every new connection
+	ResetSession  func(context.Context, *gaussdbgo.Conn) error       // function is called before a connection is reused
 	driver        *Driver
 }
 
 // Connect implement driver.Connector interface
 func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 	var (
-		connConfig pgx.ConnConfig
-		conn       *pgx.Conn
+		connConfig gaussdbgo.ConnConfig
+		conn       *gaussdbgo.Conn
 		close      func(context.Context) error
 		err        error
 	)
@@ -250,7 +249,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, err
 		}
 
-		if conn, err = pgx.ConnectConfig(ctx, &connConfig); err != nil {
+		if conn, err = gaussdbgo.ConnectConfig(ctx, &connConfig); err != nil {
 			return nil, err
 		}
 
@@ -293,12 +292,12 @@ func (c connector) Driver() driver.Driver {
 // GetDefaultDriver returns the driver initialized in the init function
 // and used when the pgx driver is registered.
 func GetDefaultDriver() driver.Driver {
-	return pgxDriver
+	return gaussdbDriver
 }
 
 type Driver struct {
 	configMutex sync.Mutex
-	configs     map[string]*pgx.ConnConfig
+	configs     map[string]*gaussdbgo.ConnConfig
 	sequence    int
 }
 
@@ -317,7 +316,7 @@ func (d *Driver) OpenConnector(name string) (driver.Connector, error) {
 	return &driverConnector{driver: d, name: name}, nil
 }
 
-func (d *Driver) registerConnConfig(c *pgx.ConnConfig) string {
+func (d *Driver) registerConnConfig(c *gaussdbgo.ConnConfig) string {
 	d.configMutex.Lock()
 	connStr := fmt.Sprintf("registeredConnConfig%d", d.sequence)
 	d.sequence++
@@ -338,7 +337,7 @@ type driverConnector struct {
 }
 
 func (dc *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	var connConfig *pgx.ConnConfig
+	var connConfig *gaussdbgo.ConnConfig
 
 	dc.driver.configMutex.Lock()
 	connConfig = dc.driver.configs[dc.name]
@@ -346,13 +345,13 @@ func (dc *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 
 	if connConfig == nil {
 		var err error
-		connConfig, err = pgx.ParseConfig(dc.name)
+		connConfig, err = gaussdbgo.ParseConfig(dc.name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	conn, err := pgx.ConnectConfig(ctx, connConfig)
+	conn, err := gaussdbgo.ConnectConfig(ctx, connConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +361,7 @@ func (dc *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 		close:            conn.Close,
 		driver:           dc.driver,
 		connConfig:       *connConfig,
-		resetSessionFunc: func(context.Context, *pgx.Conn) error { return nil },
+		resetSessionFunc: func(context.Context, *gaussdbgo.Conn) error { return nil },
 		psRefCounts:      make(map[*gaussdbconn.StatementDescription]int),
 	}
 
@@ -374,21 +373,21 @@ func (dc *driverConnector) Driver() driver.Driver {
 }
 
 // RegisterConnConfig registers a ConnConfig and returns the connection string to use with Open.
-func RegisterConnConfig(c *pgx.ConnConfig) string {
-	return pgxDriver.registerConnConfig(c)
+func RegisterConnConfig(c *gaussdbgo.ConnConfig) string {
+	return gaussdbDriver.registerConnConfig(c)
 }
 
 // UnregisterConnConfig removes the ConnConfig registration for connStr.
 func UnregisterConnConfig(connStr string) {
-	pgxDriver.unregisterConnConfig(connStr)
+	gaussdbDriver.unregisterConnConfig(connStr)
 }
 
 type Conn struct {
-	conn                 *pgx.Conn
+	conn                 *gaussdbgo.Conn
 	close                func(context.Context) error
 	driver               *Driver
-	connConfig           pgx.ConnConfig
-	resetSessionFunc     func(context.Context, *pgx.Conn) error // Function is called before a connection is reused
+	connConfig           gaussdbgo.ConnConfig
+	resetSessionFunc     func(context.Context, *gaussdbgo.Conn) error // Function is called before a connection is reused
 	lastResetSessionTime time.Time
 
 	// psRefCounts contains reference counts for prepared statements. Prepare uses the underlying pgx logic to generate
@@ -400,8 +399,8 @@ type Conn struct {
 	psRefCounts map[*gaussdbconn.StatementDescription]int
 }
 
-// Conn returns the underlying *pgx.Conn
-func (c *Conn) Conn() *pgx.Conn {
+// Conn returns the underlying *gaussdbgo.Conn
+func (c *Conn) Conn() *gaussdbgo.Conn {
 	return c.conn
 }
 
@@ -438,26 +437,26 @@ func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 		return nil, driver.ErrBadConn
 	}
 
-	var pgxOpts pgx.TxOptions
+	var gaussdbOpts gaussdbgo.TxOptions
 	switch sql.IsolationLevel(opts.Isolation) {
 	case sql.LevelDefault:
 	case sql.LevelReadUncommitted:
-		pgxOpts.IsoLevel = pgx.ReadUncommitted
+		gaussdbOpts.IsoLevel = gaussdbgo.ReadUncommitted
 	case sql.LevelReadCommitted:
-		pgxOpts.IsoLevel = pgx.ReadCommitted
+		gaussdbOpts.IsoLevel = gaussdbgo.ReadCommitted
 	case sql.LevelRepeatableRead, sql.LevelSnapshot:
-		pgxOpts.IsoLevel = pgx.RepeatableRead
+		gaussdbOpts.IsoLevel = gaussdbgo.RepeatableRead
 	case sql.LevelSerializable:
-		pgxOpts.IsoLevel = pgx.Serializable
+		gaussdbOpts.IsoLevel = gaussdbgo.Serializable
 	default:
 		return nil, fmt.Errorf("unsupported isolation: %v", opts.Isolation)
 	}
 
 	if opts.ReadOnly {
-		pgxOpts.AccessMode = pgx.ReadOnly
+		gaussdbOpts.AccessMode = gaussdbgo.ReadOnly
 	}
 
-	tx, err := c.conn.BeginTx(ctx, pgxOpts)
+	tx, err := c.conn.BeginTx(ctx, gaussdbOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -535,7 +534,7 @@ func (c *Conn) ResetSession(ctx context.Context) error {
 
 	now := time.Now()
 	if now.Sub(c.lastResetSessionTime) > time.Second {
-		if err := c.conn.PgConn().Ping(ctx); err != nil {
+		if err := c.conn.GaussdbConn().Ping(ctx); err != nil {
 			return driver.ErrBadConn
 		}
 	}
@@ -588,7 +587,7 @@ type rowValueFunc func(src []byte) (driver.Value, error)
 
 type Rows struct {
 	conn         *Conn
-	rows         pgx.Rows
+	rows         gaussdbgo.Rows
 	valueFuncs   []rowValueFunc
 	skipNext     bool
 	skipNextMore bool
@@ -873,7 +872,7 @@ func namedValueToInterface(argsV []driver.NamedValue) []any {
 
 type wrapTx struct {
 	ctx context.Context
-	tx  pgx.Tx
+	tx  gaussdbgo.Tx
 }
 
 func (wtx wrapTx) Commit() error { return wtx.tx.Commit(wtx.ctx) }

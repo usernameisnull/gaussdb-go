@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type FunctionCallResponse struct {
@@ -43,9 +43,9 @@ func (src *FunctionCallResponse) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'V')
 
 	if src.Result == nil {
-		dst = pgio.AppendInt32(dst, -1)
+		dst = gaussdbio.AppendInt32(dst, -1)
 	} else {
-		dst = pgio.AppendInt32(dst, int32(len(src.Result)))
+		dst = gaussdbio.AppendInt32(dst, int32(len(src.Result)))
 		dst = append(dst, src.Result...)
 	}
 

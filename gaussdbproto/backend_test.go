@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -52,8 +52,8 @@ func TestBackendReceiveUnexpectedEOF(t *testing.T) {
 
 	// Receive StartupMessage msg
 	dst := []byte{}
-	dst = pgio.AppendUint32(dst, 1000) // tell the backend we expect 1000 bytes to be read
-	dst = pgio.AppendUint32(dst, 1)    // only send 1 byte
+	dst = gaussdbio.AppendUint32(dst, 1000) // tell the backend we expect 1000 bytes to be read
+	dst = gaussdbio.AppendUint32(dst, 1)    // only send 1 byte
 	server.push(dst)
 
 	msg, err = backend.ReceiveStartupMessage()
@@ -106,8 +106,8 @@ func TestStartupMessage(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				server := &interruptReader{}
 				dst := []byte{}
-				dst = pgio.AppendUint32(dst, tt.packetLen)
-				dst = pgio.AppendUint32(dst, gaussdbproto.ProtocolVersionNumber)
+				dst = gaussdbio.AppendUint32(dst, tt.packetLen)
+				dst = gaussdbio.AppendUint32(dst, gaussdbproto.ProtocolVersionNumber)
 				server.push(dst)
 
 				backend := gaussdbproto.NewBackend(server, nil)

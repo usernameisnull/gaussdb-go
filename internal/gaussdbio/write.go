@@ -1,4 +1,4 @@
-package pgio
+package gaussdbio
 
 import "encoding/binary"
 

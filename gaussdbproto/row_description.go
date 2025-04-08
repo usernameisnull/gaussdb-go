@@ -7,7 +7,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 const (
@@ -107,17 +107,17 @@ func (src *RowDescription) Encode(dst []byte) ([]byte, error) {
 	if len(src.Fields) > math.MaxUint16 {
 		return nil, errors.New("too many fields")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.Fields)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.Fields)))
 	for _, fd := range src.Fields {
 		dst = append(dst, fd.Name...)
 		dst = append(dst, 0)
 
-		dst = pgio.AppendUint32(dst, fd.TableOID)
-		dst = pgio.AppendUint16(dst, fd.TableAttributeNumber)
-		dst = pgio.AppendUint32(dst, fd.DataTypeOID)
-		dst = pgio.AppendInt16(dst, fd.DataTypeSize)
-		dst = pgio.AppendInt32(dst, fd.TypeModifier)
-		dst = pgio.AppendInt16(dst, fd.Format)
+		dst = gaussdbio.AppendUint32(dst, fd.TableOID)
+		dst = gaussdbio.AppendUint16(dst, fd.TableAttributeNumber)
+		dst = gaussdbio.AppendUint32(dst, fd.DataTypeOID)
+		dst = gaussdbio.AppendInt16(dst, fd.DataTypeSize)
+		dst = gaussdbio.AppendInt32(dst, fd.TypeModifier)
+		dst = gaussdbio.AppendInt16(dst, fd.Format)
 	}
 
 	return finishMessage(dst, sp)

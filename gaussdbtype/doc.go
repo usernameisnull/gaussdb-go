@@ -129,7 +129,7 @@ examples and for examples of type registration.
 Encoding Unknown Types
 
 pgtype works best when the OID of the PostgreSQL type is known. But in some cases such as using the simple protocol the
-OID is unknown. In this case Map.RegisterDefaultPgType can be used to register an assumed OID for a particular Go type.
+OID is unknown. In this case Map.RegisterDefaultGaussdbType can be used to register an assumed OID for a particular Go type.
 
 Renamed Types
 
@@ -160,7 +160,7 @@ example_child_records_test.go for an example.
 Overview of Scanning Implementation
 
 The first step is to use the OID to lookup the correct Codec. If the OID is unavailable, Map will try to find the OID
-from previous calls of Map.RegisterDefaultPgType. The Map will call the Codec's PlanScan method to get a plan for
+from previous calls of Map.RegisterDefaultGaussdbType. The Map will call the Codec's PlanScan method to get a plan for
 scanning into the Go value. A Codec will support scanning into one or more Go types. Oftentime these Go types are
 interfaces rather than explicit types. For example, PointCodec can use any Go type that implements the PointScanner and
 PointValuer interfaces.
@@ -185,7 +185,7 @@ Reducing Compiled Binary Size
 pgx.QueryExecModeExec and pgx.QueryExecModeSimpleProtocol require the default PostgreSQL type to be registered for each
 Go type used as a query parameter. By default pgx does this for all supported types and their array variants. If an
 application does not use those query execution modes or manually registers the default PostgreSQL type for the types it
-uses as query parameters it can use the build tag nopgxregisterdefaulttypes. This omits the default type registration
+uses as query parameters it can use the build tag nogaussdbregisterdefaulttypes. This omits the default type registration
 and reduces the compiled binary size by ~2MB.
 */
 package gaussdbtype

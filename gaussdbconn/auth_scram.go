@@ -30,8 +30,8 @@ import (
 const clientNonceLen = 18
 
 // Perform SCRAM authentication.
-func (c *PgConn) scramAuth(serverAuthMechanisms []string) error {
-	sc, err := newScramClient(serverAuthMechanisms, c.config.Password)
+func (g *GaussdbConn) scramAuth(serverAuthMechanisms []string) error {
+	sc, err := newScramClient(serverAuthMechanisms, g.config.Password)
 	if err != nil {
 		return err
 	}
@@ -41,14 +41,14 @@ func (c *PgConn) scramAuth(serverAuthMechanisms []string) error {
 		AuthMechanism: "SCRAM-SHA-256",
 		Data:          sc.clientFirstMessage(),
 	}
-	c.frontend.Send(saslInitialResponse)
-	err = c.flushWithPotentialWriteReadDeadlock()
+	g.frontend.Send(saslInitialResponse)
+	err = g.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
 		return err
 	}
 
 	// Receive server-first-message payload in an AuthenticationSASLContinue.
-	saslContinue, err := c.rxSASLContinue()
+	saslContinue, err := g.rxSASLContinue()
 	if err != nil {
 		return err
 	}
@@ -61,22 +61,22 @@ func (c *PgConn) scramAuth(serverAuthMechanisms []string) error {
 	saslResponse := &gaussdbproto.SASLResponse{
 		Data: []byte(sc.clientFinalMessage()),
 	}
-	c.frontend.Send(saslResponse)
-	err = c.flushWithPotentialWriteReadDeadlock()
+	g.frontend.Send(saslResponse)
+	err = g.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
 		return err
 	}
 
 	// Receive server-final-message payload in an AuthenticationSASLFinal.
-	saslFinal, err := c.rxSASLFinal()
+	saslFinal, err := g.rxSASLFinal()
 	if err != nil {
 		return err
 	}
 	return sc.recvServerFinalMessage(saslFinal.Data)
 }
 
-func (c *PgConn) rxSASLContinue() (*gaussdbproto.AuthenticationSASLContinue, error) {
-	msg, err := c.receiveMessage()
+func (g *GaussdbConn) rxSASLContinue() (*gaussdbproto.AuthenticationSASLContinue, error) {
+	msg, err := g.receiveMessage()
 	if err != nil {
 		return nil, err
 	}
@@ -84,14 +84,14 @@ func (c *PgConn) rxSASLContinue() (*gaussdbproto.AuthenticationSASLContinue, err
 	case *gaussdbproto.AuthenticationSASLContinue:
 		return m, nil
 	case *gaussdbproto.ErrorResponse:
-		return nil, ErrorResponseToPgError(m)
+		return nil, ErrorResponseToGuassdbError(m)
 	}
 
 	return nil, fmt.Errorf("expected AuthenticationSASLContinue message but received unexpected message %T", msg)
 }
 
-func (c *PgConn) rxSASLFinal() (*gaussdbproto.AuthenticationSASLFinal, error) {
-	msg, err := c.receiveMessage()
+func (g *GaussdbConn) rxSASLFinal() (*gaussdbproto.AuthenticationSASLFinal, error) {
+	msg, err := g.receiveMessage()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *PgConn) rxSASLFinal() (*gaussdbproto.AuthenticationSASLFinal, error) {
 	case *gaussdbproto.AuthenticationSASLFinal:
 		return m, nil
 	case *gaussdbproto.ErrorResponse:
-		return nil, ErrorResponseToPgError(m)
+		return nil, ErrorResponseToGuassdbError(m)
 	}
 
 	return nil, fmt.Errorf("expected AuthenticationSASLFinal message but received unexpected message %T", msg)

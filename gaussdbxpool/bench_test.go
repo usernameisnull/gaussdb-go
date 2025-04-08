@@ -29,7 +29,7 @@ func BenchmarkMinimalPreparedSelectBaseline(b *testing.B) {
 	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(b, err)
 
-	config.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
+	config.AfterConnect = func(ctx context.Context, c *gaussdbgo.Conn) error {
 		_, err := c.Prepare(ctx, "ps1", "select $1::int8")
 		return err
 	}
@@ -60,7 +60,7 @@ func BenchmarkMinimalPreparedSelect(b *testing.B) {
 	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(b, err)
 
-	config.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
+	config.AfterConnect = func(ctx context.Context, c *gaussdbgo.Conn) error {
 		_, err := c.Prepare(ctx, "ps1", "select $1::int8")
 		return err
 	}

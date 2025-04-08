@@ -1,4 +1,4 @@
-package pgx
+package gaussdbgo
 
 import (
 	"context"
@@ -13,11 +13,11 @@ import (
 /*
 buildLoadDerivedTypesSQL generates the correct query for retrieving type information.
 
-	pgVersion: the major version of the PostgreSQL server
+	gaussdbVersion: the major version of the GaussDB server
 	typeNames: the names of the types to load. If nil, load all types.
 */
-func buildLoadDerivedTypesSQL(pgVersion int64, typeNames []string) string {
-	supportsMultirange := (pgVersion >= 14)
+func buildLoadDerivedTypesSQL(gaussdbVersion int64, typeNames []string) string {
+	supportsMultirange := (gaussdbVersion >= 14)
 	var typeNamesClause string
 
 	if typeNames == nil {
@@ -241,7 +241,7 @@ func (c *Conn) LoadTypes(ctx context.Context, typeNames []string) ([]*gaussdbtyp
 
 // serverVersion returns the postgresql server version.
 func serverVersion(c *Conn) (int64, error) {
-	serverVersionStr := c.PgConn().ParameterStatus("server_version")
+	serverVersionStr := c.GaussdbConn().ParameterStatus("server_version")
 	serverVersionStr = regexp.MustCompile(`^[0-9]+`).FindString(serverVersionStr)
 	// if not PostgreSQL do nothing
 	if serverVersionStr == "" {

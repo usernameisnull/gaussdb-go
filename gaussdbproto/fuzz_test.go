@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +46,7 @@ func FuzzFrontend(f *testing.F) {
 
 		var encodedMsg []byte
 		encodedMsg = append(encodedMsg, msgType)
-		encodedMsg = pgio.AppendUint32(encodedMsg, msgLen)
+		encodedMsg = gaussdbio.AppendUint32(encodedMsg, msgLen)
 		encodedMsg = append(encodedMsg, msgBody...)
 		_, err := r.Write(encodedMsg)
 		require.NoError(t, err)

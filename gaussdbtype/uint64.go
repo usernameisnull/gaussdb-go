@@ -7,7 +7,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Uint64Scanner interface {
@@ -115,7 +115,7 @@ type encodePlanUint64CodecBinaryUint64 struct{}
 
 func (encodePlanUint64CodecBinaryUint64) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	v := value.(uint64)
-	return pgio.AppendUint64(buf, v), nil
+	return gaussdbio.AppendUint64(buf, v), nil
 }
 
 type encodePlanUint64CodecBinaryUint64Valuer struct{}
@@ -130,7 +130,7 @@ func (encodePlanUint64CodecBinaryUint64Valuer) Encode(value any, buf []byte) (ne
 		return nil, nil
 	}
 
-	return pgio.AppendUint64(buf, v.Uint64), nil
+	return gaussdbio.AppendUint64(buf, v.Uint64), nil
 }
 
 type encodePlanUint64CodecBinaryInt64Valuer struct{}
@@ -149,7 +149,7 @@ func (encodePlanUint64CodecBinaryInt64Valuer) Encode(value any, buf []byte) (new
 		return nil, fmt.Errorf("%d is less than minimum value for uint64", v.Int64)
 	}
 
-	return pgio.AppendUint64(buf, uint64(v.Int64)), nil
+	return gaussdbio.AppendUint64(buf, uint64(v.Int64)), nil
 }
 
 type encodePlanUint64CodecTextUint64 struct{}

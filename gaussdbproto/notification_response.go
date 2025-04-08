@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type NotificationResponse struct {
@@ -47,7 +47,7 @@ func (dst *NotificationResponse) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *NotificationResponse) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'A')
-	dst = pgio.AppendUint32(dst, src.PID)
+	dst = gaussdbio.AppendUint32(dst, src.PID)
 	dst = append(dst, src.Channel...)
 	dst = append(dst, 0)
 	dst = append(dst, src.Payload...)

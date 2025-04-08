@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 const cancelRequestCode = 80877102
@@ -37,10 +37,10 @@ func (dst *CancelRequest) Decode(src []byte) error {
 
 // Encode encodes src into dst. dst will include the 4 byte message length.
 func (src *CancelRequest) Encode(dst []byte) ([]byte, error) {
-	dst = pgio.AppendInt32(dst, 16)
-	dst = pgio.AppendInt32(dst, cancelRequestCode)
-	dst = pgio.AppendUint32(dst, src.ProcessID)
-	dst = pgio.AppendUint32(dst, src.SecretKey)
+	dst = gaussdbio.AppendInt32(dst, 16)
+	dst = gaussdbio.AppendInt32(dst, cancelRequestCode)
+	dst = gaussdbio.AppendUint32(dst, src.ProcessID)
+	dst = gaussdbio.AppendUint32(dst, src.SecretKey)
 	return dst, nil
 }
 

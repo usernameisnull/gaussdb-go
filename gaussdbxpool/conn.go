@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/puddle/v2"
 )
 
-// Conn is an acquired *pgx.Conn from a Pool.
+// Conn is an acquired *gaussdbgo.Conn from a Pool.
 type Conn struct {
 	res *puddle.Resource[*connResource]
 	p   *Pool
@@ -30,7 +30,7 @@ func (c *Conn) Release() {
 		c.p.releaseTracer.TraceRelease(c.p, TraceReleaseData{Conn: conn})
 	}
 
-	if conn.IsClosed() || conn.PgConn().IsBusy() || conn.PgConn().TxStatus() != 'I' {
+	if conn.IsClosed() || conn.GaussdbConn().IsBusy() || conn.GaussdbConn().TxStatus() != 'I' {
 		res.Destroy()
 		// Signal to the health check to run since we just destroyed a connections
 		// and we might be below minConns now
@@ -69,7 +69,7 @@ func (c *Conn) Release() {
 
 // Hijack assumes ownership of the connection from the pool. Caller is responsible for closing the connection. Hijack
 // will panic if called on an already released or hijacked connection.
-func (c *Conn) Hijack() *pgx.Conn {
+func (c *Conn) Hijack() *gaussdbgo.Conn {
 	if c.res == nil {
 		panic("cannot hijack already released or hijacked connection")
 	}
@@ -87,29 +87,29 @@ func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (gaussdbc
 	return c.Conn().Exec(ctx, sql, arguments...)
 }
 
-func (c *Conn) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+func (c *Conn) Query(ctx context.Context, sql string, args ...any) (gaussdbgo.Rows, error) {
 	return c.Conn().Query(ctx, sql, args...)
 }
 
-func (c *Conn) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+func (c *Conn) QueryRow(ctx context.Context, sql string, args ...any) gaussdbgo.Row {
 	return c.Conn().QueryRow(ctx, sql, args...)
 }
 
-func (c *Conn) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+func (c *Conn) SendBatch(ctx context.Context, b *gaussdbgo.Batch) gaussdbgo.BatchResults {
 	return c.Conn().SendBatch(ctx, b)
 }
 
-func (c *Conn) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+func (c *Conn) CopyFrom(ctx context.Context, tableName gaussdbgo.Identifier, columnNames []string, rowSrc gaussdbgo.CopyFromSource) (int64, error) {
 	return c.Conn().CopyFrom(ctx, tableName, columnNames, rowSrc)
 }
 
 // Begin starts a transaction block from the *Conn without explicitly setting a transaction mode (see BeginTx with TxOptions if transaction mode is required).
-func (c *Conn) Begin(ctx context.Context) (pgx.Tx, error) {
+func (c *Conn) Begin(ctx context.Context) (gaussdbgo.Tx, error) {
 	return c.Conn().Begin(ctx)
 }
 
 // BeginTx starts a transaction block from the *Conn with txOptions determining the transaction mode.
-func (c *Conn) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
+func (c *Conn) BeginTx(ctx context.Context, txOptions gaussdbgo.TxOptions) (gaussdbgo.Tx, error) {
 	return c.Conn().BeginTx(ctx, txOptions)
 }
 
@@ -117,7 +117,7 @@ func (c *Conn) Ping(ctx context.Context) error {
 	return c.Conn().Ping(ctx)
 }
 
-func (c *Conn) Conn() *pgx.Conn {
+func (c *Conn) Conn() *gaussdbgo.Conn {
 	return c.connResource().conn
 }
 
@@ -125,10 +125,10 @@ func (c *Conn) connResource() *connResource {
 	return c.res.Value()
 }
 
-func (c *Conn) getPoolRow(r pgx.Row) *poolRow {
+func (c *Conn) getPoolRow(r gaussdbgo.Row) *poolRow {
 	return c.connResource().getPoolRow(c, r)
 }
 
-func (c *Conn) getPoolRows(r pgx.Rows) *poolRows {
+func (c *Conn) getPoolRows(r gaussdbgo.Rows) *poolRows {
 	return c.connResource().getPoolRows(c, r)
 }

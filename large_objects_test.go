@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 // todo  GaussD 暂时不支持 Large Object
 

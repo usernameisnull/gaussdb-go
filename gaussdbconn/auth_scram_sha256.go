@@ -15,17 +15,18 @@ package gaussdbconn
 import (
 	"errors"
 	"fmt"
+
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 )
 
-func (c *PgConn) authSha256(r *readBuf) (*writeBuf, error) {
+func (g *GaussdbConn) authSha256(r *readBuf) (*writeBuf, error) {
 	if r.int32() != gaussdbproto.AuthTypeSHA256 {
 		return nil, errors.New("bad auth type")
 	}
 
 	passwordStoredMethod := r.int32()
 	digest := ""
-	if len(c.config.Password) == 0 {
+	if len(g.config.Password) == 0 {
 		return nil, fmt.Errorf("The server requested password-based authentication, but no password was provided.")
 	}
 
@@ -33,12 +34,12 @@ func (c *PgConn) authSha256(r *readBuf) (*writeBuf, error) {
 		random64code := string(r.next(64))
 		token := string(r.next(8))
 		serverIteration := r.int32()
-		result := RFC5802Algorithm(c.config.Password, random64code, token, "", serverIteration, "sha256")
+		result := RFC5802Algorithm(g.config.Password, random64code, token, "", serverIteration, "sha256")
 		if len(result) == 0 {
 			return nil, fmt.Errorf("Invalid username/password,login denied.")
 		}
 
-		w := c.writeBuf('p')
+		w := g.writeBuf('p')
 		w.buf = []byte("p")
 		w.pos = 1
 		w.int32(4 + len(result) + 1)
@@ -48,9 +49,9 @@ func (c *PgConn) authSha256(r *readBuf) (*writeBuf, error) {
 		return w, nil
 	} else if passwordStoredMethod == Md5Password {
 		s := string(r.next(4))
-		digest = "md5" + md5s(md5s(c.config.Password+c.config.User)+s)
+		digest = "md5" + md5s(md5s(g.config.Password+g.config.User)+s)
 
-		w := c.writeBuf('p')
+		w := g.writeBuf('p')
 		w.int16(4 + len(digest) + 1)
 		w.string(digest)
 		w.byte(0)
@@ -62,19 +63,19 @@ func (c *PgConn) authSha256(r *readBuf) (*writeBuf, error) {
 }
 
 // Perform SCRAM authentication.
-func (c *PgConn) scramSha256Auth(r *gaussdbproto.ReadBuf) error {
-	w, err := c.authSha256((*readBuf)(r))
+func (g *GaussdbConn) scramSha256Auth(r *gaussdbproto.ReadBuf) error {
+	w, err := g.authSha256((*readBuf)(r))
 	if err != nil {
 		return err
 	}
 
-	c.frontend.SendSha256(w.buf)
-	err = c.flushWithPotentialWriteReadDeadlock()
+	g.frontend.SendSha256(w.buf)
+	err = g.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
 		return err
 	}
 
-	_, err = c.receiveMessage()
+	_, err = g.receiveMessage()
 	if err != nil {
 		return err
 	}

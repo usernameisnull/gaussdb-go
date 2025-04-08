@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type LineScanner interface {
@@ -102,9 +102,9 @@ func (encodePlanLineCodecBinary) Encode(value any, buf []byte) (newBuf []byte, e
 		return nil, nil
 	}
 
-	buf = pgio.AppendUint64(buf, math.Float64bits(line.A))
-	buf = pgio.AppendUint64(buf, math.Float64bits(line.B))
-	buf = pgio.AppendUint64(buf, math.Float64bits(line.C))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(line.A))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(line.B))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(line.C))
 	return buf, nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type CopyInResponse struct {
@@ -52,9 +52,9 @@ func (src *CopyInResponse) Encode(dst []byte) ([]byte, error) {
 	if len(src.ColumnFormatCodes) > math.MaxUint16 {
 		return nil, errors.New("too many column format codes")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.ColumnFormatCodes)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.ColumnFormatCodes)))
 	for _, fc := range src.ColumnFormatCodes {
-		dst = pgio.AppendUint16(dst, fc)
+		dst = gaussdbio.AppendUint16(dst, fc)
 	}
 
 	return finishMessage(dst, sp)

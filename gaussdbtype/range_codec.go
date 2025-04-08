@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // RangeValuer is a type that can be converted into a PostgreSQL range.
@@ -111,7 +111,7 @@ func (plan *encodePlanRangeCodecRangeValuerToBinary) Encode(value any, buf []byt
 		}
 
 		sp := len(buf)
-		buf = pgio.AppendInt32(buf, -1)
+		buf = gaussdbio.AppendInt32(buf, -1)
 
 		lowerPlan := plan.m.PlanEncode(plan.rc.ElementType.OID, BinaryFormatCode, lower)
 		if lowerPlan == nil {
@@ -126,7 +126,7 @@ func (plan *encodePlanRangeCodecRangeValuerToBinary) Encode(value any, buf []byt
 			return nil, fmt.Errorf("Lower cannot be NULL unless LowerType is Unbounded")
 		}
 
-		pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+		gaussdbio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
 	}
 
 	if upperType != Unbounded {
@@ -135,7 +135,7 @@ func (plan *encodePlanRangeCodecRangeValuerToBinary) Encode(value any, buf []byt
 		}
 
 		sp := len(buf)
-		buf = pgio.AppendInt32(buf, -1)
+		buf = gaussdbio.AppendInt32(buf, -1)
 
 		upperPlan := plan.m.PlanEncode(plan.rc.ElementType.OID, BinaryFormatCode, upper)
 		if upperPlan == nil {
@@ -150,7 +150,7 @@ func (plan *encodePlanRangeCodecRangeValuerToBinary) Encode(value any, buf []byt
 			return nil, fmt.Errorf("Upper cannot be NULL unless UpperType is Unbounded")
 		}
 
-		pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+		gaussdbio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
 	}
 
 	return buf, nil

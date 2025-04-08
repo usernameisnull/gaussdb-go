@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
@@ -41,7 +41,7 @@ func TestRangeCodecTranscode(t *testing.T) {
 
 func TestRangeCodecTranscodeCompatibleRangeElementTypes(t *testing.T) {
 	ctr := defaultConnTestRunner
-	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {}
+	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {}
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, ctr, nil, "numrange", []gaussdbxtest.ValueRoundTripTest{
 		{
@@ -72,7 +72,7 @@ func TestRangeCodecTranscodeCompatibleRangeElementTypes(t *testing.T) {
 func TestRangeCodecScanRangeTwiceWithUnbounded(t *testing.T) {
 	skipCockroachDB(t, "Server does not support range types (see https://github.com/cockroachdb/cockroach/issues/27791)")
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		var r gaussdbtype.Range[gaussdbtype.Int4]
 
@@ -126,7 +126,7 @@ func TestRangeCodecScanRangeTwiceWithUnbounded(t *testing.T) {
 func TestRangeCodecDecodeValue(t *testing.T) {
 	skipCockroachDB(t, "Server does not support range types (see https://github.com/cockroachdb/cockroach/issues/27791)")
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
 
 		for _, tt := range []struct {
 			sql      string

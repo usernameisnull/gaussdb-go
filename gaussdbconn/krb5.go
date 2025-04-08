@@ -33,7 +33,7 @@ type GSS interface {
 	Continue(inToken []byte) (done bool, outToken []byte, err error)
 }
 
-func (c *PgConn) gssAuth() error {
+func (g *GaussdbConn) gssAuth() error {
 	if newGSS == nil {
 		return errors.New("kerberos error: no GSSAPI provider registered, see https://github.com/otan/gopgkrb5")
 	}
@@ -43,16 +43,16 @@ func (c *PgConn) gssAuth() error {
 	}
 
 	var nextData []byte
-	if c.config.KerberosSpn != "" {
+	if g.config.KerberosSpn != "" {
 		// Use the supplied SPN if provided.
-		nextData, err = cli.GetInitTokenFromSPN(c.config.KerberosSpn)
+		nextData, err = cli.GetInitTokenFromSPN(g.config.KerberosSpn)
 	} else {
 		// Allow the kerberos service name to be overridden
 		service := "postgres"
-		if c.config.KerberosSrvName != "" {
-			service = c.config.KerberosSrvName
+		if g.config.KerberosSrvName != "" {
+			service = g.config.KerberosSrvName
 		}
-		nextData, err = cli.GetInitToken(c.config.Host, service)
+		nextData, err = cli.GetInitToken(g.config.Host, service)
 	}
 	if err != nil {
 		return err
@@ -62,12 +62,12 @@ func (c *PgConn) gssAuth() error {
 		gssResponse := &gaussdbproto.GSSResponse{
 			Data: nextData,
 		}
-		c.frontend.Send(gssResponse)
-		err = c.flushWithPotentialWriteReadDeadlock()
+		g.frontend.Send(gssResponse)
+		err = g.flushWithPotentialWriteReadDeadlock()
 		if err != nil {
 			return err
 		}
-		resp, err := c.rxGSSContinue()
+		resp, err := g.rxGSSContinue()
 		if err != nil {
 			return err
 		}
@@ -83,8 +83,8 @@ func (c *PgConn) gssAuth() error {
 	return nil
 }
 
-func (c *PgConn) rxGSSContinue() (*gaussdbproto.AuthenticationGSSContinue, error) {
-	msg, err := c.receiveMessage()
+func (g *GaussdbConn) rxGSSContinue() (*gaussdbproto.AuthenticationGSSContinue, error) {
+	msg, err := g.receiveMessage()
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (c *PgConn) rxGSSContinue() (*gaussdbproto.AuthenticationGSSContinue, error
 	case *gaussdbproto.AuthenticationGSSContinue:
 		return m, nil
 	case *gaussdbproto.ErrorResponse:
-		return nil, ErrorResponseToPgError(m)
+		return nil, ErrorResponseToGuassdbError(m)
 	}
 
 	return nil, fmt.Errorf("expected AuthenticationGSSContinue message but received unexpected message %T", msg)

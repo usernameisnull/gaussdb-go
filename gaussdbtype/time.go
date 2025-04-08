@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type TimeScanner interface {
@@ -108,7 +108,7 @@ func (encodePlanTimeCodecBinary) Encode(value any, buf []byte) (newBuf []byte, e
 		return nil, nil
 	}
 
-	return pgio.AppendInt64(buf, t.Microseconds), nil
+	return gaussdbio.AppendInt64(buf, t.Microseconds), nil
 }
 
 type encodePlanTimeCodecText struct{}

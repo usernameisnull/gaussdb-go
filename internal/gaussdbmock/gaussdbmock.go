@@ -1,5 +1,5 @@
-// Package pgmock provides the ability to mock a PostgreSQL server.
-package pgmock
+// Package gaussdbmock provides the ability to mock a PostgreSQL server.
+package gaussdbmock
 
 import (
 	"fmt"

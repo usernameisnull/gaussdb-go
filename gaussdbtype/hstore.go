@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type HstoreScanner interface {
@@ -96,16 +96,16 @@ func (encodePlanHstoreCodecBinary) Encode(value any, buf []byte) (newBuf []byte,
 		return nil, nil
 	}
 
-	buf = pgio.AppendInt32(buf, int32(len(hstore)))
+	buf = gaussdbio.AppendInt32(buf, int32(len(hstore)))
 
 	for k, v := range hstore {
-		buf = pgio.AppendInt32(buf, int32(len(k)))
+		buf = gaussdbio.AppendInt32(buf, int32(len(k)))
 		buf = append(buf, k...)
 
 		if v == nil {
-			buf = pgio.AppendInt32(buf, -1)
+			buf = gaussdbio.AppendInt32(buf, -1)
 		} else {
-			buf = pgio.AppendInt32(buf, int32(len(*v)))
+			buf = gaussdbio.AppendInt32(buf, int32(len(*v)))
 			buf = append(buf, (*v)...)
 		}
 	}
