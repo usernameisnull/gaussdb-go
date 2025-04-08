@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func closeConn(t testing.TB, conn *gaussdbconn.PgConn) {
+func closeConn(t testing.TB, conn *gaussdbconn.GaussdbConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	require.NoError(t, conn.Close(ctx))
@@ -23,9 +23,9 @@ func closeConn(t testing.TB, conn *gaussdbconn.PgConn) {
 }
 
 // Do a simple query to ensure the connection is still usable
-func ensureConnValid(t *testing.T, pgConn *gaussdbconn.PgConn) {
+func ensureConnValid(t *testing.T, gaussdbConn *gaussdbconn.GaussdbConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	result := pgConn.ExecParams(ctx, "select generate_series(1,$1)", [][]byte{[]byte("3")}, nil, nil, nil).Read()
+	result := gaussdbConn.ExecParams(ctx, "select generate_series(1,$1)", [][]byte{[]byte("3")}, nil, nil, nil).Read()
 	cancel()
 
 	require.Nil(t, result.Err)

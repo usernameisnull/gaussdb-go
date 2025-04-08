@@ -18,7 +18,7 @@ type AcquireTracer interface {
 type TraceAcquireStartData struct{}
 
 type TraceAcquireEndData struct {
-	Conn *pgx.Conn
+	Conn *gaussdbgo.Conn
 	Err  error
 }
 
@@ -29,5 +29,5 @@ type ReleaseTracer interface {
 }
 
 type TraceReleaseData struct {
-	Conn *pgx.Conn
+	Conn *gaussdbgo.Conn
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type AuthenticationGSS struct{}
@@ -29,7 +29,7 @@ func (a *AuthenticationGSS) Decode(src []byte) error {
 
 func (a *AuthenticationGSS) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'R')
-	dst = pgio.AppendUint32(dst, AuthTypeGSS)
+	dst = gaussdbio.AppendUint32(dst, AuthTypeGSS)
 	return finishMessage(dst, sp)
 }
 

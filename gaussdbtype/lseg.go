@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type LsegScanner interface {
@@ -98,10 +98,10 @@ func (encodePlanLsegCodecBinary) Encode(value any, buf []byte) (newBuf []byte, e
 		return nil, nil
 	}
 
-	buf = pgio.AppendUint64(buf, math.Float64bits(lseg.P[0].X))
-	buf = pgio.AppendUint64(buf, math.Float64bits(lseg.P[0].Y))
-	buf = pgio.AppendUint64(buf, math.Float64bits(lseg.P[1].X))
-	buf = pgio.AppendUint64(buf, math.Float64bits(lseg.P[1].Y))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(lseg.P[0].X))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(lseg.P[0].Y))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(lseg.P[1].X))
+	buf = gaussdbio.AppendUint64(buf, math.Float64bits(lseg.P[1].Y))
 	return buf, nil
 }
 

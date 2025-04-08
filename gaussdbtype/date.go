@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type DateScanner interface {
@@ -169,7 +169,7 @@ func (encodePlanDateCodecBinary) Encode(value any, buf []byte) (newBuf []byte, e
 		daysSinceDateEpoch = negativeInfinityDayOffset
 	}
 
-	return pgio.AppendInt32(buf, daysSinceDateEpoch), nil
+	return gaussdbio.AppendInt32(buf, daysSinceDateEpoch), nil
 }
 
 type encodePlanDateCodecText struct{}

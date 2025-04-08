@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // AuthenticationMD5Password is a message sent from the backend indicating that an MD5 hashed password is required.
@@ -40,7 +40,7 @@ func (dst *AuthenticationMD5Password) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *AuthenticationMD5Password) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'R')
-	dst = pgio.AppendUint32(dst, AuthTypeMD5Password)
+	dst = gaussdbio.AppendUint32(dst, AuthTypeMD5Password)
 	dst = append(dst, src.Salt[:]...)
 	return finishMessage(dst, sp)
 }

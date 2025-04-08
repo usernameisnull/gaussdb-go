@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // Information on the internals of PostgreSQL arrays can be found in
@@ -73,19 +73,19 @@ func (dst *arrayHeader) DecodeBinary(m *Map, src []byte) (int, error) {
 }
 
 func (src arrayHeader) EncodeBinary(buf []byte) []byte {
-	buf = pgio.AppendInt32(buf, int32(len(src.Dimensions)))
+	buf = gaussdbio.AppendInt32(buf, int32(len(src.Dimensions)))
 
 	var containsNull int32
 	if src.ContainsNull {
 		containsNull = 1
 	}
-	buf = pgio.AppendInt32(buf, containsNull)
+	buf = gaussdbio.AppendInt32(buf, containsNull)
 
-	buf = pgio.AppendUint32(buf, src.ElementOID)
+	buf = gaussdbio.AppendUint32(buf, src.ElementOID)
 
 	for i := range src.Dimensions {
-		buf = pgio.AppendInt32(buf, src.Dimensions[i].Length)
-		buf = pgio.AppendInt32(buf, src.Dimensions[i].LowerBound)
+		buf = gaussdbio.AppendInt32(buf, src.Dimensions[i].Length)
+		buf = gaussdbio.AppendInt32(buf, src.Dimensions[i].LowerBound)
 	}
 
 	return buf

@@ -24,13 +24,13 @@ func Example_childRecords() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := pgx.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return
 	}
 
-	if conn.PgConn().ParameterStatus("crdb_version") != "" {
+	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
 		// Skip test / example when running on CockroachDB. Since an example can't be skipped fake success instead.
 		fmt.Println(`Alpha
   Adam: wing
@@ -78,7 +78,7 @@ select t.name,
 from teams t
 order by t.name
 `)
-	teams, err := pgx.CollectRows(rows, pgx.RowToStructByPos[Team])
+	teams, err := gaussdbgo.CollectRows(rows, gaussdbgo.RowToStructByPos[Team])
 	if err != nil {
 		fmt.Printf("CollectRows error: %v", err)
 		return

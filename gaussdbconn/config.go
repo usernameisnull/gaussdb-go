@@ -23,8 +23,8 @@ import (
 	"github.com/jackc/pgservicefile"
 )
 
-type AfterConnectFunc func(ctx context.Context, pgconn *PgConn) error
-type ValidateConnectFunc func(ctx context.Context, pgconn *PgConn) error
+type AfterConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
+type ValidateConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
 type GetSSLPasswordFunc func(ctx context.Context) string
 
 // Config is the settings used to establish a connection to a PostgreSQL server. It must be created by [ParseConfig]. A
@@ -44,8 +44,8 @@ type Config struct {
 	BuildFrontend  BuildFrontendFunc
 
 	// BuildContextWatcherHandler is called to create a ContextWatcherHandler for a connection. The handler is called
-	// when a context passed to a PgConn method is canceled.
-	BuildContextWatcherHandler func(*PgConn) ctxwatch.Handler
+	// when a context passed to a GaussdbConn method is canceled.
+	BuildContextWatcherHandler func(*GaussdbConn) ctxwatch.Handler
 
 	RuntimeParams map[string]string // Run-time parameters to set on connection as session default values (e.g. search_path or application_name)
 
@@ -68,10 +68,10 @@ type Config struct {
 	// OnNotification is a callback function called when a notification from the LISTEN/NOTIFY system is received.
 	OnNotification NotificationHandler
 
-	// OnPgError is a callback function called when a Postgres error is received by the server. The default handler will close
+	// OnGaussdbError is a callback function called when a Postgres error is received by the server. The default handler will close
 	// the connection on any FATAL errors. If you override this handler you should call the previously set handler or ensure
 	// that you close on FATAL errors by returning false.
-	OnPgError PgErrorHandler
+	OnGaussdbError GaussdbErrorHandler
 
 	createdByParseConfig bool // Used to enforce created by ParseConfig rule.
 }
@@ -282,12 +282,12 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		BuildFrontend: func(r io.Reader, w io.Writer) *gaussdbproto.Frontend {
 			return gaussdbproto.NewFrontend(r, w)
 		},
-		BuildContextWatcherHandler: func(pgConn *PgConn) ctxwatch.Handler {
-			return &DeadlineContextWatcherHandler{Conn: pgConn.conn}
+		BuildContextWatcherHandler: func(gaussdbConn *GaussdbConn) ctxwatch.Handler {
+			return &DeadlineContextWatcherHandler{Conn: gaussdbConn.conn}
 		},
-		OnPgError: func(_ *PgConn, pgErr *PgError) bool {
+		OnGaussdbError: func(_ *GaussdbConn, gaussdbError *GaussdbError) bool {
 			// we want to automatically close any fatal errors
-			if strings.EqualFold(pgErr.Severity, "FATAL") {
+			if strings.EqualFold(gaussdbError.Severity, "FATAL") {
 				return false
 			}
 			return true
@@ -862,8 +862,8 @@ func makeConnectTimeoutDialFunc(timeout time.Duration) DialFunc {
 
 // ValidateConnectTargetSessionAttrsReadWrite is a ValidateConnectFunc that implements libpq compatible
 // target_session_attrs=read-write.
-func ValidateConnectTargetSessionAttrsReadWrite(ctx context.Context, pgConn *PgConn) error {
-	result, err := pgConn.Exec(ctx, "show transaction_read_only").ReadAll()
+func ValidateConnectTargetSessionAttrsReadWrite(ctx context.Context, gaussdbConn *GaussdbConn) error {
+	result, err := gaussdbConn.Exec(ctx, "show transaction_read_only").ReadAll()
 	if err != nil {
 		return err
 	}
@@ -877,8 +877,8 @@ func ValidateConnectTargetSessionAttrsReadWrite(ctx context.Context, pgConn *PgC
 
 // ValidateConnectTargetSessionAttrsReadOnly is a ValidateConnectFunc that implements libpq compatible
 // target_session_attrs=read-only.
-func ValidateConnectTargetSessionAttrsReadOnly(ctx context.Context, pgConn *PgConn) error {
-	result, err := pgConn.Exec(ctx, "show transaction_read_only").ReadAll()
+func ValidateConnectTargetSessionAttrsReadOnly(ctx context.Context, gaussdbConn *GaussdbConn) error {
+	result, err := gaussdbConn.Exec(ctx, "show transaction_read_only").ReadAll()
 	if err != nil {
 		return err
 	}
@@ -892,8 +892,8 @@ func ValidateConnectTargetSessionAttrsReadOnly(ctx context.Context, pgConn *PgCo
 
 // ValidateConnectTargetSessionAttrsStandby is a ValidateConnectFunc that implements libpq compatible
 // target_session_attrs=standby.
-func ValidateConnectTargetSessionAttrsStandby(ctx context.Context, pgConn *PgConn) error {
-	result, err := pgConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
+func ValidateConnectTargetSessionAttrsStandby(ctx context.Context, gaussdbConn *GaussdbConn) error {
+	result, err := gaussdbConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
 	if err != nil {
 		return err
 	}
@@ -907,8 +907,8 @@ func ValidateConnectTargetSessionAttrsStandby(ctx context.Context, pgConn *PgCon
 
 // ValidateConnectTargetSessionAttrsPrimary is a ValidateConnectFunc that implements libpq compatible
 // target_session_attrs=primary.
-func ValidateConnectTargetSessionAttrsPrimary(ctx context.Context, pgConn *PgConn) error {
-	result, err := pgConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
+func ValidateConnectTargetSessionAttrsPrimary(ctx context.Context, gaussdbConn *GaussdbConn) error {
+	result, err := gaussdbConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
 	if err != nil {
 		return err
 	}
@@ -922,8 +922,8 @@ func ValidateConnectTargetSessionAttrsPrimary(ctx context.Context, pgConn *PgCon
 
 // ValidateConnectTargetSessionAttrsPreferStandby is a ValidateConnectFunc that implements libpq compatible
 // target_session_attrs=prefer-standby.
-func ValidateConnectTargetSessionAttrsPreferStandby(ctx context.Context, pgConn *PgConn) error {
-	result, err := pgConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
+func ValidateConnectTargetSessionAttrsPreferStandby(ctx context.Context, gaussdbConn *GaussdbConn) error {
+	result, err := gaussdbConn.Exec(ctx, "select pg_is_in_recovery()").ReadAll()
 	if err != nil {
 		return err
 	}

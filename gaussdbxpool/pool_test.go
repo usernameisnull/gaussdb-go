@@ -56,7 +56,7 @@ func TestConstructorIgnoresContext(t *testing.T) {
 	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	assert.NoError(t, err)
 	var cancel func()
-	config.BeforeConnect = func(context.Context, *pgx.ConnConfig) error {
+	config.BeforeConnect = func(context.Context, *gaussdbgo.ConnConfig) error {
 		// cancel the query's context before we actually Dial to ensure the Dial's
 		// context isn't cancelled
 		cancel()
@@ -154,7 +154,7 @@ func TestPoolAcquireChecksIdleConns(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	controllerConn, err := pgx.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	controllerConn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	defer controllerConn.Close(ctx)
 
@@ -173,7 +173,7 @@ func TestPoolAcquireChecksIdleConns(t *testing.T) {
 
 	var pids []uint32
 	for _, c := range conns {
-		pids = append(pids, c.Conn().PgConn().PID())
+		pids = append(pids, c.Conn().GaussdbConn().PID())
 		c.Release()
 	}
 
@@ -195,7 +195,7 @@ func TestPoolAcquireChecksIdleConns(t *testing.T) {
 	c, err := pool.Acquire(ctx)
 	require.NoError(t, err)
 
-	cPID := c.Conn().PgConn().PID()
+	cPID := c.Conn().GaussdbConn().PID()
 	c.Release()
 
 	require.NotContains(t, pids, cPID)
@@ -244,7 +244,7 @@ func TestPoolBeforeConnect(t *testing.T) {
 	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	config.BeforeConnect = func(ctx context.Context, cfg *pgx.ConnConfig) error {
+	config.BeforeConnect = func(ctx context.Context, cfg *gaussdbgo.ConnConfig) error {
 		cfg.Config.RuntimeParams["application_name"] = "pgx"
 		return nil
 	}
@@ -268,7 +268,7 @@ func TestPoolAfterConnect(t *testing.T) {
 	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 
-	config.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
+	config.AfterConnect = func(ctx context.Context, c *gaussdbgo.Conn) error {
 		_, err := c.Prepare(ctx, "ps1", "select 1")
 		return err
 	}
@@ -294,7 +294,7 @@ func TestPoolBeforeAcquire(t *testing.T) {
 
 	acquireAttempts := 0
 
-	config.BeforeAcquire = func(ctx context.Context, c *pgx.Conn) bool {
+	config.BeforeAcquire = func(ctx context.Context, c *gaussdbgo.Conn) bool {
 		acquireAttempts++
 		return acquireAttempts%2 == 0
 	}
@@ -344,7 +344,7 @@ func TestPoolAfterRelease(t *testing.T) {
 
 	afterReleaseCount := 0
 
-	config.AfterRelease = func(c *pgx.Conn) bool {
+	config.AfterRelease = func(c *gaussdbgo.Conn) bool {
 		afterReleaseCount++
 		return afterReleaseCount%2 == 1
 	}
@@ -358,7 +358,7 @@ func TestPoolAfterRelease(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		conn, err := db.Acquire(ctx)
 		assert.NoError(t, err)
-		connPIDs[conn.Conn().PgConn().PID()] = struct{}{}
+		connPIDs[conn.Conn().GaussdbConn().PID()] = struct{}{}
 		conn.Release()
 		waitForReleaseToComplete()
 	}
@@ -382,8 +382,8 @@ func TestPoolBeforeClose(t *testing.T) {
 	require.NoError(t, err)
 
 	connPIDs := make(chan uint32, 5)
-	config.BeforeClose = func(c *pgx.Conn) {
-		connPIDs <- c.PgConn().PID()
+	config.BeforeClose = func(c *gaussdbgo.Conn) {
+		connPIDs <- c.GaussdbConn().PID()
 	}
 
 	db, err := gaussdbxpool.NewWithConfig(ctx, config)
@@ -395,7 +395,7 @@ func TestPoolBeforeClose(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		conn, err := db.Acquire(ctx)
 		assert.NoError(t, err)
-		acquiredPIDs = append(acquiredPIDs, conn.Conn().PgConn().PID())
+		acquiredPIDs = append(acquiredPIDs, conn.Conn().GaussdbConn().PID())
 		conn.Release()
 		db.Reset()
 		closedPIDs = append(closedPIDs, <-connPIDs)
@@ -707,7 +707,7 @@ func TestPoolQueryRowErrNoRows(t *testing.T) {
 	defer pool.Close()
 
 	err = pool.QueryRow(ctx, "select n from generate_series(1,10) n where n=0").Scan(nil)
-	require.Equal(t, pgx.ErrNoRows, err)
+	require.Equal(t, gaussdbgo.ErrNoRows, err)
 }
 
 // https://github.com/jackc/pgx/issues/1628
@@ -773,7 +773,7 @@ func TestPoolCopyFrom(t *testing.T) {
 		{nil, nil, nil, nil, nil, nil, nil},
 	}
 
-	copyCount, err := pool.CopyFrom(ctx, pgx.Identifier{"poolcopyfromtest"}, []string{"a", "b", "c", "d", "e", "f", "g"}, pgx.CopyFromRows(inputRows))
+	copyCount, err := pool.CopyFrom(ctx, gaussdbgo.Identifier{"poolcopyfromtest"}, []string{"a", "b", "c", "d", "e", "f", "g"}, gaussdbgo.CopyFromRows(inputRows))
 	assert.NoError(t, err)
 	assert.EqualValues(t, len(inputRows), copyCount)
 
@@ -806,19 +806,19 @@ func TestConnReleaseClosesConnInFailedTransaction(t *testing.T) {
 	c, err := pool.Acquire(ctx)
 	require.NoError(t, err)
 
-	pid := c.Conn().PgConn().PID()
+	pid := c.Conn().GaussdbConn().PID()
 
-	assert.Equal(t, byte('I'), c.Conn().PgConn().TxStatus())
+	assert.Equal(t, byte('I'), c.Conn().GaussdbConn().TxStatus())
 
 	_, err = c.Exec(ctx, "begin")
 	assert.NoError(t, err)
 
-	assert.Equal(t, byte('T'), c.Conn().PgConn().TxStatus())
+	assert.Equal(t, byte('T'), c.Conn().GaussdbConn().TxStatus())
 
 	_, err = c.Exec(ctx, "selct")
 	assert.Error(t, err)
 
-	assert.Equal(t, byte('E'), c.Conn().PgConn().TxStatus())
+	assert.Equal(t, byte('E'), c.Conn().GaussdbConn().TxStatus())
 
 	c.Release()
 	waitForReleaseToComplete()
@@ -826,8 +826,8 @@ func TestConnReleaseClosesConnInFailedTransaction(t *testing.T) {
 	c, err = pool.Acquire(ctx)
 	require.NoError(t, err)
 
-	assert.NotEqual(t, pid, c.Conn().PgConn().PID())
-	assert.Equal(t, byte('I'), c.Conn().PgConn().TxStatus())
+	assert.NotEqual(t, pid, c.Conn().GaussdbConn().PID())
+	assert.Equal(t, byte('I'), c.Conn().GaussdbConn().TxStatus())
 
 	c.Release()
 }
@@ -845,14 +845,14 @@ func TestConnReleaseClosesConnInTransaction(t *testing.T) {
 	c, err := pool.Acquire(ctx)
 	require.NoError(t, err)
 
-	pid := c.Conn().PgConn().PID()
+	pid := c.Conn().GaussdbConn().PID()
 
-	assert.Equal(t, byte('I'), c.Conn().PgConn().TxStatus())
+	assert.Equal(t, byte('I'), c.Conn().GaussdbConn().TxStatus())
 
 	_, err = c.Exec(ctx, "begin")
 	assert.NoError(t, err)
 
-	assert.Equal(t, byte('T'), c.Conn().PgConn().TxStatus())
+	assert.Equal(t, byte('T'), c.Conn().GaussdbConn().TxStatus())
 
 	c.Release()
 	waitForReleaseToComplete()
@@ -860,8 +860,8 @@ func TestConnReleaseClosesConnInTransaction(t *testing.T) {
 	c, err = pool.Acquire(ctx)
 	require.NoError(t, err)
 
-	assert.NotEqual(t, pid, c.Conn().PgConn().PID())
-	assert.Equal(t, byte('I'), c.Conn().PgConn().TxStatus())
+	assert.NotEqual(t, pid, c.Conn().GaussdbConn().PID())
+	assert.Equal(t, byte('I'), c.Conn().GaussdbConn().TxStatus())
 
 	c.Release()
 }
@@ -934,8 +934,8 @@ func TestConnReleaseWhenBeginFail(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	tx, err := db.BeginTx(ctx, pgx.TxOptions{
-		IsoLevel: pgx.TxIsoLevel("foo"),
+	tx, err := db.BeginTx(ctx, gaussdbgo.TxOptions{
+		IsoLevel: gaussdbgo.TxIsoLevel("foo"),
 	})
 	assert.Error(t, err)
 	if !assert.Zero(t, tx) {
@@ -976,15 +976,15 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 		db.Exec(ctx, "drop table pgxpooltx")
 	}()
 
-	err = pgx.BeginFunc(ctx, db, func(db pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
 		_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (1)")
 		require.NoError(t, err)
 
-		err = pgx.BeginFunc(ctx, db, func(db pgx.Tx) error {
+		err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
 			_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (2)")
 			require.NoError(t, err)
 
-			err = pgx.BeginFunc(ctx, db, func(db pgx.Tx) error {
+			err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
 				_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (3)")
 				require.NoError(t, err)
 				return nil
@@ -1026,11 +1026,11 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 		db.Exec(ctx, "drop table pgxpooltx")
 	}()
 
-	err = pgx.BeginFunc(ctx, db, func(db pgx.Tx) error {
+	err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
 		_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (1)")
 		require.NoError(t, err)
 
-		err = pgx.BeginFunc(ctx, db, func(db pgx.Tx) error {
+		err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
 			_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (2)")
 			require.NoError(t, err)
 			return errors.New("do a rollback")
@@ -1079,11 +1079,11 @@ func TestConnectEagerlyReachesMinPoolSize(t *testing.T) {
 	acquireAttempts := int64(0)
 	connectAttempts := int64(0)
 
-	config.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
+	config.BeforeAcquire = func(ctx context.Context, conn *gaussdbgo.Conn) bool {
 		atomic.AddInt64(&acquireAttempts, 1)
 		return true
 	}
-	config.BeforeConnect = func(ctx context.Context, cfg *pgx.ConnConfig) error {
+	config.BeforeConnect = func(ctx context.Context, cfg *gaussdbgo.ConnConfig) error {
 		atomic.AddInt64(&connectAttempts, 1)
 		return nil
 	}
@@ -1120,7 +1120,7 @@ func TestPoolSendBatchBatchCloseTwice(t *testing.T) {
 
 	for i := 0; i < testCount; i++ {
 		go func() {
-			batch := &pgx.Batch{}
+			batch := &gaussdbgo.Batch{}
 			batch.Queue("select 1")
 			batch.Queue("select 2")
 

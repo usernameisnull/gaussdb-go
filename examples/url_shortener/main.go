@@ -19,7 +19,7 @@ func getUrlHandler(w http.ResponseWriter, req *http.Request) {
 	switch err {
 	case nil:
 		http.Redirect(w, req, url, http.StatusSeeOther)
-	case pgx.ErrNoRows:
+	case gaussdbgo.ErrNoRows:
 		http.NotFound(w, req)
 	default:
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

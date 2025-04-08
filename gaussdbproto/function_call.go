@@ -5,7 +5,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type FunctionCall struct {
@@ -75,28 +75,28 @@ func (dst *FunctionCall) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *FunctionCall) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'F')
-	dst = pgio.AppendUint32(dst, src.Function)
+	dst = gaussdbio.AppendUint32(dst, src.Function)
 
 	if len(src.ArgFormatCodes) > math.MaxUint16 {
 		return nil, errors.New("too many arg format codes")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.ArgFormatCodes)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.ArgFormatCodes)))
 	for _, argFormatCode := range src.ArgFormatCodes {
-		dst = pgio.AppendUint16(dst, argFormatCode)
+		dst = gaussdbio.AppendUint16(dst, argFormatCode)
 	}
 
 	if len(src.Arguments) > math.MaxUint16 {
 		return nil, errors.New("too many arguments")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.Arguments)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.Arguments)))
 	for _, argument := range src.Arguments {
 		if argument == nil {
-			dst = pgio.AppendInt32(dst, -1)
+			dst = gaussdbio.AppendInt32(dst, -1)
 		} else {
-			dst = pgio.AppendInt32(dst, int32(len(argument)))
+			dst = gaussdbio.AppendInt32(dst, int32(len(argument)))
 			dst = append(dst, argument...)
 		}
 	}
-	dst = pgio.AppendUint16(dst, src.ResultFormatCode)
+	dst = gaussdbio.AppendUint16(dst, src.ResultFormatCode)
 	return finishMessage(dst, sp)
 }

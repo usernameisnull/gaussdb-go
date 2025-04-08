@@ -1,4 +1,4 @@
-package pgx
+package gaussdbgo
 
 import (
 	"context"
@@ -190,7 +190,7 @@ func (tx *dbTx) Commit(ctx context.Context) error {
 	commandTag, err := tx.conn.Exec(ctx, commandSQL)
 	tx.closed = true
 	if err != nil {
-		if tx.conn.PgConn().TxStatus() != 'I' {
+		if tx.conn.GaussdbConn().TxStatus() != 'I' {
 			_ = tx.conn.Close(ctx) // already have error to return
 		}
 		return err

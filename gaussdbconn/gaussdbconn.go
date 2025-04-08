@@ -20,8 +20,8 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn/ctxwatch"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn/internal/bgreader"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/iobufpool"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 
 // Notice represents a notice response message reported by the PostgreSQL server. Be aware that this is distinct from
 // LISTEN/NOTIFY notification.
-type Notice PgError
+type Notice GaussdbError
 
 // Notification is a message received from the PostgreSQL LISTEN/NOTIFY system
 type Notification struct {
@@ -53,26 +53,26 @@ type LookupFunc func(ctx context.Context, host string) (addrs []string, err erro
 // BuildFrontendFunc is a function that can be used to create Frontend implementation for connection.
 type BuildFrontendFunc func(r io.Reader, w io.Writer) *gaussdbproto.Frontend
 
-// PgErrorHandler is a function that handles errors returned from Postgres. This function must return true to keep
+// GaussdbErrorHandler is a function that handles errors returned from Postgres. This function must return true to keep
 // the connection open. Returning false will cause the connection to be closed immediately. You should return
-// false on any FATAL-severity errors. This will not receive network errors. The *PgConn is provided so the handler is
+// false on any FATAL-severity errors. This will not receive network errors. The *GaussdbConn is provided so the handler is
 // aware of the origin of the error, but it must not invoke any query method.
-type PgErrorHandler func(*PgConn, *PgError) bool
+type GaussdbErrorHandler func(*GaussdbConn, *GaussdbError) bool
 
 // NoticeHandler is a function that can handle notices received from the PostgreSQL server. Notices can be received at
-// any time, usually during handling of a query response. The *PgConn is provided so the handler is aware of the origin
+// any time, usually during handling of a query response. The *GaussdbConn is provided so the handler is aware of the origin
 // of the notice, but it must not invoke any query method. Be aware that this is distinct from LISTEN/NOTIFY
 // notification.
-type NoticeHandler func(*PgConn, *Notice)
+type NoticeHandler func(*GaussdbConn, *Notice)
 
 // NotificationHandler is a function that can handle notifications received from the PostgreSQL server. Notifications
-// can be received at any time, usually during handling of a query response. The *PgConn is provided so the handler is
+// can be received at any time, usually during handling of a query response. The *GaussdbConn is provided so the handler is
 // aware of the origin of the notice, but it must not invoke any query method. Be aware that this is distinct from a
 // notice event.
-type NotificationHandler func(*PgConn, *Notification)
+type NotificationHandler func(*GaussdbConn, *Notification)
 
-// PgConn is a low-level PostgreSQL connection handle. It is not safe for concurrent usage.
-type PgConn struct {
+// GaussdbConn is a low-level PostgreSQL connection handle. It is not safe for concurrent usage.
+type GaussdbConn struct {
 	scratch []byte
 
 	conn              net.Conn
@@ -111,7 +111,7 @@ type PgConn struct {
 // Connect establishes a connection to a PostgreSQL server using the environment and connString (in URL or keyword/value
 // format) to provide configuration. See documentation for [ParseConfig] for details. ctx can be used to cancel a
 // connect attempt.
-func Connect(ctx context.Context, connString string) (*PgConn, error) {
+func Connect(ctx context.Context, connString string) (*GaussdbConn, error) {
 	config, err := ParseConfig(connString)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func Connect(ctx context.Context, connString string) (*PgConn, error) {
 // Connect establishes a connection to a PostgreSQL server using the environment and connString (in URL or keyword/value
 // format) and ParseConfigOptions to provide additional configuration. See documentation for [ParseConfig] for details.
 // ctx can be used to cancel a connect attempt.
-func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptions ParseConfigOptions) (*PgConn, error) {
+func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptions ParseConfigOptions) (*GaussdbConn, error) {
 	config, err := ParseConfigWithOptions(connString, parseConfigOptions)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptio
 // If config.Fallbacks are present they will sequentially be tried in case of error establishing network connection. An
 // authentication error will terminate the chain of attempts (like libpq:
 // https://www.postgresql.org/docs/11/libpq-connect.html#LIBPQ-MULTIPLE-HOSTS) and be returned as the error.
-func ConnectConfig(ctx context.Context, config *Config) (*PgConn, error) {
+func ConnectConfig(ctx context.Context, config *Config) (*GaussdbConn, error) {
 	// Default values are set in ParseConfig. Enforce initial creation by ParseConfig rather than setting defaults from
 	// zero values.
 	if !config.createdByParseConfig {
@@ -156,21 +156,21 @@ func ConnectConfig(ctx context.Context, config *Config) (*PgConn, error) {
 		return nil, &ConnectError{Config: config, err: fmt.Errorf("hostname resolving error: %w", errors.Join(allErrors...))}
 	}
 
-	pgConn, errs := connectPreferred(ctx, config, connectConfigs)
+	gaussdbConn, errs := connectPreferred(ctx, config, connectConfigs)
 	if len(errs) > 0 {
 		allErrors = append(allErrors, errs...)
 		return nil, &ConnectError{Config: config, err: errors.Join(allErrors...)}
 	}
 
 	if config.AfterConnect != nil {
-		err := config.AfterConnect(ctx, pgConn)
+		err := config.AfterConnect(ctx, gaussdbConn)
 		if err != nil {
-			pgConn.conn.Close()
+			gaussdbConn.conn.Close()
 			return nil, &ConnectError{Config: config, err: fmt.Errorf("AfterConnect error: %w", err)}
 		}
 	}
 
-	return pgConn, nil
+	return gaussdbConn, nil
 }
 
 // buildConnectOneConfigs resolves hostnames and builds a list of connectOneConfigs to try connecting to. It returns a
@@ -243,7 +243,7 @@ func buildConnectOneConfigs(ctx context.Context, config *Config) ([]*connectOneC
 // connectPreferred attempts to connect to the preferred host from connectOneConfigs. The connections are attempted in
 // order. If a connection is successful it is returned. If no connection is successful then all errors are returned. If
 // a connection attempt returns a [NotPreferredError], then that host will be used if no other hosts are successful.
-func connectPreferred(ctx context.Context, config *Config, connectOneConfigs []*connectOneConfig) (*PgConn, []error) {
+func connectPreferred(ctx context.Context, config *Config, connectOneConfigs []*connectOneConfig) (*GaussdbConn, []error) {
 	octx := ctx
 	var allErrors []error
 
@@ -261,23 +261,23 @@ func connectPreferred(ctx context.Context, config *Config, connectOneConfigs []*
 			ctx = octx
 		}
 
-		pgConn, err := connectOne(ctx, config, c, false)
-		if pgConn != nil {
-			return pgConn, nil
+		gaussdbConn, err := connectOne(ctx, config, c, false)
+		if gaussdbConn != nil {
+			return gaussdbConn, nil
 		}
 
 		allErrors = append(allErrors, err)
 
-		var pgErr *PgError
-		if errors.As(err, &pgErr) {
+		var gaussdbError *GaussdbError
+		if errors.As(err, &gaussdbError) {
 			const ERRCODE_INVALID_PASSWORD = "28P01"                    // wrong password
 			const ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION = "28000" // wrong password or bad pg_hba.conf settings
 			const ERRCODE_INVALID_CATALOG_NAME = "3D000"                // db does not exist
 			const ERRCODE_INSUFFICIENT_PRIVILEGE = "42501"              // missing connect privilege
-			if pgErr.Code == ERRCODE_INVALID_PASSWORD ||
-				pgErr.Code == ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION && c.tlsConfig != nil ||
-				pgErr.Code == ERRCODE_INVALID_CATALOG_NAME ||
-				pgErr.Code == ERRCODE_INSUFFICIENT_PRIVILEGE {
+			if gaussdbError.Code == ERRCODE_INVALID_PASSWORD ||
+				gaussdbError.Code == ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION && c.tlsConfig != nil ||
+				gaussdbError.Code == ERRCODE_INVALID_CATALOG_NAME ||
+				gaussdbError.Code == ERRCODE_INSUFFICIENT_PRIVILEGE {
 				return nil, allErrors
 			}
 		}
@@ -289,9 +289,9 @@ func connectPreferred(ctx context.Context, config *Config, connectOneConfigs []*
 	}
 
 	if fallbackConnectOneConfig != nil {
-		pgConn, err := connectOne(ctx, config, fallbackConnectOneConfig, true)
+		gaussdbConn, err := connectOne(ctx, config, fallbackConnectOneConfig, true)
 		if err == nil {
-			return pgConn, nil
+			return gaussdbConn, nil
 		}
 		allErrors = append(allErrors, err)
 	}
@@ -302,11 +302,11 @@ func connectPreferred(ctx context.Context, config *Config, connectOneConfigs []*
 // connectOne makes one connection attempt to a single host.
 func connectOne(ctx context.Context, config *Config, connectConfig *connectOneConfig,
 	ignoreNotPreferredErr bool,
-) (*PgConn, error) {
-	pgConn := new(PgConn)
-	pgConn.config = config
-	pgConn.cleanupDone = make(chan struct{})
-	pgConn.customData = make(map[string]any)
+) (*GaussdbConn, error) {
+	gaussdbConn := new(GaussdbConn)
+	gaussdbConn.config = config
+	gaussdbConn.cleanupDone = make(chan struct{})
+	gaussdbConn.customData = make(map[string]any)
 
 	var err error
 
@@ -316,7 +316,7 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 		return e
 	}
 
-	pgConn.conn, err = config.DialFunc(ctx, connectConfig.network, connectConfig.address)
+	gaussdbConn.conn, err = config.DialFunc(ctx, connectConfig.network, connectConfig.address)
 	if err != nil {
 		return nil, newPerDialConnectError("dial error", err)
 	}
@@ -324,37 +324,37 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 	if config.minReadBufferSize == 0 {
 		config.minReadBufferSize = 8192
 	}
-	pgConn.scratch = make([]byte, config.minReadBufferSize)
+	gaussdbConn.scratch = make([]byte, config.minReadBufferSize)
 
 	if connectConfig.tlsConfig != nil {
-		pgConn.contextWatcher = ctxwatch.NewContextWatcher(&DeadlineContextWatcherHandler{Conn: pgConn.conn})
-		pgConn.contextWatcher.Watch(ctx)
-		tlsConn, err := startTLS(pgConn.conn, connectConfig.tlsConfig)
-		pgConn.contextWatcher.Unwatch() // Always unwatch `netConn` after TLS.
+		gaussdbConn.contextWatcher = ctxwatch.NewContextWatcher(&DeadlineContextWatcherHandler{Conn: gaussdbConn.conn})
+		gaussdbConn.contextWatcher.Watch(ctx)
+		tlsConn, err := startTLS(gaussdbConn.conn, connectConfig.tlsConfig)
+		gaussdbConn.contextWatcher.Unwatch() // Always unwatch `netConn` after TLS.
 		if err != nil {
-			pgConn.conn.Close()
+			gaussdbConn.conn.Close()
 			return nil, newPerDialConnectError("tls error", err)
 		}
 
-		pgConn.conn = tlsConn
+		gaussdbConn.conn = tlsConn
 	}
 
-	pgConn.contextWatcher = ctxwatch.NewContextWatcher(config.BuildContextWatcherHandler(pgConn))
-	pgConn.contextWatcher.Watch(ctx)
-	defer pgConn.contextWatcher.Unwatch()
+	gaussdbConn.contextWatcher = ctxwatch.NewContextWatcher(config.BuildContextWatcherHandler(gaussdbConn))
+	gaussdbConn.contextWatcher.Watch(ctx)
+	defer gaussdbConn.contextWatcher.Unwatch()
 
-	pgConn.parameterStatuses = make(map[string]string)
-	pgConn.status = connStatusConnecting
-	pgConn.bgReader = bgreader.New(pgConn.conn)
-	pgConn.slowWriteTimer = time.AfterFunc(time.Duration(math.MaxInt64),
+	gaussdbConn.parameterStatuses = make(map[string]string)
+	gaussdbConn.status = connStatusConnecting
+	gaussdbConn.bgReader = bgreader.New(gaussdbConn.conn)
+	gaussdbConn.slowWriteTimer = time.AfterFunc(time.Duration(math.MaxInt64),
 		func() {
-			pgConn.bgReader.Start()
-			pgConn.bgReaderStarted <- struct{}{}
+			gaussdbConn.bgReader.Start()
+			gaussdbConn.bgReaderStarted <- struct{}{}
 		},
 	)
-	pgConn.slowWriteTimer.Stop()
-	pgConn.bgReaderStarted = make(chan struct{})
-	pgConn.frontend = config.BuildFrontend(pgConn.bgReader, pgConn.conn)
+	gaussdbConn.slowWriteTimer.Stop()
+	gaussdbConn.bgReaderStarted = make(chan struct{})
+	gaussdbConn.frontend = config.BuildFrontend(gaussdbConn.bgReader, gaussdbConn.conn)
 
 	startupMsg := gaussdbproto.StartupMessage{
 		ProtocolVersion: gaussdbproto.ProtocolVersionNumber,
@@ -371,17 +371,17 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 		startupMsg.Parameters["database"] = config.Database
 	}
 
-	pgConn.frontend.Send(&startupMsg)
-	if err := pgConn.flushWithPotentialWriteReadDeadlock(); err != nil {
-		pgConn.conn.Close()
+	gaussdbConn.frontend.Send(&startupMsg)
+	if err := gaussdbConn.flushWithPotentialWriteReadDeadlock(); err != nil {
+		gaussdbConn.conn.Close()
 		return nil, newPerDialConnectError("failed to write startup message", err)
 	}
 
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
-			pgConn.conn.Close()
-			if err, ok := err.(*PgError); ok {
+			gaussdbConn.conn.Close()
+			if err, ok := err.(*GaussdbError); ok {
 				return nil, newPerDialConnectError("server error", err)
 			}
 			return nil, newPerDialConnectError("failed to receive message", err)
@@ -389,68 +389,68 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 
 		switch msg := msg.(type) {
 		case *gaussdbproto.BackendKeyData:
-			pgConn.pid = msg.ProcessID
-			pgConn.secretKey = msg.SecretKey
+			gaussdbConn.pid = msg.ProcessID
+			gaussdbConn.secretKey = msg.SecretKey
 
 		case *gaussdbproto.AuthenticationOk:
 		case *gaussdbproto.AuthenticationCleartextPassword:
-			err = pgConn.txPasswordMessage(pgConn.config.Password)
+			err = gaussdbConn.txPasswordMessage(gaussdbConn.config.Password)
 			if err != nil {
-				pgConn.conn.Close()
+				gaussdbConn.conn.Close()
 				return nil, newPerDialConnectError("failed to write password message", err)
 			}
 		case *gaussdbproto.AuthenticationMD5Password:
-			digestedPassword := "md5" + hexMD5(hexMD5(pgConn.config.Password+pgConn.config.User)+string(msg.Salt[:]))
-			err = pgConn.txPasswordMessage(digestedPassword)
+			digestedPassword := "md5" + hexMD5(hexMD5(gaussdbConn.config.Password+gaussdbConn.config.User)+string(msg.Salt[:]))
+			err = gaussdbConn.txPasswordMessage(digestedPassword)
 			if err != nil {
-				pgConn.conn.Close()
+				gaussdbConn.conn.Close()
 				return nil, newPerDialConnectError("failed to write password message", err)
 			}
 		case *gaussdbproto.AuthenticationSASL:
-			err = pgConn.scramAuth(msg.AuthMechanisms)
+			err = gaussdbConn.scramAuth(msg.AuthMechanisms)
 			if err != nil {
-				pgConn.conn.Close()
+				gaussdbConn.conn.Close()
 				return nil, newPerDialConnectError("failed SASL auth", err)
 			}
 		case *gaussdbproto.AuthenticationSHA256:
-			err = pgConn.scramSha256Auth(msg.GetR())
+			err = gaussdbConn.scramSha256Auth(msg.GetR())
 			if err != nil {
-				pgConn.conn.Close()
+				gaussdbConn.conn.Close()
 				return nil, newPerDialConnectError("failed SASL SHA256 auth", err)
 			}
 		case *gaussdbproto.AuthenticationGSS:
-			err = pgConn.gssAuth()
+			err = gaussdbConn.gssAuth()
 			if err != nil {
-				pgConn.conn.Close()
+				gaussdbConn.conn.Close()
 				return nil, newPerDialConnectError("failed GSS auth", err)
 			}
 		case *gaussdbproto.ReadyForQuery:
-			pgConn.status = connStatusIdle
+			gaussdbConn.status = connStatusIdle
 			if config.ValidateConnect != nil {
 				// ValidateConnect may execute commands that cause the context to be watched again. Unwatch first to avoid
 				// the watch already in progress panic. This is that last thing done by this method so there is no need to
 				// restart the watch after ValidateConnect returns.
 				//
 				// See https://github.com/jackc/pgconn/issues/40.
-				pgConn.contextWatcher.Unwatch()
+				gaussdbConn.contextWatcher.Unwatch()
 
-				err := config.ValidateConnect(ctx, pgConn)
+				err := config.ValidateConnect(ctx, gaussdbConn)
 				if err != nil {
 					if _, ok := err.(*NotPreferredError); ignoreNotPreferredErr && ok {
-						return pgConn, nil
+						return gaussdbConn, nil
 					}
-					pgConn.conn.Close()
+					gaussdbConn.conn.Close()
 					return nil, newPerDialConnectError("ValidateConnect failed", err)
 				}
 			}
-			return pgConn, nil
+			return gaussdbConn, nil
 		case *gaussdbproto.ParameterStatus, *gaussdbproto.NoticeResponse:
 			// handled by ReceiveMessage
 		case *gaussdbproto.ErrorResponse:
-			pgConn.conn.Close()
-			return nil, newPerDialConnectError("server error", ErrorResponseToPgError(msg))
+			gaussdbConn.conn.Close()
+			return nil, newPerDialConnectError("server error", ErrorResponseToGuassdbError(msg))
 		default:
-			pgConn.conn.Close()
+			gaussdbConn.conn.Close()
 			return nil, newPerDialConnectError("received unexpected message", err)
 		}
 	}
@@ -474,9 +474,9 @@ func startTLS(conn net.Conn, tlsConfig *tls.Config) (net.Conn, error) {
 	return tls.Client(conn, tlsConfig), nil
 }
 
-func (pgConn *PgConn) txPasswordMessage(password string) (err error) {
-	pgConn.frontend.Send(&gaussdbproto.PasswordMessage{Password: password})
-	return pgConn.flushWithPotentialWriteReadDeadlock()
+func (gaussdbConn *GaussdbConn) txPasswordMessage(password string) (err error) {
+	gaussdbConn.frontend.Send(&gaussdbproto.PasswordMessage{Password: password})
+	return gaussdbConn.flushWithPotentialWriteReadDeadlock()
 }
 
 func hexMD5(s string) string {
@@ -485,18 +485,18 @@ func hexMD5(s string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (pgConn *PgConn) signalMessage() chan struct{} {
-	if pgConn.bufferingReceive {
+func (gaussdbConn *GaussdbConn) signalMessage() chan struct{} {
+	if gaussdbConn.bufferingReceive {
 		panic("BUG: signalMessage when already in progress")
 	}
 
-	pgConn.bufferingReceive = true
-	pgConn.bufferingReceiveMux.Lock()
+	gaussdbConn.bufferingReceive = true
+	gaussdbConn.bufferingReceiveMux.Lock()
 
 	ch := make(chan struct{})
 	go func() {
-		pgConn.bufferingReceiveMsg, pgConn.bufferingReceiveErr = pgConn.frontend.Receive()
-		pgConn.bufferingReceiveMux.Unlock()
+		gaussdbConn.bufferingReceiveMsg, gaussdbConn.bufferingReceiveErr = gaussdbConn.frontend.Receive()
+		gaussdbConn.bufferingReceiveMux.Unlock()
 		close(ch)
 	}()
 
@@ -505,16 +505,16 @@ func (pgConn *PgConn) signalMessage() chan struct{} {
 
 // ReceiveMessage receives one wire protocol message from the PostgreSQL server. It must only be used when the
 // connection is not busy. e.g. It is an error to call ReceiveMessage while reading the result of a query. The messages
-// are still handled by the core pgconn message handling system so receiving a NotificationResponse will still trigger
+// are still handled by the core gaussdbconn message handling system so receiving a NotificationResponse will still trigger
 // the OnNotification callback.
 //
 // This is a very low level method that requires deep understanding of the PostgreSQL wire protocol to use correctly.
 // See https://www.postgresql.org/docs/current/protocol.html.
-func (pgConn *PgConn) ReceiveMessage(ctx context.Context) (gaussdbproto.BackendMessage, error) {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) ReceiveMessage(ctx context.Context) (gaussdbproto.BackendMessage, error) {
+	if err := gaussdbConn.lock(); err != nil {
 		return nil, err
 	}
-	defer pgConn.unlock()
+	defer gaussdbConn.unlock()
 
 	if ctx != context.Background() {
 		select {
@@ -522,13 +522,13 @@ func (pgConn *PgConn) ReceiveMessage(ctx context.Context) (gaussdbproto.BackendM
 			return nil, newContextAlreadyDoneError(ctx)
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
-	msg, err := pgConn.receiveMessage()
+	msg, err := gaussdbConn.receiveMessage()
 	if err != nil {
-		err = &pgconnError{
+		err = &gaussdbConnError{
 			msg:         "receive message failed",
 			err:         normalizeTimeoutError(ctx, err),
 			safeToRetry: true,
@@ -538,27 +538,27 @@ func (pgConn *PgConn) ReceiveMessage(ctx context.Context) (gaussdbproto.BackendM
 }
 
 // peekMessage peeks at the next message without setting up context cancellation.
-func (pgConn *PgConn) peekMessage() (gaussdbproto.BackendMessage, error) {
-	if pgConn.peekedMsg != nil {
-		return pgConn.peekedMsg, nil
+func (gaussdbConn *GaussdbConn) peekMessage() (gaussdbproto.BackendMessage, error) {
+	if gaussdbConn.peekedMsg != nil {
+		return gaussdbConn.peekedMsg, nil
 	}
 
 	var msg gaussdbproto.BackendMessage
 	var err error
-	if pgConn.bufferingReceive {
-		pgConn.bufferingReceiveMux.Lock()
-		msg = pgConn.bufferingReceiveMsg
-		err = pgConn.bufferingReceiveErr
-		pgConn.bufferingReceiveMux.Unlock()
-		pgConn.bufferingReceive = false
+	if gaussdbConn.bufferingReceive {
+		gaussdbConn.bufferingReceiveMux.Lock()
+		msg = gaussdbConn.bufferingReceiveMsg
+		err = gaussdbConn.bufferingReceiveErr
+		gaussdbConn.bufferingReceiveMux.Unlock()
+		gaussdbConn.bufferingReceive = false
 
 		// If a timeout error happened in the background try the read again.
 		var netErr net.Error
 		if errors.As(err, &netErr) && netErr.Timeout() {
-			msg, err = pgConn.frontend.Receive()
+			msg, err = gaussdbConn.frontend.Receive()
 		}
 	} else {
-		msg, err = pgConn.frontend.Receive()
+		msg, err = gaussdbConn.frontend.Receive()
 	}
 
 	if err != nil {
@@ -566,44 +566,44 @@ func (pgConn *PgConn) peekMessage() (gaussdbproto.BackendMessage, error) {
 		var netErr net.Error
 		isNetErr := errors.As(err, &netErr)
 		if !(isNetErr && netErr.Timeout()) {
-			pgConn.asyncClose()
+			gaussdbConn.asyncClose()
 		}
 
 		return nil, err
 	}
 
-	pgConn.peekedMsg = msg
+	gaussdbConn.peekedMsg = msg
 	return msg, nil
 }
 
 // receiveMessage receives a message without setting up context cancellation
-func (pgConn *PgConn) receiveMessage() (gaussdbproto.BackendMessage, error) {
-	msg, err := pgConn.peekMessage()
+func (gaussdbConn *GaussdbConn) receiveMessage() (gaussdbproto.BackendMessage, error) {
+	msg, err := gaussdbConn.peekMessage()
 	if err != nil {
 		return nil, err
 	}
-	pgConn.peekedMsg = nil
+	gaussdbConn.peekedMsg = nil
 
 	switch msg := msg.(type) {
 	case *gaussdbproto.ReadyForQuery:
-		pgConn.txStatus = msg.TxStatus
+		gaussdbConn.txStatus = msg.TxStatus
 	case *gaussdbproto.ParameterStatus:
-		pgConn.parameterStatuses[msg.Name] = msg.Value
+		gaussdbConn.parameterStatuses[msg.Name] = msg.Value
 	case *gaussdbproto.ErrorResponse:
-		err := ErrorResponseToPgError(msg)
-		if pgConn.config.OnPgError != nil && !pgConn.config.OnPgError(pgConn, err) {
-			pgConn.status = connStatusClosed
-			pgConn.conn.Close() // Ignore error as the connection is already broken and there is already an error to return.
-			close(pgConn.cleanupDone)
+		err := ErrorResponseToGuassdbError(msg)
+		if gaussdbConn.config.OnGaussdbError != nil && !gaussdbConn.config.OnGaussdbError(gaussdbConn, err) {
+			gaussdbConn.status = connStatusClosed
+			gaussdbConn.conn.Close() // Ignore error as the connection is already broken and there is already an error to return.
+			close(gaussdbConn.cleanupDone)
 			return nil, err
 		}
 	case *gaussdbproto.NoticeResponse:
-		if pgConn.config.OnNotice != nil {
-			pgConn.config.OnNotice(pgConn, noticeResponseToNotice(msg))
+		if gaussdbConn.config.OnNotice != nil {
+			gaussdbConn.config.OnNotice(gaussdbConn, noticeResponseToNotice(msg))
 		}
 	case *gaussdbproto.NotificationResponse:
-		if pgConn.config.OnNotification != nil {
-			pgConn.config.OnNotification(pgConn, &Notification{PID: msg.PID, Channel: msg.Channel, Payload: msg.Payload})
+		if gaussdbConn.config.OnNotification != nil {
+			gaussdbConn.config.OnNotification(gaussdbConn, &Notification{PID: msg.PID, Channel: msg.Channel, Payload: msg.Payload})
 		}
 	}
 
@@ -612,13 +612,13 @@ func (pgConn *PgConn) receiveMessage() (gaussdbproto.BackendMessage, error) {
 
 // Conn returns the underlying net.Conn. This rarely necessary. If the connection will be directly used for reading or
 // writing then SyncConn should usually be called before Conn.
-func (pgConn *PgConn) Conn() net.Conn {
-	return pgConn.conn
+func (gaussdbConn *GaussdbConn) Conn() net.Conn {
+	return gaussdbConn.conn
 }
 
 // PID returns the backend PID.
-func (pgConn *PgConn) PID() uint32 {
-	return pgConn.pid
+func (gaussdbConn *GaussdbConn) PID() uint32 {
+	return gaussdbConn.pid
 }
 
 // TxStatus returns the current TxStatus as reported by the server in the ReadyForQuery message.
@@ -630,31 +630,31 @@ func (pgConn *PgConn) PID() uint32 {
 //	'E' - in a failed transaction
 //
 // See https://www.postgresql.org/docs/current/protocol-message-formats.html.
-func (pgConn *PgConn) TxStatus() byte {
-	return pgConn.txStatus
+func (gaussdbConn *GaussdbConn) TxStatus() byte {
+	return gaussdbConn.txStatus
 }
 
 // SecretKey returns the backend secret key used to send a cancel query message to the server.
-func (pgConn *PgConn) SecretKey() uint32 {
-	return pgConn.secretKey
+func (gaussdbConn *GaussdbConn) SecretKey() uint32 {
+	return gaussdbConn.secretKey
 }
 
 // Frontend returns the underlying *pgproto3.Frontend. This rarely necessary.
-func (pgConn *PgConn) Frontend() *gaussdbproto.Frontend {
-	return pgConn.frontend
+func (gaussdbConn *GaussdbConn) Frontend() *gaussdbproto.Frontend {
+	return gaussdbConn.frontend
 }
 
 // Close closes a connection. It is safe to call Close on an already closed connection. Close attempts a clean close by
 // sending the exit message to PostgreSQL. However, this could block so ctx is available to limit the time to wait. The
 // underlying net.Conn.Close() will always be called regardless of any other errors.
-func (pgConn *PgConn) Close(ctx context.Context) error {
-	if pgConn.status == connStatusClosed {
+func (gaussdbConn *GaussdbConn) Close(ctx context.Context) error {
+	if gaussdbConn.status == connStatusClosed {
 		return nil
 	}
-	pgConn.status = connStatusClosed
+	gaussdbConn.status = connStatusClosed
 
-	defer close(pgConn.cleanupDone)
-	defer pgConn.conn.Close()
+	defer close(gaussdbConn.cleanupDone)
+	defer gaussdbConn.conn.Close()
 
 	if ctx != context.Background() {
 		// Close may be called while a cancellable query is in progress. This will most often be triggered by panic when
@@ -662,10 +662,10 @@ func (pgConn *PgConn) Close(ctx context.Context) error {
 		// previous watch. It is safe to Unwatch regardless of whether a watch is already is progress.
 		//
 		// See https://github.com/jackc/pgconn/issues/29
-		pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Unwatch()
 
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
 	// Ignore any errors sending Terminate message and waiting for server to close connection.
@@ -673,35 +673,35 @@ func (pgConn *PgConn) Close(ctx context.Context) error {
 	// ignores errors.
 	//
 	// See https://github.com/jackc/pgx/issues/637
-	pgConn.frontend.Send(&gaussdbproto.Terminate{})
-	pgConn.flushWithPotentialWriteReadDeadlock()
+	gaussdbConn.frontend.Send(&gaussdbproto.Terminate{})
+	gaussdbConn.flushWithPotentialWriteReadDeadlock()
 
-	return pgConn.conn.Close()
+	return gaussdbConn.conn.Close()
 }
 
 // asyncClose marks the connection as closed and asynchronously sends a cancel query message and closes the underlying
 // connection.
-func (pgConn *PgConn) asyncClose() {
-	if pgConn.status == connStatusClosed {
+func (gaussdbConn *GaussdbConn) asyncClose() {
+	if gaussdbConn.status == connStatusClosed {
 		return
 	}
-	pgConn.status = connStatusClosed
+	gaussdbConn.status = connStatusClosed
 
 	go func() {
-		defer close(pgConn.cleanupDone)
-		defer pgConn.conn.Close()
+		defer close(gaussdbConn.cleanupDone)
+		defer gaussdbConn.conn.Close()
 
 		deadline := time.Now().Add(time.Second * 15)
 
 		ctx, cancel := context.WithDeadline(context.Background(), deadline)
 		defer cancel()
 
-		pgConn.CancelRequest(ctx)
+		gaussdbConn.CancelRequest(ctx)
 
-		pgConn.conn.SetDeadline(deadline)
+		gaussdbConn.conn.SetDeadline(deadline)
 
-		pgConn.frontend.Send(&gaussdbproto.Terminate{})
-		pgConn.flushWithPotentialWriteReadDeadlock()
+		gaussdbConn.frontend.Send(&gaussdbproto.Terminate{})
+		gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	}()
 }
 
@@ -713,25 +713,25 @@ func (pgConn *PgConn) asyncClose() {
 //
 // This is only likely to be useful to connection pools. It gives them a way avoid establishing a new connection while
 // an old connection is still being cleaned up and thereby exceeding the maximum pool size.
-func (pgConn *PgConn) CleanupDone() chan (struct{}) {
-	return pgConn.cleanupDone
+func (gaussdbConn *GaussdbConn) CleanupDone() chan (struct{}) {
+	return gaussdbConn.cleanupDone
 }
 
 // IsClosed reports if the connection has been closed.
 //
 // CleanupDone() can be used to determine if all cleanup has been completed.
-func (pgConn *PgConn) IsClosed() bool {
-	return pgConn.status < connStatusIdle
+func (gaussdbConn *GaussdbConn) IsClosed() bool {
+	return gaussdbConn.status < connStatusIdle
 }
 
 // IsBusy reports if the connection is busy.
-func (pgConn *PgConn) IsBusy() bool {
-	return pgConn.status == connStatusBusy
+func (gaussdbConn *GaussdbConn) IsBusy() bool {
+	return gaussdbConn.status == connStatusBusy
 }
 
 // lock locks the connection.
-func (pgConn *PgConn) lock() error {
-	switch pgConn.status {
+func (gaussdbConn *GaussdbConn) lock() error {
+	switch gaussdbConn.status {
 	case connStatusBusy:
 		return &connLockError{status: "conn busy"} // This only should be possible in case of an application bug.
 	case connStatusClosed:
@@ -739,14 +739,14 @@ func (pgConn *PgConn) lock() error {
 	case connStatusUninitialized:
 		return &connLockError{status: "conn uninitialized"}
 	}
-	pgConn.status = connStatusBusy
+	gaussdbConn.status = connStatusBusy
 	return nil
 }
 
-func (pgConn *PgConn) unlock() {
-	switch pgConn.status {
+func (gaussdbConn *GaussdbConn) unlock() {
+	switch gaussdbConn.status {
 	case connStatusBusy:
-		pgConn.status = connStatusIdle
+		gaussdbConn.status = connStatusIdle
 	case connStatusClosed:
 	default:
 		panic("BUG: cannot unlock unlocked connection") // This should only be possible if there is a bug in this package.
@@ -755,8 +755,8 @@ func (pgConn *PgConn) unlock() {
 
 // ParameterStatus returns the value of a parameter reported by the server (e.g.
 // server_version). Returns an empty string for unknown parameters.
-func (pgConn *PgConn) ParameterStatus(key string) string {
-	return pgConn.parameterStatuses[key]
+func (gaussdbConn *GaussdbConn) ParameterStatus(key string) string {
+	return gaussdbConn.parameterStatuses[key]
 }
 
 // CommandTag is the status text returned by PostgreSQL for a query.
@@ -828,7 +828,7 @@ type FieldDescription struct {
 	Format               int16
 }
 
-func (pgConn *PgConn) convertRowDescription(dst []FieldDescription, rd *gaussdbproto.RowDescription) []FieldDescription {
+func (gaussdbConn *GaussdbConn) convertRowDescription(dst []FieldDescription, rd *gaussdbproto.RowDescription) []FieldDescription {
 	if cap(dst) >= len(rd.Fields) {
 		dst = dst[:len(rd.Fields):len(rd.Fields)]
 	} else {
@@ -860,11 +860,11 @@ type StatementDescription struct {
 //
 // Prepare does not send a PREPARE statement to the server. It uses the PostgreSQL Parse and Describe protocol messages
 // directly.
-func (pgConn *PgConn) Prepare(ctx context.Context, name, sql string, paramOIDs []uint32) (*StatementDescription, error) {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) Prepare(ctx context.Context, name, sql string, paramOIDs []uint32) (*StatementDescription, error) {
+	if err := gaussdbConn.lock(); err != nil {
 		return nil, err
 	}
-	defer pgConn.unlock()
+	defer gaussdbConn.unlock()
 
 	if ctx != context.Background() {
 		select {
@@ -872,16 +872,16 @@ func (pgConn *PgConn) Prepare(ctx context.Context, name, sql string, paramOIDs [
 			return nil, newContextAlreadyDoneError(ctx)
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
-	pgConn.frontend.SendParse(&gaussdbproto.Parse{Name: name, Query: sql, ParameterOIDs: paramOIDs})
-	pgConn.frontend.SendDescribe(&gaussdbproto.Describe{ObjectType: 'S', Name: name})
-	pgConn.frontend.SendSync(&gaussdbproto.Sync{})
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	gaussdbConn.frontend.SendParse(&gaussdbproto.Parse{Name: name, Query: sql, ParameterOIDs: paramOIDs})
+	gaussdbConn.frontend.SendDescribe(&gaussdbproto.Describe{ObjectType: 'S', Name: name})
+	gaussdbConn.frontend.SendSync(&gaussdbproto.Sync{})
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return nil, err
 	}
 
@@ -891,9 +891,9 @@ func (pgConn *PgConn) Prepare(ctx context.Context, name, sql string, paramOIDs [
 
 readloop:
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
-			pgConn.asyncClose()
+			gaussdbConn.asyncClose()
 			return nil, normalizeTimeoutError(ctx, err)
 		}
 
@@ -902,9 +902,9 @@ readloop:
 			psd.ParamOIDs = make([]uint32, len(msg.ParameterOIDs))
 			copy(psd.ParamOIDs, msg.ParameterOIDs)
 		case *gaussdbproto.RowDescription:
-			psd.Fields = pgConn.convertRowDescription(nil, msg)
+			psd.Fields = gaussdbConn.convertRowDescription(nil, msg)
 		case *gaussdbproto.ErrorResponse:
-			parseErr = ErrorResponseToPgError(msg)
+			parseErr = ErrorResponseToGuassdbError(msg)
 		case *gaussdbproto.ReadyForQuery:
 			break readloop
 		}
@@ -922,11 +922,11 @@ readloop:
 // directly. This has slightly different behavior than executing DEALLOCATE statement.
 //   - Deallocate can succeed in an aborted transaction.
 //   - Deallocating a non-existent prepared statement is not an error.
-func (pgConn *PgConn) Deallocate(ctx context.Context, name string) error {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) Deallocate(ctx context.Context, name string) error {
+	if err := gaussdbConn.lock(); err != nil {
 		return err
 	}
-	defer pgConn.unlock()
+	defer gaussdbConn.unlock()
 
 	if ctx != context.Background() {
 		select {
@@ -934,37 +934,37 @@ func (pgConn *PgConn) Deallocate(ctx context.Context, name string) error {
 			return newContextAlreadyDoneError(ctx)
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
-	pgConn.frontend.SendClose(&gaussdbproto.Close{ObjectType: 'S', Name: name})
-	pgConn.frontend.SendSync(&gaussdbproto.Sync{})
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	gaussdbConn.frontend.SendClose(&gaussdbproto.Close{ObjectType: 'S', Name: name})
+	gaussdbConn.frontend.SendSync(&gaussdbproto.Sync{})
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return err
 	}
 
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
-			pgConn.asyncClose()
+			gaussdbConn.asyncClose()
 			return normalizeTimeoutError(ctx, err)
 		}
 
 		switch msg := msg.(type) {
 		case *gaussdbproto.ErrorResponse:
-			return ErrorResponseToPgError(msg)
+			return ErrorResponseToGuassdbError(msg)
 		case *gaussdbproto.ReadyForQuery:
 			return nil
 		}
 	}
 }
 
-// ErrorResponseToPgError converts a wire protocol error message to a *PgError.
-func ErrorResponseToPgError(msg *gaussdbproto.ErrorResponse) *PgError {
-	return &PgError{
+// ErrorResponseToGuassdbError converts a wire protocol error message to a *GaussdbError.
+func ErrorResponseToGuassdbError(msg *gaussdbproto.ErrorResponse) *GaussdbError {
+	return &GaussdbError{
 		Severity:            msg.Severity,
 		SeverityUnlocalized: msg.SeverityUnlocalized,
 		Code:                string(msg.Code),
@@ -987,37 +987,37 @@ func ErrorResponseToPgError(msg *gaussdbproto.ErrorResponse) *PgError {
 }
 
 func noticeResponseToNotice(msg *gaussdbproto.NoticeResponse) *Notice {
-	pgerr := ErrorResponseToPgError((*gaussdbproto.ErrorResponse)(msg))
-	return (*Notice)(pgerr)
+	gaussdbError := ErrorResponseToGuassdbError((*gaussdbproto.ErrorResponse)(msg))
+	return (*Notice)(gaussdbError)
 }
 
 // CancelRequest sends a cancel request to the PostgreSQL server. It returns an error if unable to deliver the cancel
 // request, but lack of an error does not ensure that the query was canceled. As specified in the documentation, there
 // is no way to be sure a query was canceled. See https://www.postgresql.org/docs/11/protocol-flow.html#id-1.10.5.7.9
-func (pgConn *PgConn) CancelRequest(ctx context.Context) error {
+func (gaussdbConn *GaussdbConn) CancelRequest(ctx context.Context) error {
 	// Open a cancellation request to the same server. The address is taken from the net.Conn directly instead of reusing
 	// the connection config. This is important in high availability configurations where fallback connections may be
 	// specified or DNS may be used to load balance.
-	serverAddr := pgConn.conn.RemoteAddr()
+	serverAddr := gaussdbConn.conn.RemoteAddr()
 	var serverNetwork string
 	var serverAddress string
 	if serverAddr.Network() == "unix" {
 		// for unix sockets, RemoteAddr() calls getpeername() which returns the name the
 		// server passed to bind(). For Postgres, this is always a relative path "./.s.PGSQL.5432"
 		// so connecting to it will fail. Fall back to the config's value
-		serverNetwork, serverAddress = NetworkAddress(pgConn.config.Host, pgConn.config.Port)
+		serverNetwork, serverAddress = NetworkAddress(gaussdbConn.config.Host, gaussdbConn.config.Port)
 	} else {
 		serverNetwork, serverAddress = serverAddr.Network(), serverAddr.String()
 	}
-	cancelConn, err := pgConn.config.DialFunc(ctx, serverNetwork, serverAddress)
+	cancelConn, err := gaussdbConn.config.DialFunc(ctx, serverNetwork, serverAddress)
 	if err != nil {
 		// In case of unix sockets, RemoteAddr() returns only the file part of the path. If the
 		// first connect failed, try the config.
 		if serverAddr.Network() != "unix" {
 			return err
 		}
-		serverNetwork, serverAddr := NetworkAddress(pgConn.config.Host, pgConn.config.Port)
-		cancelConn, err = pgConn.config.DialFunc(ctx, serverNetwork, serverAddr)
+		serverNetwork, serverAddr := NetworkAddress(gaussdbConn.config.Host, gaussdbConn.config.Port)
+		cancelConn, err = gaussdbConn.config.DialFunc(ctx, serverNetwork, serverAddr)
 		if err != nil {
 			return err
 		}
@@ -1033,8 +1033,8 @@ func (pgConn *PgConn) CancelRequest(ctx context.Context) error {
 	buf := make([]byte, 16)
 	binary.BigEndian.PutUint32(buf[0:4], 16)
 	binary.BigEndian.PutUint32(buf[4:8], 80877102)
-	binary.BigEndian.PutUint32(buf[8:12], pgConn.pid)
-	binary.BigEndian.PutUint32(buf[12:16], pgConn.secretKey)
+	binary.BigEndian.PutUint32(buf[8:12], gaussdbConn.pid)
+	binary.BigEndian.PutUint32(buf[12:16], gaussdbConn.secretKey)
 
 	if _, err := cancelConn.Write(buf); err != nil {
 		return fmt.Errorf("write to connection for cancellation: %w", err)
@@ -1049,11 +1049,11 @@ func (pgConn *PgConn) CancelRequest(ctx context.Context) error {
 
 // WaitForNotification waits for a LISTEN/NOTIFY message to be received. It returns an error if a notification was not
 // received.
-func (pgConn *PgConn) WaitForNotification(ctx context.Context) error {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) WaitForNotification(ctx context.Context) error {
+	if err := gaussdbConn.lock(); err != nil {
 		return err
 	}
-	defer pgConn.unlock()
+	defer gaussdbConn.unlock()
 
 	if ctx != context.Background() {
 		select {
@@ -1062,12 +1062,12 @@ func (pgConn *PgConn) WaitForNotification(ctx context.Context) error {
 		default:
 		}
 
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
 			return normalizeTimeoutError(ctx, err)
 		}
@@ -1084,39 +1084,39 @@ func (pgConn *PgConn) WaitForNotification(ctx context.Context) error {
 // statements.
 //
 // Prefer ExecParams unless executing arbitrary SQL that may contain multiple queries.
-func (pgConn *PgConn) Exec(ctx context.Context, sql string) *MultiResultReader {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) Exec(ctx context.Context, sql string) *MultiResultReader {
+	if err := gaussdbConn.lock(); err != nil {
 		return &MultiResultReader{
 			closed: true,
 			err:    err,
 		}
 	}
 
-	pgConn.multiResultReader = MultiResultReader{
-		pgConn: pgConn,
-		ctx:    ctx,
+	gaussdbConn.multiResultReader = MultiResultReader{
+		gaussdbConn: gaussdbConn,
+		ctx:         ctx,
 	}
-	multiResult := &pgConn.multiResultReader
+	multiResult := &gaussdbConn.multiResultReader
 	if ctx != context.Background() {
 		select {
 		case <-ctx.Done():
 			multiResult.closed = true
 			multiResult.err = newContextAlreadyDoneError(ctx)
-			pgConn.unlock()
+			gaussdbConn.unlock()
 			return multiResult
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
+		gaussdbConn.contextWatcher.Watch(ctx)
 	}
 
-	pgConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	gaussdbConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
-		pgConn.contextWatcher.Unwatch()
+		gaussdbConn.asyncClose()
+		gaussdbConn.contextWatcher.Unwatch()
 		multiResult.closed = true
 		multiResult.err = err
-		pgConn.unlock()
+		gaussdbConn.unlock()
 		return multiResult
 	}
 
@@ -1141,17 +1141,17 @@ func (pgConn *PgConn) Exec(ctx context.Context, sql string) *MultiResultReader {
 // resultFormats is a slice of format codes determining for each result column whether it is encoded in text or
 // binary format. If resultFormats is nil all results will be in text format.
 //
-// ResultReader must be closed before PgConn can be used again.
-func (pgConn *PgConn) ExecParams(ctx context.Context, sql string, paramValues [][]byte, paramOIDs []uint32, paramFormats []int16, resultFormats []int16) *ResultReader {
-	result := pgConn.execExtendedPrefix(ctx, paramValues)
+// ResultReader must be closed before GaussdbConn can be used again.
+func (gaussdbConn *GaussdbConn) ExecParams(ctx context.Context, sql string, paramValues [][]byte, paramOIDs []uint32, paramFormats []int16, resultFormats []int16) *ResultReader {
+	result := gaussdbConn.execExtendedPrefix(ctx, paramValues)
 	if result.closed {
 		return result
 	}
 
-	pgConn.frontend.SendParse(&gaussdbproto.Parse{Query: sql, ParameterOIDs: paramOIDs})
-	pgConn.frontend.SendBind(&gaussdbproto.Bind{ParameterFormatCodes: paramFormats, Parameters: paramValues, ResultFormatCodes: resultFormats})
+	gaussdbConn.frontend.SendParse(&gaussdbproto.Parse{Query: sql, ParameterOIDs: paramOIDs})
+	gaussdbConn.frontend.SendBind(&gaussdbproto.Bind{ParameterFormatCodes: paramFormats, Parameters: paramValues, ResultFormatCodes: resultFormats})
 
-	pgConn.execExtendedSuffix(result)
+	gaussdbConn.execExtendedSuffix(result)
 
 	return result
 }
@@ -1167,28 +1167,28 @@ func (pgConn *PgConn) ExecParams(ctx context.Context, sql string, paramValues []
 // resultFormats is a slice of format codes determining for each result column whether it is encoded in text or
 // binary format. If resultFormats is nil all results will be in text format.
 //
-// ResultReader must be closed before PgConn can be used again.
-func (pgConn *PgConn) ExecPrepared(ctx context.Context, stmtName string, paramValues [][]byte, paramFormats []int16, resultFormats []int16) *ResultReader {
-	result := pgConn.execExtendedPrefix(ctx, paramValues)
+// ResultReader must be closed before GaussdbConn can be used again.
+func (gaussdbConn *GaussdbConn) ExecPrepared(ctx context.Context, stmtName string, paramValues [][]byte, paramFormats []int16, resultFormats []int16) *ResultReader {
+	result := gaussdbConn.execExtendedPrefix(ctx, paramValues)
 	if result.closed {
 		return result
 	}
 
-	pgConn.frontend.SendBind(&gaussdbproto.Bind{PreparedStatement: stmtName, ParameterFormatCodes: paramFormats, Parameters: paramValues, ResultFormatCodes: resultFormats})
+	gaussdbConn.frontend.SendBind(&gaussdbproto.Bind{PreparedStatement: stmtName, ParameterFormatCodes: paramFormats, Parameters: paramValues, ResultFormatCodes: resultFormats})
 
-	pgConn.execExtendedSuffix(result)
+	gaussdbConn.execExtendedSuffix(result)
 
 	return result
 }
 
-func (pgConn *PgConn) execExtendedPrefix(ctx context.Context, paramValues [][]byte) *ResultReader {
-	pgConn.resultReader = ResultReader{
-		pgConn: pgConn,
-		ctx:    ctx,
+func (gaussdbConn *GaussdbConn) execExtendedPrefix(ctx context.Context, paramValues [][]byte) *ResultReader {
+	gaussdbConn.resultReader = ResultReader{
+		gaussdbConn: gaussdbConn,
+		ctx:         ctx,
 	}
-	result := &pgConn.resultReader
+	result := &gaussdbConn.resultReader
 
-	if err := pgConn.lock(); err != nil {
+	if err := gaussdbConn.lock(); err != nil {
 		result.concludeCommand(CommandTag{}, err)
 		result.closed = true
 		return result
@@ -1197,7 +1197,7 @@ func (pgConn *PgConn) execExtendedPrefix(ctx context.Context, paramValues [][]by
 	if len(paramValues) > math.MaxUint16 {
 		result.concludeCommand(CommandTag{}, fmt.Errorf("extended protocol limited to %v parameters", math.MaxUint16))
 		result.closed = true
-		pgConn.unlock()
+		gaussdbConn.unlock()
 		return result
 	}
 
@@ -1206,28 +1206,28 @@ func (pgConn *PgConn) execExtendedPrefix(ctx context.Context, paramValues [][]by
 		case <-ctx.Done():
 			result.concludeCommand(CommandTag{}, newContextAlreadyDoneError(ctx))
 			result.closed = true
-			pgConn.unlock()
+			gaussdbConn.unlock()
 			return result
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
+		gaussdbConn.contextWatcher.Watch(ctx)
 	}
 
 	return result
 }
 
-func (pgConn *PgConn) execExtendedSuffix(result *ResultReader) {
-	pgConn.frontend.SendDescribe(&gaussdbproto.Describe{ObjectType: 'P'})
-	pgConn.frontend.SendExecute(&gaussdbproto.Execute{})
-	pgConn.frontend.SendSync(&gaussdbproto.Sync{})
+func (gaussdbConn *GaussdbConn) execExtendedSuffix(result *ResultReader) {
+	gaussdbConn.frontend.SendDescribe(&gaussdbproto.Describe{ObjectType: 'P'})
+	gaussdbConn.frontend.SendExecute(&gaussdbproto.Execute{})
+	gaussdbConn.frontend.SendSync(&gaussdbproto.Sync{})
 
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		result.concludeCommand(CommandTag{}, err)
-		pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Unwatch()
 		result.closed = true
-		pgConn.unlock()
+		gaussdbConn.unlock()
 		return
 	}
 
@@ -1235,39 +1235,39 @@ func (pgConn *PgConn) execExtendedSuffix(result *ResultReader) {
 }
 
 // CopyTo executes the copy command sql and copies the results to w.
-func (pgConn *PgConn) CopyTo(ctx context.Context, w io.Writer, sql string) (CommandTag, error) {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) CopyTo(ctx context.Context, w io.Writer, sql string) (CommandTag, error) {
+	if err := gaussdbConn.lock(); err != nil {
 		return CommandTag{}, err
 	}
 
 	if ctx != context.Background() {
 		select {
 		case <-ctx.Done():
-			pgConn.unlock()
+			gaussdbConn.unlock()
 			return CommandTag{}, newContextAlreadyDoneError(ctx)
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
 	// Send copy to command
-	pgConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
+	gaussdbConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
 
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
-		pgConn.unlock()
+		gaussdbConn.asyncClose()
+		gaussdbConn.unlock()
 		return CommandTag{}, err
 	}
 
 	// Read results
 	var commandTag CommandTag
-	var pgErr error
+	var gaussdbErr error
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
-			pgConn.asyncClose()
+			gaussdbConn.asyncClose()
 			return CommandTag{}, normalizeTimeoutError(ctx, err)
 		}
 
@@ -1276,16 +1276,16 @@ func (pgConn *PgConn) CopyTo(ctx context.Context, w io.Writer, sql string) (Comm
 		case *gaussdbproto.CopyData:
 			_, err := w.Write(msg.Data)
 			if err != nil {
-				pgConn.asyncClose()
+				gaussdbConn.asyncClose()
 				return CommandTag{}, err
 			}
 		case *gaussdbproto.ReadyForQuery:
-			pgConn.unlock()
-			return commandTag, pgErr
+			gaussdbConn.unlock()
+			return commandTag, gaussdbErr
 		case *gaussdbproto.CommandComplete:
-			commandTag = pgConn.makeCommandTag(msg.CommandTag)
+			commandTag = gaussdbConn.makeCommandTag(msg.CommandTag)
 		case *gaussdbproto.ErrorResponse:
-			pgErr = ErrorResponseToPgError(msg)
+			gaussdbErr = ErrorResponseToGuassdbError(msg)
 		}
 	}
 }
@@ -1294,11 +1294,11 @@ func (pgConn *PgConn) CopyTo(ctx context.Context, w io.Writer, sql string) (Comm
 //
 // Note: context cancellation will only interrupt operations on the underlying PostgreSQL network connection. Reads on r
 // could still block.
-func (pgConn *PgConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (CommandTag, error) {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (CommandTag, error) {
+	if err := gaussdbConn.lock(); err != nil {
 		return CommandTag{}, err
 	}
-	defer pgConn.unlock()
+	defer gaussdbConn.unlock()
 
 	if ctx != context.Background() {
 		select {
@@ -1306,22 +1306,22 @@ func (pgConn *PgConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (Co
 			return CommandTag{}, newContextAlreadyDoneError(ctx)
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
-		defer pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Watch(ctx)
+		defer gaussdbConn.contextWatcher.Unwatch()
 	}
 
 	// Send copy from query
-	pgConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
-	err := pgConn.flushWithPotentialWriteReadDeadlock()
+	gaussdbConn.frontend.SendQuery(&gaussdbproto.Query{String: sql})
+	err := gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return CommandTag{}, err
 	}
 
 	// Send copy data
 	abortCopyChan := make(chan struct{})
 	copyErrChan := make(chan error, 1)
-	signalMessageChan := pgConn.signalMessage()
+	signalMessageChan := gaussdbConn.signalMessage()
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -1335,13 +1335,13 @@ func (pgConn *PgConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (Co
 			n, readErr := r.Read((*buf)[5:cap(*buf)])
 			if n > 0 {
 				*buf = (*buf)[0 : n+5]
-				pgio.SetInt32((*buf)[1:], int32(n+4))
+				gaussdbio.SetInt32((*buf)[1:], int32(n+4))
 
-				writeErr := pgConn.frontend.SendUnbufferedEncodedCopyData(*buf)
+				writeErr := gaussdbConn.frontend.SendUnbufferedEncodedCopyData(*buf)
 				if writeErr != nil {
 					// Write errors are always fatal, but we can't use asyncClose because we are in a different goroutine. Not
-					// setting pgConn.status or closing pgConn.cleanupDone for the same reason.
-					pgConn.conn.Close()
+					// setting gaussdbConn.status or closing gaussdbConn.cleanupDone for the same reason.
+					gaussdbConn.conn.Close()
 
 					copyErrChan <- writeErr
 					return
@@ -1360,28 +1360,28 @@ func (pgConn *PgConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (Co
 		}
 	}()
 
-	var pgErr error
+	var gaussdbErr error
 	var copyErr error
-	for copyErr == nil && pgErr == nil {
+	for copyErr == nil && gaussdbErr == nil {
 		select {
 		case copyErr = <-copyErrChan:
 		case <-signalMessageChan:
-			// If pgConn.receiveMessage encounters an error it will call pgConn.asyncClose. But that is a race condition with
-			// the goroutine. So instead check pgConn.bufferingReceiveErr which will have been set by the signalMessage. If an
+			// If gaussdbConn.receiveMessage encounters an error it will call gaussdbConn.asyncClose. But that is a race condition with
+			// the goroutine. So instead check gaussdbConn.bufferingReceiveErr which will have been set by the signalMessage. If an
 			// error is found then forcibly close the connection without sending the Terminate message.
-			if err := pgConn.bufferingReceiveErr; err != nil {
-				pgConn.status = connStatusClosed
-				pgConn.conn.Close()
-				close(pgConn.cleanupDone)
+			if err := gaussdbConn.bufferingReceiveErr; err != nil {
+				gaussdbConn.status = connStatusClosed
+				gaussdbConn.conn.Close()
+				close(gaussdbConn.cleanupDone)
 				return CommandTag{}, normalizeTimeoutError(ctx, err)
 			}
-			msg, _ := pgConn.receiveMessage()
+			msg, _ := gaussdbConn.receiveMessage()
 
 			switch msg := msg.(type) {
 			case *gaussdbproto.ErrorResponse:
-				pgErr = ErrorResponseToPgError(msg)
+				gaussdbErr = ErrorResponseToGuassdbError(msg)
 			default:
-				signalMessageChan = pgConn.signalMessage()
+				signalMessageChan = gaussdbConn.signalMessage()
 			}
 		}
 	}
@@ -1389,41 +1389,41 @@ func (pgConn *PgConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (Co
 	// Make sure io goroutine finishes before writing.
 	wg.Wait()
 
-	if copyErr == io.EOF || pgErr != nil {
-		pgConn.frontend.Send(&gaussdbproto.CopyDone{})
+	if copyErr == io.EOF || gaussdbErr != nil {
+		gaussdbConn.frontend.Send(&gaussdbproto.CopyDone{})
 	} else {
-		pgConn.frontend.Send(&gaussdbproto.CopyFail{Message: copyErr.Error()})
+		gaussdbConn.frontend.Send(&gaussdbproto.CopyFail{Message: copyErr.Error()})
 	}
-	err = pgConn.flushWithPotentialWriteReadDeadlock()
+	err = gaussdbConn.flushWithPotentialWriteReadDeadlock()
 	if err != nil {
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return CommandTag{}, err
 	}
 
 	// Read results
 	var commandTag CommandTag
 	for {
-		msg, err := pgConn.receiveMessage()
+		msg, err := gaussdbConn.receiveMessage()
 		if err != nil {
-			pgConn.asyncClose()
+			gaussdbConn.asyncClose()
 			return CommandTag{}, normalizeTimeoutError(ctx, err)
 		}
 
 		switch msg := msg.(type) {
 		case *gaussdbproto.ReadyForQuery:
-			return commandTag, pgErr
+			return commandTag, gaussdbErr
 		case *gaussdbproto.CommandComplete:
-			commandTag = pgConn.makeCommandTag(msg.CommandTag)
+			commandTag = gaussdbConn.makeCommandTag(msg.CommandTag)
 		case *gaussdbproto.ErrorResponse:
-			pgErr = ErrorResponseToPgError(msg)
+			gaussdbErr = ErrorResponseToGuassdbError(msg)
 		}
 	}
 }
 
 // MultiResultReader is a reader for a command that could return multiple results such as Exec or ExecBatch.
 type MultiResultReader struct {
-	pgConn *PgConn
-	ctx    context.Context
+	gaussdbConn *GaussdbConn
+	ctx         context.Context
 
 	rr *ResultReader
 
@@ -1444,22 +1444,22 @@ func (mrr *MultiResultReader) ReadAll() ([]*Result, error) {
 }
 
 func (mrr *MultiResultReader) receiveMessage() (gaussdbproto.BackendMessage, error) {
-	msg, err := mrr.pgConn.receiveMessage()
+	msg, err := mrr.gaussdbConn.receiveMessage()
 	if err != nil {
-		mrr.pgConn.contextWatcher.Unwatch()
+		mrr.gaussdbConn.contextWatcher.Unwatch()
 		mrr.err = normalizeTimeoutError(mrr.ctx, err)
 		mrr.closed = true
-		mrr.pgConn.asyncClose()
+		mrr.gaussdbConn.asyncClose()
 		return nil, mrr.err
 	}
 
 	switch msg := msg.(type) {
 	case *gaussdbproto.ReadyForQuery:
 		mrr.closed = true
-		mrr.pgConn.contextWatcher.Unwatch()
-		mrr.pgConn.unlock()
+		mrr.gaussdbConn.contextWatcher.Unwatch()
+		mrr.gaussdbConn.unlock()
 	case *gaussdbproto.ErrorResponse:
-		mrr.err = ErrorResponseToPgError(msg)
+		mrr.err = ErrorResponseToGuassdbError(msg)
 	}
 
 	return msg, nil
@@ -1475,22 +1475,22 @@ func (mrr *MultiResultReader) NextResult() bool {
 
 		switch msg := msg.(type) {
 		case *gaussdbproto.RowDescription:
-			mrr.pgConn.resultReader = ResultReader{
-				pgConn:            mrr.pgConn,
+			mrr.gaussdbConn.resultReader = ResultReader{
+				gaussdbConn:       mrr.gaussdbConn,
 				multiResultReader: mrr,
 				ctx:               mrr.ctx,
-				fieldDescriptions: mrr.pgConn.convertRowDescription(mrr.pgConn.fieldDescriptions[:], msg),
+				fieldDescriptions: mrr.gaussdbConn.convertRowDescription(mrr.gaussdbConn.fieldDescriptions[:], msg),
 			}
 
-			mrr.rr = &mrr.pgConn.resultReader
+			mrr.rr = &mrr.gaussdbConn.resultReader
 			return true
 		case *gaussdbproto.CommandComplete:
-			mrr.pgConn.resultReader = ResultReader{
-				commandTag:       mrr.pgConn.makeCommandTag(msg.CommandTag),
+			mrr.gaussdbConn.resultReader = ResultReader{
+				commandTag:       mrr.gaussdbConn.makeCommandTag(msg.CommandTag),
 				commandConcluded: true,
 				closed:           true,
 			}
-			mrr.rr = &mrr.pgConn.resultReader
+			mrr.rr = &mrr.gaussdbConn.resultReader
 			return true
 		case *gaussdbproto.EmptyQueryResponse:
 			return false
@@ -1519,7 +1519,7 @@ func (mrr *MultiResultReader) Close() error {
 
 // ResultReader is a reader for the result of a single query.
 type ResultReader struct {
-	pgConn            *PgConn
+	gaussdbConn       *GaussdbConn
 	multiResultReader *MultiResultReader
 	pipeline          *Pipeline
 	ctx               context.Context
@@ -1622,10 +1622,10 @@ func (rr *ResultReader) Close() (CommandTag, error) {
 			switch msg := msg.(type) {
 			// Detect a deferred constraint violation where the ErrorResponse is sent after CommandComplete.
 			case *gaussdbproto.ErrorResponse:
-				rr.err = ErrorResponseToPgError(msg)
+				rr.err = ErrorResponseToGuassdbError(msg)
 			case *gaussdbproto.ReadyForQuery:
-				rr.pgConn.contextWatcher.Unwatch()
-				rr.pgConn.unlock()
+				rr.gaussdbConn.contextWatcher.Unwatch()
+				rr.gaussdbConn.unlock()
 				return rr.commandTag, rr.err
 			}
 		}
@@ -1641,7 +1641,7 @@ func (rr *ResultReader) readUntilRowDescription() {
 		// Peek before receive to avoid consuming a DataRow if the result set does not include a RowDescription method.
 		// This should never happen under normal pgconn usage, but it is possible if SendBytes and ReceiveResults are
 		// manually used to construct a query that does not issue a describe statement.
-		msg, _ := rr.pgConn.peekMessage()
+		msg, _ := rr.gaussdbConn.peekMessage()
 		if _, ok := msg.(*gaussdbproto.DataRow); ok {
 			return
 		}
@@ -1656,7 +1656,7 @@ func (rr *ResultReader) readUntilRowDescription() {
 
 func (rr *ResultReader) receiveMessage() (msg gaussdbproto.BackendMessage, err error) {
 	if rr.multiResultReader == nil {
-		msg, err = rr.pgConn.receiveMessage()
+		msg, err = rr.gaussdbConn.receiveMessage()
 	} else {
 		msg, err = rr.multiResultReader.receiveMessage()
 	}
@@ -1664,10 +1664,10 @@ func (rr *ResultReader) receiveMessage() (msg gaussdbproto.BackendMessage, err e
 	if err != nil {
 		err = normalizeTimeoutError(rr.ctx, err)
 		rr.concludeCommand(CommandTag{}, err)
-		rr.pgConn.contextWatcher.Unwatch()
+		rr.gaussdbConn.contextWatcher.Unwatch()
 		rr.closed = true
 		if rr.multiResultReader == nil {
-			rr.pgConn.asyncClose()
+			rr.gaussdbConn.asyncClose()
 		}
 
 		return nil, rr.err
@@ -1675,17 +1675,17 @@ func (rr *ResultReader) receiveMessage() (msg gaussdbproto.BackendMessage, err e
 
 	switch msg := msg.(type) {
 	case *gaussdbproto.RowDescription:
-		rr.fieldDescriptions = rr.pgConn.convertRowDescription(rr.pgConn.fieldDescriptions[:], msg)
+		rr.fieldDescriptions = rr.gaussdbConn.convertRowDescription(rr.gaussdbConn.fieldDescriptions[:], msg)
 	case *gaussdbproto.CommandComplete:
-		rr.concludeCommand(rr.pgConn.makeCommandTag(msg.CommandTag), nil)
+		rr.concludeCommand(rr.gaussdbConn.makeCommandTag(msg.CommandTag), nil)
 	case *gaussdbproto.EmptyQueryResponse:
 		rr.concludeCommand(CommandTag{}, nil)
 	case *gaussdbproto.ErrorResponse:
-		pgErr := ErrorResponseToPgError(msg)
+		gaussdbError := ErrorResponseToGuassdbError(msg)
 		if rr.pipeline != nil {
-			rr.pipeline.state.HandleError(pgErr)
+			rr.pipeline.state.HandleError(gaussdbError)
 		}
-		rr.concludeCommand(CommandTag{}, pgErr)
+		rr.concludeCommand(CommandTag{}, gaussdbError)
 	}
 
 	return msg, nil
@@ -1713,7 +1713,7 @@ type Batch struct {
 	err error
 }
 
-// ExecParams appends an ExecParams command to the batch. See PgConn.ExecParams for parameter descriptions.
+// ExecParams appends an ExecParams command to the batch. See GaussdbConn.ExecParams for parameter descriptions.
 func (batch *Batch) ExecParams(sql string, paramValues [][]byte, paramOIDs []uint32, paramFormats []int16, resultFormats []int16) {
 	if batch.err != nil {
 		return
@@ -1726,7 +1726,7 @@ func (batch *Batch) ExecParams(sql string, paramValues [][]byte, paramOIDs []uin
 	batch.ExecPrepared("", paramValues, paramFormats, resultFormats)
 }
 
-// ExecPrepared appends an ExecPrepared e command to the batch. See PgConn.ExecPrepared for parameter descriptions.
+// ExecPrepared appends an ExecPrepared e command to the batch. See GaussdbConn.ExecPrepared for parameter descriptions.
 func (batch *Batch) ExecPrepared(stmtName string, paramValues [][]byte, paramFormats []int16, resultFormats []int16) {
 	if batch.err != nil {
 		return
@@ -1751,7 +1751,7 @@ func (batch *Batch) ExecPrepared(stmtName string, paramValues [][]byte, paramFor
 // ExecBatch executes all the queries in batch in a single round-trip. Execution is implicitly transactional unless a
 // transaction is already in progress or SQL contains transaction control statements. This is a simpler way of executing
 // multiple queries in a single round trip than using pipeline mode.
-func (pgConn *PgConn) ExecBatch(ctx context.Context, batch *Batch) *MultiResultReader {
+func (gaussdbConn *GaussdbConn) ExecBatch(ctx context.Context, batch *Batch) *MultiResultReader {
 	if batch.err != nil {
 		return &MultiResultReader{
 			closed: true,
@@ -1759,48 +1759,48 @@ func (pgConn *PgConn) ExecBatch(ctx context.Context, batch *Batch) *MultiResultR
 		}
 	}
 
-	if err := pgConn.lock(); err != nil {
+	if err := gaussdbConn.lock(); err != nil {
 		return &MultiResultReader{
 			closed: true,
 			err:    err,
 		}
 	}
 
-	pgConn.multiResultReader = MultiResultReader{
-		pgConn: pgConn,
-		ctx:    ctx,
+	gaussdbConn.multiResultReader = MultiResultReader{
+		gaussdbConn: gaussdbConn,
+		ctx:         ctx,
 	}
-	multiResult := &pgConn.multiResultReader
+	multiResult := &gaussdbConn.multiResultReader
 
 	if ctx != context.Background() {
 		select {
 		case <-ctx.Done():
 			multiResult.closed = true
 			multiResult.err = newContextAlreadyDoneError(ctx)
-			pgConn.unlock()
+			gaussdbConn.unlock()
 			return multiResult
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
+		gaussdbConn.contextWatcher.Watch(ctx)
 	}
 
 	batch.buf, batch.err = (&gaussdbproto.Sync{}).Encode(batch.buf)
 	if batch.err != nil {
-		pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Unwatch()
 		multiResult.err = normalizeTimeoutError(multiResult.ctx, batch.err)
 		multiResult.closed = true
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return multiResult
 	}
 
-	pgConn.enterPotentialWriteReadDeadlock()
-	defer pgConn.exitPotentialWriteReadDeadlock()
-	_, err := pgConn.conn.Write(batch.buf)
+	gaussdbConn.enterPotentialWriteReadDeadlock()
+	defer gaussdbConn.exitPotentialWriteReadDeadlock()
+	_, err := gaussdbConn.conn.Write(batch.buf)
 	if err != nil {
-		pgConn.contextWatcher.Unwatch()
+		gaussdbConn.contextWatcher.Unwatch()
 		multiResult.err = normalizeTimeoutError(multiResult.ctx, err)
 		multiResult.closed = true
-		pgConn.asyncClose()
+		gaussdbConn.asyncClose()
 		return multiResult
 	}
 
@@ -1812,12 +1812,12 @@ func (pgConn *PgConn) ExecBatch(ctx context.Context, batch *Batch) *MultiResultR
 //
 // The current implementation requires that standard_conforming_strings=on and client_encoding="UTF8". If these
 // conditions are not met an error will be returned. It is possible these restrictions will be lifted in the future.
-func (pgConn *PgConn) EscapeString(s string) (string, error) {
-	if pgConn.ParameterStatus("standard_conforming_strings") != "on" {
+func (gaussdbConn *GaussdbConn) EscapeString(s string) (string, error) {
+	if gaussdbConn.ParameterStatus("standard_conforming_strings") != "on" {
 		return "", errors.New("EscapeString must be run with standard_conforming_strings=on")
 	}
 
-	if pgConn.ParameterStatus("client_encoding") != "UTF8" {
+	if gaussdbConn.ParameterStatus("client_encoding") != "UTF8" {
 		return "", errors.New("EscapeString must be run with client_encoding=UTF8")
 	}
 
@@ -1832,11 +1832,11 @@ func (pgConn *PgConn) EscapeString(s string) (string, error) {
 //
 // Deprecated: CheckConn is deprecated in favor of Ping. CheckConn cannot detect all types of broken connections where
 // the write would still appear to succeed. Prefer Ping unless on a high latency connection.
-func (pgConn *PgConn) CheckConn() error {
+func (gaussdbConn *GaussdbConn) CheckConn() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
 
-	_, err := pgConn.ReceiveMessage(ctx)
+	_, err := gaussdbConn.ReceiveMessage(ctx)
 	if err != nil {
 		if !Timeout(err) {
 			return err
@@ -1849,64 +1849,64 @@ func (pgConn *PgConn) CheckConn() error {
 // Ping pings the server. This can be useful because a TCP connection can be broken such that a write will appear to
 // succeed even though it will never actually reach the server. Pinging immediately before sending a query reduces the
 // chances a query will be sent that fails without the client knowing whether the server received it or not.
-func (pgConn *PgConn) Ping(ctx context.Context) error {
-	return pgConn.Exec(ctx, "-- ping").Close()
+func (gaussdbConn *GaussdbConn) Ping(ctx context.Context) error {
+	return gaussdbConn.Exec(ctx, "-- ping").Close()
 }
 
 // makeCommandTag makes a CommandTag. It does not retain a reference to buf or buf's underlying memory.
-func (pgConn *PgConn) makeCommandTag(buf []byte) CommandTag {
+func (gaussdbConn *GaussdbConn) makeCommandTag(buf []byte) CommandTag {
 	return CommandTag{s: string(buf)}
 }
 
 // enterPotentialWriteReadDeadlock must be called before a write that could deadlock if the server is simultaneously
 // blocked writing to us.
-func (pgConn *PgConn) enterPotentialWriteReadDeadlock() {
+func (gaussdbConn *GaussdbConn) enterPotentialWriteReadDeadlock() {
 	// The time to wait is somewhat arbitrary. A Write should only take as long as the syscall and memcpy to the OS
 	// outbound network buffer unless the buffer is full (which potentially is a block). It needs to be long enough for
 	// the normal case, but short enough not to kill performance if a block occurs.
 	//
 	// In addition, on Windows the default timer resolution is 15.6ms. So setting the timer to less than that is
 	// ineffective.
-	if pgConn.slowWriteTimer.Reset(15 * time.Millisecond) {
+	if gaussdbConn.slowWriteTimer.Reset(15 * time.Millisecond) {
 		panic("BUG: slow write timer already active")
 	}
 }
 
 // exitPotentialWriteReadDeadlock must be called after a call to enterPotentialWriteReadDeadlock.
-func (pgConn *PgConn) exitPotentialWriteReadDeadlock() {
-	if !pgConn.slowWriteTimer.Stop() {
+func (gaussdbConn *GaussdbConn) exitPotentialWriteReadDeadlock() {
+	if !gaussdbConn.slowWriteTimer.Stop() {
 		// The timer starts its function in a separate goroutine. It is necessary to ensure the background reader has
 		// started before calling Stop. Otherwise, the background reader may not be stopped. That on its own is not a
 		// serious problem. But what is a serious problem is that the background reader may start at an inopportune time in
 		// a subsequent query. For example, if a subsequent query was canceled then a deadline may be set on the net.Conn to
 		// interrupt an in-progress read. After the read is interrupted, but before the deadline is cleared, the background
 		// reader could start and read a deadline error. Then the next query would receive the an unexpected deadline error.
-		<-pgConn.bgReaderStarted
-		pgConn.bgReader.Stop()
+		<-gaussdbConn.bgReaderStarted
+		gaussdbConn.bgReader.Stop()
 	}
 }
 
-func (pgConn *PgConn) flushWithPotentialWriteReadDeadlock() error {
-	pgConn.enterPotentialWriteReadDeadlock()
-	defer pgConn.exitPotentialWriteReadDeadlock()
-	err := pgConn.frontend.Flush()
+func (gaussdbConn *GaussdbConn) flushWithPotentialWriteReadDeadlock() error {
+	gaussdbConn.enterPotentialWriteReadDeadlock()
+	defer gaussdbConn.exitPotentialWriteReadDeadlock()
+	err := gaussdbConn.frontend.Flush()
 	return err
 }
 
-// SyncConn prepares the underlying net.Conn for direct use. PgConn may internally buffer reads or use goroutines for
+// SyncConn prepares the underlying net.Conn for direct use. GaussdbConn may internally buffer reads or use goroutines for
 // background IO. This means that any direct use of the underlying net.Conn may be corrupted if a read is already
 // buffered or a read is in progress. SyncConn drains read buffers and stops background IO. In some cases this may
 // require sending a ping to the server. ctx can be used to cancel this operation. This should be called before any
 // operation that will use the underlying net.Conn directly. e.g. Before Conn() or Hijack().
 //
 // This should not be confused with the PostgreSQL protocol Sync message.
-func (pgConn *PgConn) SyncConn(ctx context.Context) error {
+func (gaussdbConn *GaussdbConn) SyncConn(ctx context.Context) error {
 	for i := 0; i < 10; i++ {
-		if pgConn.bgReader.Status() == bgreader.StatusStopped && pgConn.frontend.ReadBufferLen() == 0 {
+		if gaussdbConn.bgReader.Status() == bgreader.StatusStopped && gaussdbConn.frontend.ReadBufferLen() == 0 {
 			return nil
 		}
 
-		err := pgConn.Ping(ctx)
+		err := gaussdbConn.Ping(ctx)
 		if err != nil {
 			return fmt.Errorf("SyncConn: Ping failed while syncing conn: %w", err)
 		}
@@ -1918,8 +1918,8 @@ func (pgConn *PgConn) SyncConn(ctx context.Context) error {
 }
 
 // CustomData returns a map that can be used to associate custom data with the connection.
-func (pgConn *PgConn) CustomData() map[string]any {
-	return pgConn.customData
+func (gaussdbConn *GaussdbConn) CustomData() map[string]any {
+	return gaussdbConn.customData
 }
 
 // HijackedConn is the result of hijacking a connection.
@@ -1937,39 +1937,39 @@ type HijackedConn struct {
 	CustomData        map[string]any
 }
 
-// Hijack extracts the internal connection data. pgConn must be in an idle state. SyncConn should be called immediately
-// before Hijack. pgConn is unusable after hijacking. Hijacking is typically only useful when using pgconn to establish
+// Hijack extracts the internal connection data. gaussdbConn must be in an idle state. SyncConn should be called immediately
+// before Hijack. gaussdbConn is unusable after hijacking. Hijacking is typically only useful when using pgconn to establish
 // a connection, but taking complete control of the raw connection after that (e.g. a load balancer or proxy).
 //
 // Due to the necessary exposure of internal implementation details, it is not covered by the semantic versioning
 // compatibility.
-func (pgConn *PgConn) Hijack() (*HijackedConn, error) {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) Hijack() (*HijackedConn, error) {
+	if err := gaussdbConn.lock(); err != nil {
 		return nil, err
 	}
-	pgConn.status = connStatusClosed
+	gaussdbConn.status = connStatusClosed
 
 	return &HijackedConn{
-		Conn:              pgConn.conn,
-		PID:               pgConn.pid,
-		SecretKey:         pgConn.secretKey,
-		ParameterStatuses: pgConn.parameterStatuses,
-		TxStatus:          pgConn.txStatus,
-		Frontend:          pgConn.frontend,
-		Config:            pgConn.config,
-		CustomData:        pgConn.customData,
+		Conn:              gaussdbConn.conn,
+		PID:               gaussdbConn.pid,
+		SecretKey:         gaussdbConn.secretKey,
+		ParameterStatuses: gaussdbConn.parameterStatuses,
+		TxStatus:          gaussdbConn.txStatus,
+		Frontend:          gaussdbConn.frontend,
+		Config:            gaussdbConn.config,
+		CustomData:        gaussdbConn.customData,
 	}, nil
 }
 
-// Construct created a PgConn from an already established connection to a PostgreSQL server. This is the inverse of
-// PgConn.Hijack. The connection must be in an idle state.
+// Construct created a GaussdbConn from an already established connection to a PostgreSQL server. This is the inverse of
+// GaussdbConn.Hijack. The connection must be in an idle state.
 //
 // hc.Frontend is replaced by a new pgproto3.Frontend built by hc.Config.BuildFrontend.
 //
 // Due to the necessary exposure of internal implementation details, it is not covered by the semantic versioning
 // compatibility.
-func Construct(hc *HijackedConn) (*PgConn, error) {
-	pgConn := &PgConn{
+func Construct(hc *HijackedConn) (*GaussdbConn, error) {
+	gaussdbConn := &GaussdbConn{
 		conn:              hc.Conn,
 		pid:               hc.PID,
 		secretKey:         hc.SecretKey,
@@ -1984,19 +1984,19 @@ func Construct(hc *HijackedConn) (*PgConn, error) {
 		cleanupDone: make(chan struct{}),
 	}
 
-	pgConn.contextWatcher = ctxwatch.NewContextWatcher(hc.Config.BuildContextWatcherHandler(pgConn))
-	pgConn.bgReader = bgreader.New(pgConn.conn)
-	pgConn.slowWriteTimer = time.AfterFunc(time.Duration(math.MaxInt64),
+	gaussdbConn.contextWatcher = ctxwatch.NewContextWatcher(hc.Config.BuildContextWatcherHandler(gaussdbConn))
+	gaussdbConn.bgReader = bgreader.New(gaussdbConn.conn)
+	gaussdbConn.slowWriteTimer = time.AfterFunc(time.Duration(math.MaxInt64),
 		func() {
-			pgConn.bgReader.Start()
-			pgConn.bgReaderStarted <- struct{}{}
+			gaussdbConn.bgReader.Start()
+			gaussdbConn.bgReaderStarted <- struct{}{}
 		},
 	)
-	pgConn.slowWriteTimer.Stop()
-	pgConn.bgReaderStarted = make(chan struct{})
-	pgConn.frontend = hc.Config.BuildFrontend(pgConn.bgReader, pgConn.conn)
+	gaussdbConn.slowWriteTimer.Stop()
+	gaussdbConn.bgReaderStarted = make(chan struct{})
+	gaussdbConn.frontend = hc.Config.BuildFrontend(gaussdbConn.bgReader, gaussdbConn.conn)
 
-	return pgConn, nil
+	return gaussdbConn, nil
 }
 
 // Pipeline represents a connection in pipeline mode.
@@ -2011,7 +2011,7 @@ func Construct(hc *HijackedConn) (*PgConn, error) {
 // (https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY) and the libpq pipeline mode
 // (https://www.postgresql.org/docs/current/libpq-pipeline-mode.html).
 type Pipeline struct {
-	conn *PgConn
+	conn *GaussdbConn
 	ctx  context.Context
 
 	state  pipelineState
@@ -2046,7 +2046,7 @@ type pipelineRequestEvent struct {
 type pipelineState struct {
 	requestEventQueue          list.List
 	lastRequestType            pipelineRequestType
-	pgErr                      *PgError
+	gaussdbErr                 *GaussdbError
 	expectedReadyForQueryCount int
 }
 
@@ -2108,16 +2108,16 @@ func (s *pipelineState) ExtractFrontRequestType() pipelineRequestType {
 
 		s.requestEventQueue.Remove(elem)
 		if val.RequestType == pipelineSyncRequest {
-			s.pgErr = nil
+			s.gaussdbErr = nil
 		}
-		if s.pgErr == nil {
+		if s.gaussdbErr == nil {
 			return val.RequestType
 		}
 	}
 }
 
-func (s *pipelineState) HandleError(err *PgError) {
-	s.pgErr = err
+func (s *pipelineState) HandleError(err *GaussdbError) {
+	s.gaussdbErr = err
 }
 
 func (s *pipelineState) HandleReadyForQuery() {
@@ -2147,8 +2147,8 @@ func (s *pipelineState) ExpectedReadyForQuery() int {
 // CancelRequest and Close. ctx is in effect for entire life of the *Pipeline.
 //
 // Prefer ExecBatch when only sending one group of queries at once.
-func (pgConn *PgConn) StartPipeline(ctx context.Context) *Pipeline {
-	if err := pgConn.lock(); err != nil {
+func (gaussdbConn *GaussdbConn) StartPipeline(ctx context.Context) *Pipeline {
+	if err := gaussdbConn.lock(); err != nil {
 		pipeline := &Pipeline{
 			closed: true,
 			err:    err,
@@ -2158,30 +2158,30 @@ func (pgConn *PgConn) StartPipeline(ctx context.Context) *Pipeline {
 		return pipeline
 	}
 
-	pgConn.pipeline = Pipeline{
-		conn: pgConn,
+	gaussdbConn.pipeline = Pipeline{
+		conn: gaussdbConn,
 		ctx:  ctx,
 	}
-	pgConn.pipeline.state.Init()
+	gaussdbConn.pipeline.state.Init()
 
-	pipeline := &pgConn.pipeline
+	pipeline := &gaussdbConn.pipeline
 
 	if ctx != context.Background() {
 		select {
 		case <-ctx.Done():
 			pipeline.closed = true
 			pipeline.err = newContextAlreadyDoneError(ctx)
-			pgConn.unlock()
+			gaussdbConn.unlock()
 			return pipeline
 		default:
 		}
-		pgConn.contextWatcher.Watch(ctx)
+		gaussdbConn.contextWatcher.Watch(ctx)
 	}
 
 	return pipeline
 }
 
-// SendPrepare is the pipeline version of *PgConn.Prepare.
+// SendPrepare is the pipeline version of *GaussdbConn.Prepare.
 func (p *Pipeline) SendPrepare(name, sql string, paramOIDs []uint32) {
 	if p.closed {
 		return
@@ -2202,7 +2202,7 @@ func (p *Pipeline) SendDeallocate(name string) {
 	p.state.PushBackRequestType(pipelineDeallocate)
 }
 
-// SendQueryParams is the pipeline version of *PgConn.QueryParams.
+// SendQueryParams is the pipeline version of *GaussdbConn.QueryParams.
 func (p *Pipeline) SendQueryParams(sql string, paramValues [][]byte, paramOIDs []uint32, paramFormats []int16, resultFormats []int16) {
 	if p.closed {
 		return
@@ -2215,7 +2215,7 @@ func (p *Pipeline) SendQueryParams(sql string, paramValues [][]byte, paramOIDs [
 	p.state.PushBackRequestType(pipelineQueryParams)
 }
 
-// SendQueryPrepared is the pipeline version of *PgConn.QueryPrepared.
+// SendQueryPrepared is the pipeline version of *GaussdbConn.QueryPrepared.
 func (p *Pipeline) SendQueryPrepared(stmtName string, paramValues [][]byte, paramFormats []int16, resultFormats []int16) {
 	if p.closed {
 		return
@@ -2291,7 +2291,7 @@ func (p *Pipeline) Sync() error {
 }
 
 // GetResults gets the next results. If results are present, results may be a *ResultReader, *StatementDescription, or
-// *PipelineSync. If an ErrorResponse is received from the server, results will be nil and err will be a *PgError. If no
+// *PipelineSync. If an ErrorResponse is received from the server, results will be nil and err will be a *GaussdbError. If no
 // results are available, results and err will both be nil.
 func (p *Pipeline) GetResults() (results any, err error) {
 	if p.closed {
@@ -2321,7 +2321,7 @@ func (p *Pipeline) getResults() (results any, err error) {
 		switch msg := msg.(type) {
 		case *gaussdbproto.RowDescription:
 			p.conn.resultReader = ResultReader{
-				pgConn:            p.conn,
+				gaussdbConn:       p.conn,
 				pipeline:          p,
 				ctx:               p.ctx,
 				fieldDescriptions: p.conn.convertRowDescription(p.conn.fieldDescriptions[:], msg),
@@ -2349,9 +2349,9 @@ func (p *Pipeline) getResults() (results any, err error) {
 			p.state.HandleReadyForQuery()
 			return &PipelineSync{}, nil
 		case *gaussdbproto.ErrorResponse:
-			pgErr := ErrorResponseToPgError(msg)
-			p.state.HandleError(pgErr)
-			return nil, pgErr
+			gaussdbErr := ErrorResponseToGuassdbError(msg)
+			p.state.HandleError(gaussdbErr)
+			return nil, gaussdbErr
 		}
 	}
 }
@@ -2381,9 +2381,9 @@ func (p *Pipeline) getResultsPrepare() (*StatementDescription, error) {
 
 		// These should never happen here. But don't take chances that could lead to a deadlock.
 		case *gaussdbproto.ErrorResponse:
-			pgErr := ErrorResponseToPgError(msg)
-			p.state.HandleError(pgErr)
-			return nil, pgErr
+			gaussdbErr := ErrorResponseToGuassdbError(msg)
+			p.state.HandleError(gaussdbErr)
+			return nil, gaussdbErr
 		case *gaussdbproto.CommandComplete:
 			p.conn.asyncClose()
 			return nil, errors.New("BUG: received CommandComplete while handling Describe")
@@ -2415,8 +2415,8 @@ func (p *Pipeline) Close() error {
 		_, err := p.getResults()
 		if err != nil {
 			p.err = err
-			var pgErr *PgError
-			if !errors.As(err, &pgErr) {
+			var gaussdbError *GaussdbError
+			if !errors.As(err, &gaussdbError) {
 				p.conn.asyncClose()
 				break
 			}
@@ -2448,7 +2448,7 @@ func (h *DeadlineContextWatcherHandler) HandleUnwatchAfterCancel() {
 // CancelRequestContextWatcherHandler handles canceled contexts by sending a cancel request to the server. It also sets
 // a deadline on a net.Conn as a fallback.
 type CancelRequestContextWatcherHandler struct {
-	Conn *PgConn
+	Conn *GaussdbConn
 
 	// CancelRequestDelay is the delay before sending the cancel request to the server.
 	CancelRequestDelay time.Duration
@@ -2503,10 +2503,10 @@ const (
 	Sha256Password = 2
 )
 
-func (pgConn *PgConn) writeBuf(b byte) *writeBuf {
-	pgConn.scratch[0] = b
+func (gaussdbConn *GaussdbConn) writeBuf(b byte) *writeBuf {
+	gaussdbConn.scratch[0] = b
 	return &writeBuf{
-		buf: pgConn.scratch[:5],
+		buf: gaussdbConn.scratch[:5],
 		pos: 1,
 	}
 }

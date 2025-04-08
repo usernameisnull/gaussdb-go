@@ -184,11 +184,11 @@ For debug tracing of the actual PostgreSQL wire protocol messages see github.com
 Lower Level PostgreSQL Functionality
 
 github.com/jackc/pgx/v5/pgconn contains a lower level PostgreSQL driver roughly at the level of libpq. pgx.Conn in
-implemented on top of pgconn. The Conn.PgConn() method can be used to access this lower layer.
+implemented on top of pgconn. The Conn.GaussdbConn() method can be used to access this lower layer.
 
 PgBouncer
 
 By default pgx automatically uses prepared statements. Prepared statements are incompatible with PgBouncer. This can be
 disabled by setting a different QueryExecMode in ConnConfig.DefaultQueryExecMode.
 */
-package pgx
+package gaussdbgo

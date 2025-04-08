@@ -19,17 +19,17 @@ func SafeToRetry(err error) bool {
 	return false
 }
 
-// Timeout checks if err was caused by a timeout. To be specific, it is true if err was caused within pgconn by a
+// Timeout checks if err was caused by a timeout. To be specific, it is true if err was caused within gaussdbconn by a
 // context.DeadlineExceeded or an implementer of net.Error where Timeout() is true.
 func Timeout(err error) bool {
 	var timeoutErr *errTimeout
 	return errors.As(err, &timeoutErr)
 }
 
-// PgError represents an error reported by the PostgreSQL server. See
+// GaussdbError represents an error reported by the PostgreSQL server. See
 // http://www.postgresql.org/docs/11/static/protocol-error-fields.html for
 // detailed field description.
-type PgError struct {
+type GaussdbError struct {
 	Severity            string
 	SeverityUnlocalized string
 	Code                string
@@ -50,12 +50,12 @@ type PgError struct {
 	Routine             string
 }
 
-func (pe *PgError) Error() string {
+func (pe *GaussdbError) Error() string {
 	return pe.Severity + ": " + pe.Message + " (SQLSTATE " + pe.Code + ")"
 }
 
 // SQLState returns the SQLState of the error.
-func (pe *PgError) SQLState() string {
+func (pe *GaussdbError) SQLState() string {
 	return pe.Code
 }
 
@@ -142,13 +142,13 @@ func normalizeTimeoutError(ctx context.Context, err error) error {
 	return err
 }
 
-type pgconnError struct {
+type gaussdbConnError struct {
 	msg         string
 	err         error
 	safeToRetry bool
 }
 
-func (e *pgconnError) Error() string {
+func (e *gaussdbConnError) Error() string {
 	if e.msg == "" {
 		return e.err.Error()
 	}
@@ -158,11 +158,11 @@ func (e *pgconnError) Error() string {
 	return fmt.Sprintf("%s: %s", e.msg, e.err.Error())
 }
 
-func (e *pgconnError) SafeToRetry() bool {
+func (e *gaussdbConnError) SafeToRetry() bool {
 	return e.safeToRetry
 }
 
-func (e *pgconnError) Unwrap() error {
+func (e *gaussdbConnError) Unwrap() error {
 	return e.err
 }
 

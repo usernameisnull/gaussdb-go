@@ -24,8 +24,8 @@ var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 
 func init() {
 	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
-	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *pgx.ConnConfig {
-		config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *gaussdbgo.ConnConfig {
+		config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 		require.NoError(t, err)
 		return config
 	}
@@ -83,13 +83,13 @@ func mustParseMacaddr(t testing.TB, s string) net.HardwareAddr {
 }
 
 func skipCockroachDB(t testing.TB, msg string) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close(context.Background())
 
-	if conn.PgConn().ParameterStatus("crdb_version") != "" {
+	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
 		t.Skip(msg)
 	}
 }
@@ -111,14 +111,14 @@ func (f driverValuerFunc) Value() (driver.Value, error) {
 func TestMapScanNilIsNoOp(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
-	err := m.Scan(gaussdbtype.TextOID, pgx.TextFormatCode, []byte("foo"), nil)
+	err := m.Scan(gaussdbtype.TextOID, gaussdbgo.TextFormatCode, []byte("foo"), nil)
 	assert.NoError(t, err)
 }
 
 func TestMapScanTextFormatInterfacePtr(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	var got any
-	err := m.Scan(gaussdbtype.TextOID, pgx.TextFormatCode, []byte("foo"), &got)
+	err := m.Scan(gaussdbtype.TextOID, gaussdbgo.TextFormatCode, []byte("foo"), &got)
 	require.NoError(t, err)
 	assert.Equal(t, "foo", got)
 }
@@ -126,7 +126,7 @@ func TestMapScanTextFormatInterfacePtr(t *testing.T) {
 func TestMapScanTextFormatNonByteaIntoByteSlice(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	var got []byte
-	err := m.Scan(gaussdbtype.JSONBOID, pgx.TextFormatCode, []byte("{}"), &got)
+	err := m.Scan(gaussdbtype.JSONBOID, gaussdbgo.TextFormatCode, []byte("{}"), &got)
 	require.NoError(t, err)
 	assert.Equal(t, []byte("{}"), got)
 }
@@ -134,7 +134,7 @@ func TestMapScanTextFormatNonByteaIntoByteSlice(t *testing.T) {
 func TestMapScanBinaryFormatInterfacePtr(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	var got any
-	err := m.Scan(gaussdbtype.TextOID, pgx.BinaryFormatCode, []byte("foo"), &got)
+	err := m.Scan(gaussdbtype.TextOID, gaussdbgo.BinaryFormatCode, []byte("foo"), &got)
 	require.NoError(t, err)
 	assert.Equal(t, "foo", got)
 }
@@ -145,22 +145,22 @@ func TestMapScanUnknownOIDToStringsAndBytes(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var s string
-	err := m.Scan(unknownOID, pgx.TextFormatCode, srcBuf, &s)
+	err := m.Scan(unknownOID, gaussdbgo.TextFormatCode, srcBuf, &s)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", s)
 
 	var rs _string
-	err = m.Scan(unknownOID, pgx.TextFormatCode, srcBuf, &rs)
+	err = m.Scan(unknownOID, gaussdbgo.TextFormatCode, srcBuf, &rs)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", string(rs))
 
 	var b []byte
-	err = m.Scan(unknownOID, pgx.TextFormatCode, srcBuf, &b)
+	err = m.Scan(unknownOID, gaussdbgo.TextFormatCode, srcBuf, &b)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("foo"), b)
 
 	var rb _byteSlice
-	err = m.Scan(unknownOID, pgx.TextFormatCode, srcBuf, &rb)
+	err = m.Scan(unknownOID, gaussdbgo.TextFormatCode, srcBuf, &rb)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("foo"), []byte(rb))
 }
@@ -170,7 +170,7 @@ func TestMapScanPointerToNilStructDoesNotCrash(t *testing.T) {
 
 	type myStruct struct{}
 	var p *myStruct
-	err := m.Scan(0, pgx.TextFormatCode, []byte("(foo,bar)"), &p)
+	err := m.Scan(0, gaussdbgo.TextFormatCode, []byte("(foo,bar)"), &p)
 	require.NotNil(t, err)
 }
 
@@ -178,7 +178,7 @@ func TestMapScanUnknownOIDTextFormat(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var n int32
-	err := m.Scan(0, pgx.TextFormatCode, []byte("123"), &n)
+	err := m.Scan(0, gaussdbgo.TextFormatCode, []byte("123"), &n)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 123, n)
 }
@@ -187,7 +187,7 @@ func TestMapScanUnknownOIDIntoSQLScanner(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var s sql.NullString
-	err := m.Scan(0, pgx.TextFormatCode, []byte(nil), &s)
+	err := m.Scan(0, gaussdbgo.TextFormatCode, []byte(nil), &s)
 	assert.NoError(t, err)
 	assert.Equal(t, "", s.String)
 	assert.False(t, s.Valid)
@@ -205,35 +205,35 @@ func TestMapScanUnregisteredOIDIntoRenamedStringSQLScanner(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var s scannerString
-	err := m.Scan(unregisteredOID, pgx.TextFormatCode, []byte(nil), &s)
+	err := m.Scan(unregisteredOID, gaussdbgo.TextFormatCode, []byte(nil), &s)
 	assert.NoError(t, err)
 	assert.Equal(t, "scanned", string(s))
 }
 
-type pgCustomInt int64
+type gaussdbCustomInt int64
 
-func (ci *pgCustomInt) Scan(src interface{}) error {
-	*ci = pgCustomInt(src.(int64))
+func (ci *gaussdbCustomInt) Scan(src interface{}) error {
+	*ci = gaussdbCustomInt(src.(int64))
 	return nil
 }
 
 func TestScanPlanBinaryInt32ScanScanner(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	src := []byte{0, 42}
-	var v pgCustomInt
+	var v gaussdbCustomInt
 
 	plan := m.PlanScan(gaussdbtype.Int2OID, gaussdbtype.BinaryFormatCode, &v)
 	err := plan.Scan(src, &v)
 	require.NoError(t, err)
 	require.EqualValues(t, 42, v)
 
-	ptr := new(pgCustomInt)
+	ptr := new(gaussdbCustomInt)
 	plan = m.PlanScan(gaussdbtype.Int2OID, gaussdbtype.BinaryFormatCode, &ptr)
 	err = plan.Scan(src, &ptr)
 	require.NoError(t, err)
 	require.EqualValues(t, 42, *ptr)
 
-	ptr = new(pgCustomInt)
+	ptr = new(gaussdbCustomInt)
 	err = plan.Scan(nil, &ptr)
 	require.NoError(t, err)
 	assert.Nil(t, ptr)
@@ -268,7 +268,7 @@ func TestPointerPointerStructScan(t *testing.T) {
 	}
 
 	int4Type, _ := m.TypeForOID(gaussdbtype.Int4OID)
-	pgt := &gaussdbtype.Type{
+	gaussdbType := &gaussdbtype.Type{
 		Codec: &gaussdbtype.CompositeCodec{
 			Fields: []gaussdbtype.CompositeCodecField{
 				{
@@ -280,10 +280,10 @@ func TestPointerPointerStructScan(t *testing.T) {
 		Name: "composite",
 		OID:  215333,
 	}
-	m.RegisterType(pgt)
+	m.RegisterType(gaussdbType)
 
 	var c *composite
-	plan := m.PlanScan(pgt.OID, gaussdbtype.TextFormatCode, &c)
+	plan := m.PlanScan(gaussdbType.OID, gaussdbtype.TextFormatCode, &c)
 	err := plan.Scan([]byte("(1)"), &c)
 	require.NoError(t, err)
 	require.Equal(t, 1, c.ID)
@@ -410,7 +410,7 @@ func TestMapScanPointerToRenamedType(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var rs *_string
-	err := m.Scan(gaussdbtype.TextOID, pgx.TextFormatCode, srcBuf, &rs)
+	err := m.Scan(gaussdbtype.TextOID, gaussdbgo.TextFormatCode, srcBuf, &rs)
 	assert.NoError(t, err)
 	require.NotNil(t, rs)
 	assert.Equal(t, "foo", string(*rs))
@@ -421,12 +421,12 @@ func TestMapScanNullToWrongType(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
 	var n *int32
-	err := m.Scan(gaussdbtype.TextOID, pgx.TextFormatCode, nil, &n)
+	err := m.Scan(gaussdbtype.TextOID, gaussdbgo.TextFormatCode, nil, &n)
 	assert.NoError(t, err)
 	assert.Nil(t, n)
 
 	var pn gaussdbtype.Int4
-	err = m.Scan(gaussdbtype.TextOID, pgx.TextFormatCode, nil, &pn)
+	err = m.Scan(gaussdbtype.TextOID, gaussdbgo.TextFormatCode, nil, &pn)
 	assert.NoError(t, err)
 	assert.False(t, pn.Valid)
 }
@@ -434,7 +434,7 @@ func TestMapScanNullToWrongType(t *testing.T) {
 func TestScanToSliceOfRenamedUint8(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	var ruint8 []_uint8
-	err := m.Scan(gaussdbtype.Int2ArrayOID, pgx.TextFormatCode, []byte("{2,4}"), &ruint8)
+	err := m.Scan(gaussdbtype.Int2ArrayOID, gaussdbgo.TextFormatCode, []byte("{2,4}"), &ruint8)
 	assert.NoError(t, err)
 	assert.Equal(t, []_uint8{2, 4}, ruint8)
 }
@@ -464,7 +464,7 @@ func TestMapScanTextToBool(t *testing.T) {
 			m := gaussdbtype.NewMap()
 
 			var v bool
-			err := m.Scan(gaussdbtype.BoolOID, pgx.TextFormatCode, tt.src, &v)
+			err := m.Scan(gaussdbtype.BoolOID, gaussdbgo.TextFormatCode, tt.src, &v)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, v)
 		})
@@ -487,7 +487,7 @@ func TestMapScanTextToBoolError(t *testing.T) {
 			m := gaussdbtype.NewMap()
 
 			var v bool
-			err := m.Scan(gaussdbtype.BoolOID, pgx.TextFormatCode, tt.src, &v)
+			err := m.Scan(gaussdbtype.BoolOID, gaussdbgo.TextFormatCode, tt.src, &v)
 			require.ErrorContains(t, err, tt.want)
 		})
 	}

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // AuthenticationCleartextPassword is a message sent from the backend indicating that a clear-text password is required.
@@ -37,7 +37,7 @@ func (dst *AuthenticationCleartextPassword) Decode(src []byte) error {
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
 func (src *AuthenticationCleartextPassword) Encode(dst []byte) ([]byte, error) {
 	dst, sp := beginMessage(dst, 'R')
-	dst = pgio.AppendUint32(dst, AuthTypeCleartextPassword)
+	dst = gaussdbio.AppendUint32(dst, AuthTypeCleartextPassword)
 	return finishMessage(dst, sp)
 }
 

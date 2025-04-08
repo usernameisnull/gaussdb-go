@@ -1,4 +1,4 @@
-package pgx
+package gaussdbgo
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // CopyFromRows returns a CopyFromSource interface over the provided rows slice
@@ -168,8 +168,8 @@ func (ct *copyFrom) run(ctx context.Context) (int64, error) {
 		buf := ct.conn.wbuf
 
 		buf = append(buf, "PGCOPY\n\377\r\n\000"...)
-		buf = pgio.AppendInt32(buf, 0)
-		buf = pgio.AppendInt32(buf, 0)
+		buf = gaussdbio.AppendInt32(buf, 0)
+		buf = gaussdbio.AppendInt32(buf, 0)
 
 		moreRows := true
 		for moreRows {
@@ -199,7 +199,7 @@ func (ct *copyFrom) run(ctx context.Context) (int64, error) {
 		w.Close()
 	}()
 
-	commandTag, err := ct.conn.pgConn.CopyFrom(ctx, r, fmt.Sprintf("copy %s ( %s ) from stdin binary;", quotedTableName, quotedColumnNames))
+	commandTag, err := ct.conn.gaussdbConn.CopyFrom(ctx, r, fmt.Sprintf("copy %s ( %s ) from stdin binary;", quotedTableName, quotedColumnNames))
 
 	r.Close()
 	<-doneChan
@@ -230,7 +230,7 @@ func (ct *copyFrom) buildCopyBuf(buf []byte, sd *gaussdbconn.StatementDescriptio
 			return false, nil, fmt.Errorf("expected %d values, got %d values", len(ct.columnNames), len(values))
 		}
 
-		buf = pgio.AppendInt16(buf, int16(len(ct.columnNames)))
+		buf = gaussdbio.AppendInt16(buf, int16(len(ct.columnNames)))
 		for i, val := range values {
 			buf, err = encodeCopyValue(ct.conn.typeMap, buf, sd.Fields[i].DataTypeOID, val)
 			if err != nil {
@@ -243,7 +243,7 @@ func (ct *copyFrom) buildCopyBuf(buf []byte, sd *gaussdbconn.StatementDescriptio
 			largestRowLen = rowLen
 		}
 
-		// Try not to overflow size of the buffer PgConn.CopyFrom will be reading into. If that happens then the nature of
+		// Try not to overflow size of the buffer GaussdbConn.CopyFrom will be reading into. If that happens then the nature of
 		// io.Pipe means that the next Read will be short. This can lead to pathological send sizes such as 65531, 13, 65531
 		// 13, 65531, 13, 65531, 13.
 		if len(buf) > sendBufSize-largestRowLen {

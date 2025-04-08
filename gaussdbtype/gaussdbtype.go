@@ -284,10 +284,10 @@ func (m *Map) RegisterType(t *Type) {
 	}
 }
 
-// RegisterDefaultPgType registers a mapping of a Go type to a PostgreSQL type name. Typically the data type to be
+// RegisterDefaultGaussdbType registers a mapping of a Go type to a PostgreSQL type name. Typically the data type to be
 // encoded or decoded is determined by the PostgreSQL OID. But if the OID of a value to be encoded or decoded is
 // unknown, this additional mapping will be used by TypeForValue to determine a suitable data type.
-func (m *Map) RegisterDefaultPgType(value any, name string) {
+func (m *Map) RegisterDefaultGaussdbType(value any, name string) {
 	m.reflectTypeToName[reflect.TypeOf(value)] = name
 
 	// Invalidated by type registration
@@ -330,7 +330,7 @@ func (m *Map) buildReflectTypeToType() {
 }
 
 // TypeForValue finds a data type suitable for v. Use RegisterType to register types that can encode and decode
-// themselves. Use RegisterDefaultPgType to register that can be handled by a registered data type.  The returned Type
+// themselves. Use RegisterDefaultGaussdbType to register that can be handled by a registered data type.  The returned Type
 // must not be mutated.
 func (m *Map) TypeForValue(v any) (*Type, bool) {
 	if m.reflectTypeToType == nil {
@@ -1997,7 +1997,7 @@ func (m *Map) Encode(oid uint32, formatCode int16, value any, buf []byte) (newBu
 // implement sql.Scanner directly.
 //
 // This uses the type of v to look up the PostgreSQL OID that v presumably came from. This means v must be registered
-// with m by calling RegisterDefaultPgType.
+// with m by calling RegisterDefaultGaussdbType.
 func (m *Map) SQLScanner(v any) sql.Scanner {
 	if s, ok := v.(sql.Scanner); ok {
 		return s

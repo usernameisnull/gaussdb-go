@@ -1,4 +1,4 @@
-package pgx
+package gaussdbgo
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type ExtendedQueryBuilder struct {
 	ResultFormats   []int16
 }
 
-// Build sets ParamValues, ParamFormats, and ResultFormats for use with *PgConn.ExecParams or *PgConn.ExecPrepared. If
+// Build sets ParamValues, ParamFormats, and ResultFormats for use with *GaussdbConn.ExecParams or *GaussdbConn.ExecPrepared. If
 // sd is nil then QueryExecModeExec behavior will be used.
 func (eqb *ExtendedQueryBuilder) Build(m *gaussdbtype.Map, sd *gaussdbconn.StatementDescription, args []any) error {
 	eqb.reset()

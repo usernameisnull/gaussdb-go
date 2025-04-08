@@ -10,21 +10,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 // PostgreSQL internal numeric storage uses 16-bit "digits" with base of 10,000
 const nbase = 10000
 
 const (
-	pgNumericNaN     = 0x00000000c0000000
-	pgNumericNaNSign = 0xc000
+	gaussdbNumericNaN     = 0x00000000c0000000
+	gaussdbNumericNaNSign = 0xc000
 
-	pgNumericPosInf     = 0x00000000d0000000
-	pgNumericPosInfSign = 0xd000
+	gaussdbNumericPosInf     = 0x00000000d0000000
+	gaussdbNumericPosInfSign = 0xd000
 
-	pgNumericNegInf     = 0x00000000f0000000
-	pgNumericNegInfSign = 0xf000
+	gaussdbNumericNegInf     = 0x00000000f0000000
+	gaussdbNumericNegInfSign = 0xf000
 )
 
 var big0 *big.Int = big.NewInt(0)
@@ -387,13 +387,13 @@ func encodeNumericBinary(n Numeric, buf []byte) (newBuf []byte, err error) {
 	}
 
 	if n.NaN {
-		buf = pgio.AppendUint64(buf, pgNumericNaN)
+		buf = gaussdbio.AppendUint64(buf, gaussdbNumericNaN)
 		return buf, nil
 	} else if n.InfinityModifier == Infinity {
-		buf = pgio.AppendUint64(buf, pgNumericPosInf)
+		buf = gaussdbio.AppendUint64(buf, gaussdbNumericPosInf)
 		return buf, nil
 	} else if n.InfinityModifier == NegativeInfinity {
-		buf = pgio.AppendUint64(buf, pgNumericNegInf)
+		buf = gaussdbio.AppendUint64(buf, gaussdbNumericNegInf)
 		return buf, nil
 	}
 
@@ -448,7 +448,7 @@ func encodeNumericBinary(n Numeric, buf []byte) (newBuf []byte, err error) {
 		}
 	}
 
-	buf = pgio.AppendInt16(buf, int16(len(wholeDigits)+len(fracDigits)))
+	buf = gaussdbio.AppendInt16(buf, int16(len(wholeDigits)+len(fracDigits)))
 
 	var weight int16
 	if len(wholeDigits) > 0 {
@@ -459,22 +459,22 @@ func encodeNumericBinary(n Numeric, buf []byte) (newBuf []byte, err error) {
 	} else {
 		weight = int16(exp/4) - 1 + int16(len(fracDigits))
 	}
-	buf = pgio.AppendInt16(buf, weight)
+	buf = gaussdbio.AppendInt16(buf, weight)
 
-	buf = pgio.AppendInt16(buf, sign)
+	buf = gaussdbio.AppendInt16(buf, sign)
 
 	var dscale int16
 	if n.Exp < 0 {
 		dscale = int16(-n.Exp)
 	}
-	buf = pgio.AppendInt16(buf, dscale)
+	buf = gaussdbio.AppendInt16(buf, dscale)
 
 	for i := len(wholeDigits) - 1; i >= 0; i-- {
-		buf = pgio.AppendInt16(buf, wholeDigits[i])
+		buf = gaussdbio.AppendInt16(buf, wholeDigits[i])
 	}
 
 	for i := len(fracDigits) - 1; i >= 0; i-- {
-		buf = pgio.AppendInt16(buf, fracDigits[i])
+		buf = gaussdbio.AppendInt16(buf, fracDigits[i])
 	}
 
 	return buf, nil
@@ -603,11 +603,11 @@ func (scanPlanBinaryNumericToNumericScanner) Scan(src []byte, dst any) error {
 	dscale := int16(binary.BigEndian.Uint16(src[rp:]))
 	rp += 2
 
-	if sign == pgNumericNaNSign {
+	if sign == gaussdbNumericNaNSign {
 		return scanner.ScanNumeric(Numeric{NaN: true, Valid: true})
-	} else if sign == pgNumericPosInfSign {
+	} else if sign == gaussdbNumericPosInfSign {
 		return scanner.ScanNumeric(Numeric{InfinityModifier: Infinity, Valid: true})
-	} else if sign == pgNumericNegInfSign {
+	} else if sign == gaussdbNumericNegInfSign {
 		return scanner.ScanNumeric(Numeric{InfinityModifier: NegativeInfinity, Valid: true})
 	}
 

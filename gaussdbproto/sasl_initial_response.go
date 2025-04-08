@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type SASLInitialResponse struct {
@@ -45,7 +45,7 @@ func (src *SASLInitialResponse) Encode(dst []byte) ([]byte, error) {
 	dst = append(dst, []byte(src.AuthMechanism)...)
 	dst = append(dst, 0)
 
-	dst = pgio.AppendInt32(dst, int32(len(src.Data)))
+	dst = gaussdbio.AppendInt32(dst, int32(len(src.Data)))
 	dst = append(dst, src.Data...)
 
 	return finishMessage(dst, sp)

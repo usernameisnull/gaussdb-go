@@ -7,7 +7,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Parse struct {
@@ -65,9 +65,9 @@ func (src *Parse) Encode(dst []byte) ([]byte, error) {
 	if len(src.ParameterOIDs) > math.MaxUint16 {
 		return nil, errors.New("too many parameter oids")
 	}
-	dst = pgio.AppendUint16(dst, uint16(len(src.ParameterOIDs)))
+	dst = gaussdbio.AppendUint16(dst, uint16(len(src.ParameterOIDs)))
 	for _, oid := range src.ParameterOIDs {
-		dst = pgio.AppendUint32(dst, oid)
+		dst = gaussdbio.AppendUint32(dst, oid)
 	}
 
 	return finishMessage(dst, sp)

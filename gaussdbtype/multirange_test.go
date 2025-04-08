@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	pgx "github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
@@ -70,7 +70,7 @@ func TestMultirangeCodecTranscode(t *testing.T) {
 
 func TestMultirangeCodecDecodeValue(t *testing.T) {
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *pgx.Conn) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
 
 		for _, tt := range []struct {
 			sql      string

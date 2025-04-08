@@ -1,4 +1,4 @@
-package pgx
+package gaussdbgo
 
 import (
 	"context"
@@ -65,7 +65,7 @@ func (cc *ConnConfig) ConnString() string { return cc.connString }
 // Conn is a PostgreSQL connection handle. It is not safe for concurrent usage. Use a connection pool to manage access
 // to multiple database connections from multiple goroutines.
 type Conn struct {
-	pgConn             *gaussdbconn.PgConn
+	gaussdbConn        *gaussdbconn.GaussdbConn
 	config             *ConnConfig // config used when establishing this connection
 	preparedStatements map[string]*gaussdbconn.StatementDescription
 	statementCache     stmtcache.Cache
@@ -272,7 +272,7 @@ func connect(ctx context.Context, config *ConnConfig) (c *Conn, err error) {
 		config.Config.OnNotification = c.bufferNotifications
 	}
 
-	c.pgConn, err = gaussdbconn.ConnectConfig(ctx, &config.Config)
+	c.gaussdbConn, err = gaussdbconn.ConnectConfig(ctx, &config.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +300,7 @@ func (c *Conn) Close(ctx context.Context) error {
 		return nil
 	}
 
-	err := c.pgConn.Close(ctx)
+	err := c.gaussdbConn.Close(ctx)
 	return err
 }
 
@@ -344,7 +344,7 @@ func (c *Conn) Prepare(ctx context.Context, name, sql string) (sd *gaussdbconn.S
 		psKey = name
 	}
 
-	sd, err = c.pgConn.Prepare(ctx, psName, sql, nil)
+	sd, err = c.gaussdbConn.Prepare(ctx, psName, sql, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (c *Conn) Deallocate(ctx context.Context, name string) error {
 		psName = name
 	}
 
-	err := c.pgConn.Deallocate(ctx, psName)
+	err := c.gaussdbConn.Deallocate(ctx, psName)
 	if err != nil {
 		return err
 	}
@@ -387,11 +387,11 @@ func (c *Conn) DeallocateAll(ctx context.Context) error {
 	if c.config.DescriptionCacheCapacity > 0 {
 		c.descriptionCache = stmtcache.NewLRUCache(c.config.DescriptionCacheCapacity)
 	}
-	_, err := c.pgConn.Exec(ctx, "deallocate all").ReadAll()
+	_, err := c.gaussdbConn.Exec(ctx, "deallocate all").ReadAll()
 	return err
 }
 
-func (c *Conn) bufferNotifications(_ *gaussdbconn.PgConn, n *gaussdbconn.Notification) {
+func (c *Conn) bufferNotifications(_ *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
 	c.notifications = append(c.notifications, n)
 }
 
@@ -407,7 +407,7 @@ func (c *Conn) WaitForNotification(ctx context.Context) (*gaussdbconn.Notificati
 		return n, nil
 	}
 
-	err := c.pgConn.WaitForNotification(ctx)
+	err := c.gaussdbConn.WaitForNotification(ctx)
 	if len(c.notifications) > 0 {
 		n = c.notifications[0]
 		c.notifications = c.notifications[1:]
@@ -417,7 +417,7 @@ func (c *Conn) WaitForNotification(ctx context.Context) (*gaussdbconn.Notificati
 
 // IsClosed reports if the connection has been closed.
 func (c *Conn) IsClosed() bool {
-	return c.pgConn.IsClosed()
+	return c.gaussdbConn.IsClosed()
 }
 
 func (c *Conn) die() {
@@ -427,24 +427,24 @@ func (c *Conn) die() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // force immediate hard cancel
-	c.pgConn.Close(ctx)
+	c.gaussdbConn.Close(ctx)
 }
 
 func quoteIdentifier(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
 }
 
-// Ping delegates to the underlying *pgconn.PgConn.Ping.
+// Ping delegates to the underlying *pgconn.GaussdbConn.Ping.
 func (c *Conn) Ping(ctx context.Context) error {
-	return c.pgConn.Ping(ctx)
+	return c.gaussdbConn.Ping(ctx)
 }
 
-// PgConn returns the underlying *pgconn.PgConn. This is an escape hatch method that allows lower level access to the
+// GaussdbConn returns the underlying *pgconn.GaussdbConn. This is an escape hatch method that allows lower level access to the
 // PostgreSQL connection than pgx exposes.
 //
-// It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *pgconn.PgConn
+// It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *pgconn.GaussdbConn
 // is used and the connection must be returned to the same state before any *pgx.Conn methods are again used.
-func (c *Conn) PgConn() *gaussdbconn.PgConn { return c.pgConn }
+func (c *Conn) GaussdbConn() *gaussdbconn.GaussdbConn { return c.gaussdbConn }
 
 // TypeMap returns the connection info used for this connection.
 func (c *Conn) TypeMap() *gaussdbtype.Map { return c.typeMap }
@@ -558,7 +558,7 @@ func (c *Conn) execSimpleProtocol(ctx context.Context, sql string, arguments []a
 		}
 	}
 
-	mrr := c.pgConn.Exec(ctx, sql)
+	mrr := c.gaussdbConn.Exec(ctx, sql)
 	for mrr.NextResult() {
 		commandTag, _ = mrr.ResultReader().Close()
 	}
@@ -572,7 +572,7 @@ func (c *Conn) execParams(ctx context.Context, sd *gaussdbconn.StatementDescript
 		return gaussdbconn.CommandTag{}, err
 	}
 
-	result := c.pgConn.ExecParams(ctx, sd.SQL, c.eqb.ParamValues, sd.ParamOIDs, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
+	result := c.gaussdbConn.ExecParams(ctx, sd.SQL, c.eqb.ParamValues, sd.ParamOIDs, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
 	c.eqb.reset() // Allow c.eqb internal memory to be GC'ed as soon as possible.
 	return result.CommandTag, result.Err
 }
@@ -583,7 +583,7 @@ func (c *Conn) execPrepared(ctx context.Context, sd *gaussdbconn.StatementDescri
 		return gaussdbconn.CommandTag{}, err
 	}
 
-	result := c.pgConn.ExecPrepared(ctx, sd.Name, c.eqb.ParamValues, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
+	result := c.gaussdbConn.ExecPrepared(ctx, sd.Name, c.eqb.ParamValues, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
 	c.eqb.reset() // Allow c.eqb internal memory to be GC'ed as soon as possible.
 	return result.CommandTag, result.Err
 }
@@ -594,7 +594,7 @@ func (c *Conn) execSQLParams(ctx context.Context, sql string, args []any) (gauss
 		return gaussdbconn.CommandTag{}, err
 	}
 
-	result := c.pgConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
+	result := c.gaussdbConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats).Read()
 	c.eqb.reset() // Allow c.eqb internal memory to be GC'ed as soon as possible.
 	return result.CommandTag, result.Err
 }
@@ -639,7 +639,7 @@ const (
 
 	// Assume the PostgreSQL query parameter types based on the Go type of the arguments. This uses the extended protocol
 	// with text formatted parameters and results. Queries are executed in a single round trip. Type mappings can be
-	// registered with pgtype.Map.RegisterDefaultPgType. Queries will be rejected that have arguments that are
+	// registered with pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are
 	// unregistered or ambiguous. e.g. A map[string]string may have the PostgreSQL type json or hstore. Modes that know
 	// the PostgreSQL type can use a map[string]string directly as an argument. This mode cannot.
 	//
@@ -649,14 +649,14 @@ const (
 	// But the text format would encode the integer 7 as the string "VII". As QueryExecModeExec uses the text format, it
 	// is possible that changing query mode from another mode to QueryExecModeExec could change the behavior of the query.
 	// This should not occur with types pgx supports directly and can be avoided by registering the types with
-	// pgtype.Map.RegisterDefaultPgType and implementing the appropriate type interfaces. In the cas of RomanNumeral, it
+	// pgtype.Map.RegisterDefaultGaussdbType and implementing the appropriate type interfaces. In the cas of RomanNumeral, it
 	// should implement pgtype.Int64Valuer.
 	QueryExecModeExec
 
 	// Use the simple protocol. Assume the PostgreSQL query parameter types based on the Go type of the arguments. This is
 	// especially significant for []byte values. []byte values are encoded as PostgreSQL bytea. string must be used
 	// instead for text type values including json and jsonb. Type mappings can be registered with
-	// pgtype.Map.RegisterDefaultPgType. Queries will be rejected that have arguments that are unregistered or ambiguous.
+	// pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are unregistered or ambiguous.
 	// e.g. A map[string]string may have the PostgreSQL type json or hstore. Modes that know the PostgreSQL type can use a
 	// map[string]string directly as an argument. This mode cannot. Queries are executed in a single round trip.
 	//
@@ -815,9 +815,9 @@ optionLoop:
 		}
 
 		if !explicitPreparedStatement && mode == QueryExecModeCacheDescribe {
-			rows.resultReader = c.pgConn.ExecParams(ctx, sql, c.eqb.ParamValues, sd.ParamOIDs, c.eqb.ParamFormats, resultFormats)
+			rows.resultReader = c.gaussdbConn.ExecParams(ctx, sql, c.eqb.ParamValues, sd.ParamOIDs, c.eqb.ParamFormats, resultFormats)
 		} else {
-			rows.resultReader = c.pgConn.ExecPrepared(ctx, sd.Name, c.eqb.ParamValues, c.eqb.ParamFormats, resultFormats)
+			rows.resultReader = c.gaussdbConn.ExecPrepared(ctx, sd.Name, c.eqb.ParamValues, c.eqb.ParamFormats, resultFormats)
 		}
 	} else if mode == QueryExecModeExec {
 		err := c.eqb.Build(c.typeMap, nil, args)
@@ -826,7 +826,7 @@ optionLoop:
 			return rows, rows.err
 		}
 
-		rows.resultReader = c.pgConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats)
+		rows.resultReader = c.gaussdbConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats)
 	} else if mode == QueryExecModeSimpleProtocol {
 		sql, err = c.sanitizeForSimpleQuery(sql, args...)
 		if err != nil {
@@ -834,7 +834,7 @@ optionLoop:
 			return rows, err
 		}
 
-		mrr := c.pgConn.Exec(ctx, sql)
+		mrr := c.gaussdbConn.Exec(ctx, sql)
 		if mrr.NextResult() {
 			rows.resultReader = mrr.ResultReader()
 			rows.multiResultReader = mrr
@@ -994,7 +994,7 @@ func (c *Conn) sendBatchQueryExecModeSimpleProtocol(ctx context.Context, b *Batc
 		}
 		sb.WriteString(sql)
 	}
-	mrr := c.pgConn.Exec(ctx, sb.String())
+	mrr := c.gaussdbConn.Exec(ctx, sb.String())
 	return &batchResults{
 		ctx:   ctx,
 		conn:  c,
@@ -1027,7 +1027,7 @@ func (c *Conn) sendBatchQueryExecModeExec(ctx context.Context, b *Batch) *batchR
 
 	c.eqb.reset() // Allow c.eqb internal memory to be GC'ed as soon as possible.
 
-	mrr := c.pgConn.ExecBatch(ctx, batch)
+	mrr := c.gaussdbConn.ExecBatch(ctx, batch)
 
 	return &batchResults{
 		ctx:   ctx,
@@ -1124,7 +1124,7 @@ func (c *Conn) sendBatchQueryExecModeDescribeExec(ctx context.Context, b *Batch)
 }
 
 func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, distinctNewQueries []*gaussdbconn.StatementDescription, sdCache stmtcache.Cache) (pbr *pipelineBatchResults) {
-	pipeline := c.pgConn.StartPipeline(ctx)
+	pipeline := c.gaussdbConn.StartPipeline(ctx)
 	defer func() {
 		if pbr != nil && pbr.err != nil {
 			pipeline.Close()
@@ -1223,11 +1223,11 @@ func (c *Conn) sendBatchExtendedWithDescription(ctx context.Context, b *Batch, d
 }
 
 func (c *Conn) sanitizeForSimpleQuery(sql string, args ...any) (string, error) {
-	if c.pgConn.ParameterStatus("standard_conforming_strings") != "on" {
+	if c.gaussdbConn.ParameterStatus("standard_conforming_strings") != "on" {
 		return "", errors.New("simple protocol queries must be run with standard_conforming_strings=on")
 	}
 
-	if c.pgConn.ParameterStatus("client_encoding") != "UTF8" {
+	if c.gaussdbConn.ParameterStatus("client_encoding") != "UTF8" {
 		return "", errors.New("simple protocol queries must be run with client_encoding=UTF8")
 	}
 
@@ -1394,7 +1394,7 @@ order by attnum`,
 }
 
 func (c *Conn) deallocateInvalidatedCachedStatements(ctx context.Context) error {
-	if txStatus := c.pgConn.TxStatus(); txStatus != 'I' && txStatus != 'T' {
+	if txStatus := c.gaussdbConn.TxStatus(); txStatus != 'I' && txStatus != 'T' {
 		return nil
 	}
 
@@ -1411,7 +1411,7 @@ func (c *Conn) deallocateInvalidatedCachedStatements(ctx context.Context) error 
 		return nil
 	}
 
-	pipeline := c.pgConn.StartPipeline(ctx)
+	pipeline := c.gaussdbConn.StartPipeline(ctx)
 	defer pipeline.Close()
 
 	for _, sd := range invalidatedStatements {

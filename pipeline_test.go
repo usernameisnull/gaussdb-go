@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 import (
 	"context"
@@ -12,10 +12,10 @@ import (
 func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 	t.Parallel()
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		pipeline := conn.PgConn().StartPipeline(ctx)
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
+		pipeline := conn.GaussdbConn().StartPipeline(ctx)
 
-		eqb := pgx.ExtendedQueryBuilder{}
+		eqb := gaussdbgo.ExtendedQueryBuilder{}
 
 		err := eqb.Build(conn.TypeMap(), nil, []any{1, 2})
 		require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 		require.NoError(t, err)
 		rr, ok := results.(*gaussdbconn.ResultReader)
 		require.True(t, ok)
-		rows := pgx.RowsFromResultReader(conn.TypeMap(), rr)
+		rows := gaussdbgo.RowsFromResultReader(conn.TypeMap(), rr)
 
 		rowCount := 0
 		var n int64
@@ -50,7 +50,7 @@ func TestPipelineWithoutPreparedOrDescribedStatements(t *testing.T) {
 		require.NoError(t, err)
 		rr, ok = results.(*gaussdbconn.ResultReader)
 		require.True(t, ok)
-		rows = pgx.RowsFromResultReader(conn.TypeMap(), rr)
+		rows = gaussdbgo.RowsFromResultReader(conn.TypeMap(), rr)
 
 		rowCount = 0
 		n = 0

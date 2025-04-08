@@ -1,4 +1,4 @@
-package pgx_test
+package gaussdbgo_test
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestPgbouncerStatementCacheDescribe(t *testing.T) {
 	}
 
 	config := mustParseConfig(t, connString)
-	config.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.DescriptionCacheCapacity = 1024
 
 	testPgbouncer(t, config, 10, 100)
@@ -30,18 +30,18 @@ func TestPgbouncerSimpleProtocol(t *testing.T) {
 	}
 
 	config := mustParseConfig(t, connString)
-	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeSimpleProtocol
 
 	testPgbouncer(t, config, 10, 100)
 }
 
-func testPgbouncer(t *testing.T, config *pgx.ConnConfig, workers, iterations int) {
+func testPgbouncer(t *testing.T, config *gaussdbgo.ConnConfig, workers, iterations int) {
 	doneChan := make(chan struct{})
 
 	for i := 0; i < workers; i++ {
 		go func() {
 			defer func() { doneChan <- struct{}{} }()
-			conn, err := pgx.ConnectConfig(context.Background(), config)
+			conn, err := gaussdbgo.ConnectConfig(context.Background(), config)
 			require.Nil(t, err)
 			defer closeConn(t, conn)
 

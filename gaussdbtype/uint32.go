@@ -7,7 +7,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Uint32Scanner interface {
@@ -112,7 +112,7 @@ type encodePlanUint32CodecBinaryUint32 struct{}
 
 func (encodePlanUint32CodecBinaryUint32) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	v := value.(uint32)
-	return pgio.AppendUint32(buf, v), nil
+	return gaussdbio.AppendUint32(buf, v), nil
 }
 
 type encodePlanUint32CodecBinaryUint32Valuer struct{}
@@ -127,7 +127,7 @@ func (encodePlanUint32CodecBinaryUint32Valuer) Encode(value any, buf []byte) (ne
 		return nil, nil
 	}
 
-	return pgio.AppendUint32(buf, v.Uint32), nil
+	return gaussdbio.AppendUint32(buf, v.Uint32), nil
 }
 
 type encodePlanUint32CodecBinaryInt64Valuer struct{}
@@ -149,7 +149,7 @@ func (encodePlanUint32CodecBinaryInt64Valuer) Encode(value any, buf []byte) (new
 		return nil, fmt.Errorf("%d is greater than maximum value for uint32", v.Int64)
 	}
 
-	return pgio.AppendUint32(buf, uint32(v.Int64)), nil
+	return gaussdbio.AppendUint32(buf, uint32(v.Int64)), nil
 }
 
 type encodePlanUint32CodecTextUint32 struct{}
