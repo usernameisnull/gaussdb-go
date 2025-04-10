@@ -29,7 +29,6 @@ Create and setup a test database:
 export PGDATABASE=pgx_test
 createdb
 psql -c 'create extension hstore;'
-psql -c 'create domain uint64 as numeric(20,0);'
 ```
 
 Ensure a `postgres` user exists. This happens by default in normal PostgreSQL installs, but some installation methods

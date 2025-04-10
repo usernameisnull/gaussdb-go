@@ -9,8 +9,6 @@ import (
 )
 
 func TestLsegTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type lseg")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "lseg", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Lseg{

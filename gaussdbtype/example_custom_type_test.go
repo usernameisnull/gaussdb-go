@@ -47,14 +47,6 @@ func Example_customType() {
 	}
 	defer conn.Close(context.Background())
 
-	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
-		// Skip test / example when running on CockroachDB which doesn't support the point type. Since an example can't be
-		// skipped fake success instead.
-		fmt.Println("null point")
-		fmt.Println("1.5, 2.5")
-		return
-	}
-
 	p := &Point{}
 	err = conn.QueryRow(context.Background(), "select null::point").Scan(p)
 	if err != nil {

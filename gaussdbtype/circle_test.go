@@ -9,8 +9,6 @@ import (
 )
 
 func TestCircleTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support box type")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "circle", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Circle{P: gaussdbtype.Vec2{1.234, 5.67890123}, R: 3.5, Valid: true},

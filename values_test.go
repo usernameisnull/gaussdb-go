@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -217,9 +216,6 @@ func testJSONInt16ArrayFailureDueToOverflow(t *testing.T, conn *gaussdbgo.Conn, 
 	var output []int16
 	err := conn.QueryRow(context.Background(), "select $1::"+typename, input).Scan(&output)
 	fieldName := typename
-	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && typename == "json" {
-		fieldName = "jsonb" // Seems like CockroachDB treats json as jsonb.
-	}
 	expectedMessage := fmt.Sprintf("can't scan into dest[0] (col: %s): json: cannot unmarshal number 234432 into Go value of type int16", fieldName)
 	if err == nil || err.Error() != expectedMessage {
 		t.Errorf("%s: Expected *json.UnmarshalTypeError, but got %v", typename, err)
@@ -292,11 +288,6 @@ func TestInetCIDRTranscodeIPNet(t *testing.T) {
 		}
 
 		for i, tt := range tests {
-			if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && strings.Contains(tt.sql, "cidr") {
-				t.Log("Server does not support cidr type (https://github.com/cockroachdb/cockroach/issues/18846)")
-				continue
-			}
-
 			var actual net.IPNet
 
 			err := conn.QueryRow(context.Background(), tt.sql, tt.value).Scan(&actual)
@@ -338,11 +329,6 @@ func TestInetCIDRTranscodeIP(t *testing.T) {
 		}
 
 		for i, tt := range tests {
-			if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && strings.Contains(tt.sql, "cidr") {
-				t.Log("Server does not support cidr type (https://github.com/cockroachdb/cockroach/issues/18846)")
-				continue
-			}
-
 			var actual net.IP
 
 			err := conn.QueryRow(context.Background(), tt.sql, tt.value).Scan(&actual)
@@ -423,11 +409,6 @@ func TestInetCIDRArrayTranscodeIPNet(t *testing.T) {
 		}
 
 		for i, tt := range tests {
-			if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && strings.Contains(tt.sql, "cidr") {
-				t.Log("Server does not support cidr type (https://github.com/cockroachdb/cockroach/issues/18846)")
-				continue
-			}
-
 			var actual []*net.IPNet
 
 			err := conn.QueryRow(context.Background(), tt.sql, tt.value).Scan(&actual)
@@ -479,11 +460,6 @@ func TestInetCIDRArrayTranscodeIP(t *testing.T) {
 		}
 
 		for i, tt := range tests {
-			if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && strings.Contains(tt.sql, "cidr") {
-				t.Log("Server does not support cidr type (https://github.com/cockroachdb/cockroach/issues/18846)")
-				continue
-			}
-
 			var actual []net.IP
 
 			err := conn.QueryRow(context.Background(), tt.sql, tt.value).Scan(&actual)
@@ -560,11 +536,6 @@ func TestInetCIDRTranscodeWithJustIP(t *testing.T) {
 		}
 
 		for i, tt := range tests {
-			if conn.GaussdbConn().ParameterStatus("crdb_version") != "" && strings.Contains(tt.sql, "cidr") {
-				t.Log("Server does not support cidr type (https://github.com/cockroachdb/cockroach/issues/18846)")
-				continue
-			}
-
 			expected := mustParseCIDR(t, tt.value)
 			var actual net.IPNet
 

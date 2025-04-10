@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// todo: gaussdb not support some type?
 func TestMultirangeCodecTranscode(t *testing.T) {
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "int4multirange", []gaussdbxtest.ValueRoundTripTest{
@@ -68,6 +69,7 @@ func TestMultirangeCodecTranscode(t *testing.T) {
 	})
 }
 
+// todo: gaussdb not support some type?
 func TestMultirangeCodecDecodeValue(t *testing.T) {
 
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {

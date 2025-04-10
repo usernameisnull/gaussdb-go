@@ -49,7 +49,8 @@ func TestConnStress(t *testing.T) {
 
 func setupStressDB(t *testing.T, gaussdbConn *gaussdbconn.GaussdbConn) {
 	_, err := gaussdbConn.Exec(context.Background(), `
-		create temporary table widgets(
+		drop table if exists widgets;
+		create table widgets(
 			id serial primary key,
 			name varchar not null,
 			description text,

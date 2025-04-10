@@ -72,7 +72,7 @@ func TestParseConfig(t *testing.T) {
 		// Test all sslmodes
 		{
 			name:       "sslmode not set (prefer)",
-			connString: "postgres://jack:secret@localhost:5432/mydb",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -95,7 +95,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode disable",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -108,7 +108,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode allow",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=allow",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=allow",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -131,7 +131,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode prefer",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=prefer",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=prefer",
 			config: &gaussdbconn.Config{
 
 				User:     "jack",
@@ -155,7 +155,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode require",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=require",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=require",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -171,7 +171,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode verify-ca",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=verify-ca",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=verify-ca",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -187,7 +187,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "sslmode verify-full",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=verify-full",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=verify-full",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -200,7 +200,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url everything",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&application_name=pgxtest&search_path=myschema&connect_timeout=5",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&application_name=pgxtest&search_path=myschema&connect_timeout=5",
 			config: &gaussdbconn.Config{
 				User:           "jack",
 				Password:       "secret",
@@ -217,7 +217,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url missing password",
-			connString: "postgres://jack@localhost:5432/mydb?sslmode=disable",
+			connString: "gaussdb://jack@localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Host:          "localhost",
@@ -229,7 +229,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url missing user and password",
-			connString: "postgres://localhost:5432/mydb?sslmode=disable",
+			connString: "gaussdb://localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          defaultUser,
 				Host:          "localhost",
@@ -241,7 +241,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url missing port",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -254,7 +254,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url unix domain socket host",
-			connString: "postgres:///foo?host=/tmp",
+			connString: "gaussdb:///foo?host=/tmp",
 			config: &gaussdbconn.Config{
 				User:          defaultUser,
 				Host:          "/tmp",
@@ -266,7 +266,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url unix domain socket host on windows",
-			connString: "postgres:///foo?host=C:\\tmp",
+			connString: "gaussdb:///foo?host=C:\\tmp",
 			config: &gaussdbconn.Config{
 				User:          defaultUser,
 				Host:          "C:\\tmp",
@@ -278,7 +278,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url dbname",
-			connString: "postgres://localhost/?dbname=foo&sslmode=disable",
+			connString: "gaussdb://localhost/?dbname=foo&sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          defaultUser,
 				Host:          "localhost",
@@ -289,8 +289,8 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
-			name:       "database url postgresql protocol",
-			connString: "postgresql://jack@localhost:5432/mydb?sslmode=disable",
+			name:       "database url gaussdb protocol",
+			connString: "gaussdb://jack@localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Host:          "localhost",
@@ -302,7 +302,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url IPv4 with port",
-			connString: "postgresql://jack@127.0.0.1:5433/mydb?sslmode=disable",
+			connString: "gaussdb://jack@127.0.0.1:5433/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Host:          "127.0.0.1",
@@ -314,7 +314,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url IPv6 with port",
-			connString: "postgresql://jack@[2001:db8::1]:5433/mydb?sslmode=disable",
+			connString: "gaussdb://jack@[2001:db8::1]:5433/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Host:          "2001:db8::1",
@@ -326,7 +326,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url IPv6 no port",
-			connString: "postgresql://jack@[2001:db8::1]/mydb?sslmode=disable",
+			connString: "gaussdb://jack@[2001:db8::1]/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Host:          "2001:db8::1",
@@ -429,7 +429,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "URL multiple hosts",
-			connString: "postgres://jack:secret@foo,bar,baz/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@foo,bar,baz/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -454,7 +454,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "URL multiple hosts and ports",
-			connString: "postgres://jack:secret@foo:1,bar:2,baz:3/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@foo:1,bar:2,baz:3/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -480,7 +480,7 @@ func TestParseConfig(t *testing.T) {
 		// https://github.com/jackc/pgconn/issues/72
 		{
 			name:       "URL without host but with port still uses default host",
-			connString: "postgres://jack:secret@:1/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@:1/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -590,7 +590,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs read-write",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=read-write",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=read-write",
 			config: &gaussdbconn.Config{
 				User:            "jack",
 				Password:        "secret",
@@ -604,7 +604,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs read-only",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=read-only",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=read-only",
 			config: &gaussdbconn.Config{
 				User:            "jack",
 				Password:        "secret",
@@ -618,7 +618,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs primary",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=primary",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=primary",
 			config: &gaussdbconn.Config{
 				User:            "jack",
 				Password:        "secret",
@@ -632,7 +632,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs standby",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=standby",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=standby",
 			config: &gaussdbconn.Config{
 				User:            "jack",
 				Password:        "secret",
@@ -646,7 +646,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs prefer-standby",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=prefer-standby",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=prefer-standby",
 			config: &gaussdbconn.Config{
 				User:            "jack",
 				Password:        "secret",
@@ -660,7 +660,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs any",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=any",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&target_session_attrs=any",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -673,7 +673,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "target_session_attrs not set (any)",
-			connString: "postgres://jack:secret@localhost:5432/mydb?sslmode=disable",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable",
 			config: &gaussdbconn.Config{
 				User:          "jack",
 				Password:      "secret",
@@ -686,7 +686,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "SNI is set by default",
-			connString: "postgres://jack:secret@sni.test:5432/mydb?sslmode=require",
+			connString: "gaussdb://jack:secret@sni.test:5432/mydb?sslmode=require",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -702,7 +702,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "SNI is not set for IPv4",
-			connString: "postgres://jack:secret@1.1.1.1:5432/mydb?sslmode=require",
+			connString: "gaussdb://jack:secret@1.1.1.1:5432/mydb?sslmode=require",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -717,7 +717,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "SNI is not set for IPv6",
-			connString: "postgres://jack:secret@[::1]:5432/mydb?sslmode=require",
+			connString: "gaussdb://jack:secret@[::1]:5432/mydb?sslmode=require",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -732,7 +732,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "SNI is not set when disabled (URL-style)",
-			connString: "postgres://jack:secret@sni.test:5432/mydb?sslmode=require&sslsni=0",
+			connString: "gaussdb://jack:secret@sni.test:5432/mydb?sslmode=require&sslsni=0",
 			config: &gaussdbconn.Config{
 				User:     "jack",
 				Password: "secret",
@@ -791,7 +791,7 @@ func TestParseConfigKVTrailingBackslash(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "postgres://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -800,7 +800,7 @@ func TestConfigCopyReturnsEqualConfig(t *testing.T) {
 }
 
 func TestConfigCopyOriginalConfigDidNotChange(t *testing.T) {
-	connString := "postgres://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5&sslmode=prefer"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5&sslmode=prefer"
 	original, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -1024,7 +1024,7 @@ func TestParseConfigReadsGaussdbPassfile(t *testing.T) {
 	err := os.WriteFile(tfName, []byte("test1:5432:curlydb:curly:nyuknyuknyuk"), 0600)
 	require.NoError(t, err)
 
-	connString := fmt.Sprintf("postgres://curly@test1:5432/curlydb?sslmode=disable&passfile=%s", tfName)
+	connString := fmt.Sprintf("gaussdb://curly@test1:5432/curlydb?sslmode=disable&passfile=%s", tfName)
 	expected := &gaussdbconn.Config{
 		User:          "curly",
 		Password:      "nyuknyuknyuk",
@@ -1071,7 +1071,7 @@ application_name = spaced string
 	}{
 		{
 			name:       "abc",
-			connString: fmt.Sprintf("postgres:///?servicefile=%s&service=%s", tfName, "abc"),
+			connString: fmt.Sprintf("gaussdb:///?servicefile=%s&service=%s", tfName, "abc"),
 			config: &gaussdbconn.Config{
 				Host:     "abc.example.com",
 				Database: "abcdb",
@@ -1093,7 +1093,7 @@ application_name = spaced string
 		},
 		{
 			name:       "def",
-			connString: fmt.Sprintf("postgres:///?servicefile=%s&service=%s", tfName, "def"),
+			connString: fmt.Sprintf("gaussdb:///?servicefile=%s&service=%s", tfName, "def"),
 			config: &gaussdbconn.Config{
 				Host:     "def.example.com",
 				Port:     defaultPort,
@@ -1115,7 +1115,7 @@ application_name = spaced string
 		},
 		{
 			name:       "conn string has precedence",
-			connString: fmt.Sprintf("postgres://other.example.com:7777/?servicefile=%s&service=%s&sslmode=disable", tfName, "abc"),
+			connString: fmt.Sprintf("gaussdb://other.example.com:7777/?servicefile=%s&service=%s&sslmode=disable", tfName, "abc"),
 			config: &gaussdbconn.Config{
 				Host:          "other.example.com",
 				Database:      "abcdb",

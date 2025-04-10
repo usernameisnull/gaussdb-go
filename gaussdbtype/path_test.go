@@ -28,8 +28,6 @@ func isExpectedEqPath(a any) func(any) bool {
 }
 
 func TestPathTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type path")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "path", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Path{

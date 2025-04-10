@@ -22,8 +22,6 @@ func TestRecordCodec(t *testing.T) {
 }
 
 func TestRecordCodecDecodeValue(t *testing.T) {
-	skipCockroachDB(t, "Server converts row int4 to int8")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
 		for _, tt := range []struct {
 			sql      string

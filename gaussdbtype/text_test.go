@@ -65,8 +65,6 @@ func TestTextCodecName(t *testing.T) {
 
 // Test fixed length char types like char(3)
 func TestTextCodecBPChar(t *testing.T) {
-	skipCockroachDB(t, "Server does not properly handle bpchar with multi-byte character")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "char(3)", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Text{String: "a  ", Valid: true},

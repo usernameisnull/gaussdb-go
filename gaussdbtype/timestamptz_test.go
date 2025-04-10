@@ -12,8 +12,6 @@ import (
 )
 
 func TestTimestamptzCodec(t *testing.T) {
-	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "timestamptz", []gaussdbxtest.ValueRoundTripTest{
 		{time.Date(-100, 1, 1, 0, 0, 0, 0, time.Local), new(time.Time), isExpectedEqTime(time.Date(-100, 1, 1, 0, 0, 0, 0, time.Local))},
 		{time.Date(-1, 1, 1, 0, 0, 0, 0, time.Local), new(time.Time), isExpectedEqTime(time.Date(-1, 1, 1, 0, 0, 0, 0, time.Local))},
@@ -39,8 +37,6 @@ func TestTimestamptzCodec(t *testing.T) {
 }
 
 func TestTimestamptzCodecWithLocationUTC(t *testing.T) {
-	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
-
 	connTestRunner := defaultConnTestRunner
 	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{
@@ -56,8 +52,6 @@ func TestTimestamptzCodecWithLocationUTC(t *testing.T) {
 }
 
 func TestTimestamptzCodecWithLocationLocal(t *testing.T) {
-	skipCockroachDB(t, "Server does not support infinite timestamps (see https://github.com/cockroachdb/cockroach/issues/41564)")
-
 	connTestRunner := defaultConnTestRunner
 	connTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		conn.TypeMap().RegisterType(&gaussdbtype.Type{

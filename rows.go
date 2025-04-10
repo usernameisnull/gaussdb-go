@@ -105,7 +105,7 @@ func (r *connRow) Scan(dest ...any) (err error) {
 	for _, d := range dest {
 		if _, ok := d.(*gaussdbtype.DriverBytes); ok {
 			rows.Close()
-			return fmt.Errorf("cannot scan into *pgtype.DriverBytes from QueryRow")
+			return fmt.Errorf("cannot scan into *gaussdbtype.DriverBytes from QueryRow")
 		}
 	}
 

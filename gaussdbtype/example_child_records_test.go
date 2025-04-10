@@ -30,19 +30,6 @@ func Example_childRecords() {
 		return
 	}
 
-	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
-		// Skip test / example when running on CockroachDB. Since an example can't be skipped fake success instead.
-		fmt.Println(`Alpha
-  Adam: wing
-  Bill: halfback
-  Charlie: fullback
-Beta
-  Don: halfback
-  Edgar: halfback
-  Frank: fullback`)
-		return
-	}
-
 	// Setup example schema and data.
 	_, err = conn.Exec(ctx, `
 create temporary table teams (

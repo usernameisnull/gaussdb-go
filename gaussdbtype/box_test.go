@@ -9,8 +9,6 @@ import (
 )
 
 func TestBoxCodec(t *testing.T) {
-	skipCockroachDB(t, "Server does not support box type")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "box", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Box{

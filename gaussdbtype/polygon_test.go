@@ -28,8 +28,6 @@ func isExpectedEqPolygon(a any) func(any) bool {
 }
 
 func TestPolygonTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type polygon")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "polygon", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Polygon{
