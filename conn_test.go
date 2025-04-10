@@ -777,8 +777,9 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 
 func TestFatalRxError(t *testing.T) {
 	t.Parallel()
+	envVar := os.Getenv("PGX_TEST_DATABASE")
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, envVar)
 	defer closeConn(t, conn)
 
 	var wg sync.WaitGroup
@@ -788,14 +789,14 @@ func TestFatalRxError(t *testing.T) {
 		var n int32
 		var s string
 		err := conn.QueryRow(context.Background(), "select 1::int4, pg_sleep(10)::varchar").Scan(&n, &s)
-		if gaussdbErr, ok := err.(*gaussdbconn.GaussdbError); ok && gaussdbErr.Severity == "FATAL" {
-		} else {
+		gaussdbErr, ok := err.(*gaussdbconn.GaussdbError)
+		if !(ok && gaussdbErr.Severity == "FATAL") {
 			t.Errorf("Expected QueryRow Scan to return fatal GaussdbError, but instead received %v", err)
 			return
 		}
 	}()
 
-	otherConn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	otherConn := mustConnectString(t, envVar)
 	defer otherConn.Close(context.Background())
 
 	if _, err := otherConn.Exec(context.Background(), "select pg_terminate_backend($1)", conn.GaussdbConn().PID()); err != nil {
@@ -943,23 +944,24 @@ func TestConnInitTypeMap(t *testing.T) {
 	ensureConnValid(t, conn)
 }
 
-func TestUnregisteredTypeUsableAsStringArgumentAndBaseResult(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-
-	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
-
-		var n uint64
-		err := conn.QueryRow(context.Background(), "select $1::uint64", "42").Scan(&n)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if n != 42 {
-			t.Fatalf("Expected n to be 42, but was %v", n)
-		}
-	})
-}
+// todo GaussDB 暂时不支持 Domain域类型
+//func TestUnregisteredTypeUsableAsStringArgumentAndBaseResult(t *testing.T) {
+//	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+//	defer cancel()
+//
+//	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
+//
+//		var n uint64
+//		err := conn.QueryRow(context.Background(), "select $1::uint64", "42").Scan(&n)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//
+//		if n != 42 {
+//			t.Fatalf("Expected n to be 42, but was %v", n)
+//		}
+//	})
+//}
 
 // todo GaussDB 暂时不支持 Domain域类型
 /*func TestDomainType(t *testing.T) {
@@ -1211,10 +1213,6 @@ func TestStmtCacheInvalidationTx(t *testing.T) {
 
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
-
-	if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
-		t.Skip("Server has non-standard prepare in errored transaction behavior (https://github.com/cockroachdb/cockroach/issues/84140)")
-	}
 
 	// create a table and fill it with some data
 	_, err := conn.Exec(ctx, `

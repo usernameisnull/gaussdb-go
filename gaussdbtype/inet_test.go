@@ -71,8 +71,6 @@ func TestInetTranscode(t *testing.T) {
 }
 
 func TestCidrTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support cidr type (see https://github.com/cockroachdb/cockroach/issues/18846)")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "cidr", []gaussdbxtest.ValueRoundTripTest{
 		{mustParseInet(t, "0.0.0.0/32"), new(net.IPNet), isExpectedEqIPNet(mustParseInet(t, "0.0.0.0/32"))},
 		{mustParseInet(t, "127.0.0.1/32"), new(net.IPNet), isExpectedEqIPNet(mustParseInet(t, "127.0.0.1/32"))},

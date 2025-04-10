@@ -35,21 +35,6 @@ func closeDB(t testing.TB, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-func skipCockroachDB(t testing.TB, db *sql.DB, msg string) {
-	conn, err := db.Conn(context.Background())
-	require.NoError(t, err)
-	defer conn.Close()
-
-	err = conn.Raw(func(driverConn any) error {
-		conn := driverConn.(*stdlib.Conn).Conn()
-		if conn.GaussdbConn().ParameterStatus("crdb_version") != "" {
-			t.Skip(msg)
-		}
-		return nil
-	})
-	require.NoError(t, err)
-}
-
 func testWithAllQueryExecModes(t *testing.T, f func(t *testing.T, db *sql.DB)) {
 	for _, mode := range []gaussdbgo.QueryExecMode{
 		gaussdbgo.QueryExecModeCacheStatement,
@@ -152,8 +137,6 @@ func TestNormalLifeCycle(t *testing.T) {
 	db := openDB(t)
 	defer closeDB(t, db)
 
-	skipCockroachDB(t, db, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
-
 	stmt := prepareStmt(t, db, "select 'foo', n from generate_series($1::int, $2::int) n")
 	defer closeStmt(t, stmt)
 
@@ -215,8 +198,6 @@ func TestQueryCloseRowsEarly(t *testing.T) {
 	db := openDB(t)
 	defer closeDB(t, db)
 
-	skipCockroachDB(t, db, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
-
 	stmt := prepareStmt(t, db, "select 'foo', n from generate_series($1::int, $2::int) n")
 	defer closeStmt(t, stmt)
 
@@ -272,8 +253,6 @@ func TestConnExec(t *testing.T) {
 
 func TestConnQuery(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
-
 		rows, err := db.Query("select 'foo', n from generate_series($1::int, $2::int) n", int32(1), int32(10))
 		require.NoError(t, err)
 
@@ -457,16 +436,17 @@ func TestConnQueryFailure(t *testing.T) {
 	})
 }
 
-func TestConnSimpleSlicePassThrough(t *testing.T) {
-	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server does not support cardinality function")
-
-		var n int64
-		err := db.QueryRow("select cardinality($1::text[])", []string{"a", "b", "c"}).Scan(&n)
-		require.NoError(t, err)
-		assert.EqualValues(t, 3, n)
-	})
-}
+// todo: opengauss not support cardinality, but gaussdb support it.
+//func TestConnSimpleSlicePassThrough(t *testing.T) {
+//	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
+//		skipCockroachDB(t, db, "Server does not support cardinality function")
+//
+//		var n int64
+//		err := db.QueryRow("select cardinality($1::text[])", []string{"a", "b", "c"}).Scan(&n)
+//		require.NoError(t, err)
+//		assert.EqualValues(t, 3, n)
+//	})
+//}
 
 func TestConnQueryScanGoArray(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
@@ -496,8 +476,6 @@ func TestConnQueryScanArray(t *testing.T) {
 
 func TestConnQueryScanRange(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server does not support int4range")
-
 		m := gaussdbtype.NewMap()
 
 		var r gaussdbtype.Range[gaussdbtype.Int4]
@@ -532,8 +510,6 @@ func TestConnQueryRowGaussdbBinary(t *testing.T) {
 
 func TestConnQueryRowUnknownType(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server does not support point type")
-
 		sql := "select $1::point"
 		expected := "(1,2)"
 		var actual string
@@ -638,10 +614,9 @@ func TestTransactionLifeCycle(t *testing.T) {
 	})
 }
 
+// todo: not support?
 func TestConnBeginTxIsolation(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server always uses serializable isolation level")
-
 		var defaultIsoLevel string
 		err := db.QueryRow("show transaction_isolation").Scan(&defaultIsoLevel)
 		require.NoError(t, err)
@@ -775,8 +750,6 @@ func TestConnPrepareContextSuccess(t *testing.T) {
 // https://github.com/jackc/pgx/issues/1754#issuecomment-1752004634
 func TestConnMultiplePrepareAndDeallocate(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server does not support pg_prepared_statements")
-
 		sql := "select 42"
 		stmt1, err := db.PrepareContext(context.Background(), sql)
 		require.NoError(t, err)
@@ -801,7 +774,7 @@ func TestConnMultiplePrepareAndDeallocate(t *testing.T) {
 
 func TestConnExecContextSuccess(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		_, err := db.ExecContext(context.Background(), "create temporary table exec_context_test(id serial primary key)")
+		_, err := db.ExecContext(context.Background(), "drop table if exists exec_context_test; create table exec_context_test(id serial primary key)")
 		require.NoError(t, err)
 	})
 }
@@ -880,8 +853,6 @@ func TestStmtExecContextCancel(t *testing.T) {
 func TestStmtQueryContextSuccess(t *testing.T) {
 	db := openDB(t)
 	defer closeDB(t, db)
-
-	skipCockroachDB(t, db, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
 
 	stmt, err := db.Prepare("select * from generate_series(1,$1::int4) n")
 	require.NoError(t, err)
@@ -1044,8 +1015,6 @@ func TestRowsColumnTypes(t *testing.T) {
 
 func TestQueryLifeCycle(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-		skipCockroachDB(t, db, "Server issues incorrect ParameterDescription (https://github.com/cockroachdb/cockroach/issues/60907)")
-
 		rows, err := db.Query("SELECT 'foo', n FROM generate_series($1::int, $2::int) n WHERE 3 = $3", 1, 10, 3)
 		require.NoError(t, err)
 
@@ -1132,7 +1101,7 @@ func TestRegisterConnConfig(t *testing.T) {
 	defer stdlib.UnregisterConnConfig(connStr)
 	require.Equal(t, "registeredConnConfig1", connStr)
 
-	db, err := sql.Open("pgx", connStr)
+	db, err := sql.Open("gaussdb", connStr)
 	require.NoError(t, err)
 	defer closeDB(t, db)
 
@@ -1149,13 +1118,16 @@ func TestRegisterConnConfig(t *testing.T) {
 func TestConnQueryRowConstraintErrors(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 
-		_, err := db.Exec(`create temporary table defer_test (
+		_, err := db.Exec(`
+			drop table if exists defer_test;
+			create table defer_test (
 			id text primary key,
 			n int not null, unique (n),
 			unique (n) deferrable initially deferred )`)
 		require.NoError(t, err)
-
-		_, err = db.Exec(`drop function if exists test_trigger cascade`)
+		// todo: opengauss not support cascade key word, but gaussdb support, so remove cascade.
+		//_, err = db.Exec(`drop function if exists test_trigger cascade`)
+		_, err = db.Exec(`drop function if exists test_trigger`)
 		require.NoError(t, err)
 
 		_, err = db.Exec(`create function test_trigger() returns trigger language plpgsql as $$
@@ -1219,7 +1191,7 @@ func TestOptionBeforeAfterConnect(t *testing.T) {
 }
 
 func TestRandomizeHostOrderFunc(t *testing.T) {
-	config, err := gaussdbgo.ParseConfig("postgres://host1,host2,host3")
+	config, err := gaussdbgo.ParseConfig("gaussdb://host1,host2,host3")
 	require.NoError(t, err)
 
 	// Test that at some point we connect to all 3 hosts
@@ -1280,13 +1252,12 @@ func TestResetSessionHookCalled(t *testing.T) {
 }
 
 func TestCheckIdleConn(t *testing.T) {
-	controllerConn, err := sql.Open("pgx", os.Getenv("PGX_TEST_DATABASE"))
+	// stdlib/sql.go#L102, register here
+	controllerConn, err := sql.Open("gaussdb", os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	defer closeDB(t, controllerConn)
 
-	skipCockroachDB(t, controllerConn, "Server does not support pg_terminate_backend() (https://github.com/cockroachdb/cockroach/issues/35897)")
-
-	db, err := sql.Open("pgx", os.Getenv("PGX_TEST_DATABASE"))
+	db, err := sql.Open("gaussdb", os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	defer closeDB(t, db)
 

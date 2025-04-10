@@ -15,7 +15,8 @@ func BenchmarkConnect(b *testing.B) {
 		name string
 		env  string
 	}{
-		{"Unix socket", "PGX_TEST_UNIX_SOCKET_CONN_STRING"},
+		// todo: unix socket to improve
+		//{"Unix socket", "PGX_TEST_UNIX_SOCKET_CONN_STRING"},
 		{"TCP", "PGX_TEST_TCP_CONN_STRING"},
 	}
 

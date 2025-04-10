@@ -9,8 +9,6 @@ import (
 )
 
 func TestTIDCodec(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type tid")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "tid", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.TID{BlockNumber: 42, OffsetNumber: 43, Valid: true},

@@ -15,8 +15,8 @@ func TestConfigError(t *testing.T) {
 	}{
 		{
 			name:        "url with password",
-			err:         gaussdbconn.NewParseConfigError("postgresql://foo:password@host", "msg", nil),
-			expectedMsg: "cannot parse `postgresql://foo:xxxxx@host`: msg",
+			err:         gaussdbconn.NewParseConfigError("gaussdb://foo:password@host", "msg", nil),
+			expectedMsg: "cannot parse `gaussdb://foo:xxxxx@host`: msg",
 		},
 		{
 			name:        "keyword/value with password unquoted",
@@ -30,18 +30,18 @@ func TestConfigError(t *testing.T) {
 		},
 		{
 			name:        "weird url",
-			err:         gaussdbconn.NewParseConfigError("postgresql://foo::password@host:1:", "msg", nil),
-			expectedMsg: "cannot parse `postgresql://foo:xxxxx@host:1:`: msg",
+			err:         gaussdbconn.NewParseConfigError("gaussdb://foo::password@host:1:", "msg", nil),
+			expectedMsg: "cannot parse `gaussdb://foo:xxxxx@host:1:`: msg",
 		},
 		{
 			name:        "weird url with slash in password",
-			err:         gaussdbconn.NewParseConfigError("postgres://user:pass/word@host:5432/db_name", "msg", nil),
-			expectedMsg: "cannot parse `postgres://user:xxxxxx@host:5432/db_name`: msg",
+			err:         gaussdbconn.NewParseConfigError("gaussdb://user:pass/word@host:5432/db_name", "msg", nil),
+			expectedMsg: "cannot parse `gaussdb://user:xxxxxx@host:5432/db_name`: msg",
 		},
 		{
 			name:        "url without password",
-			err:         gaussdbconn.NewParseConfigError("postgresql://other@host/db", "msg", nil),
-			expectedMsg: "cannot parse `postgresql://other@host/db`: msg",
+			err:         gaussdbconn.NewParseConfigError("gaussdb://other@host/db", "msg", nil),
+			expectedMsg: "cannot parse `gaussdb://other@host/db`: msg",
 		},
 	}
 	for _, tt := range tests {

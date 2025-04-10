@@ -206,7 +206,7 @@ func newContextAlreadyDoneError(ctx context.Context) (err error) {
 }
 
 func redactPW(connString string) string {
-	if strings.HasPrefix(connString, "postgres://") || strings.HasPrefix(connString, "postgresql://") {
+	if strings.HasPrefix(connString, "gaussdb://") {
 		if u, err := url.Parse(connString); err == nil {
 			return redactURL(u)
 		}

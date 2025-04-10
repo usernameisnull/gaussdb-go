@@ -11,8 +11,6 @@ import (
 )
 
 func TestRangeCodecTranscode(t *testing.T) {
-	skipCockroachDB(t, "Server does not support range types (see https://github.com/cockroachdb/cockroach/issues/27791)")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "int4range", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Range[gaussdbtype.Int4]{LowerType: gaussdbtype.Empty, UpperType: gaussdbtype.Empty, Valid: true},
@@ -70,8 +68,6 @@ func TestRangeCodecTranscodeCompatibleRangeElementTypes(t *testing.T) {
 }
 
 func TestRangeCodecScanRangeTwiceWithUnbounded(t *testing.T) {
-	skipCockroachDB(t, "Server does not support range types (see https://github.com/cockroachdb/cockroach/issues/27791)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		var r gaussdbtype.Range[gaussdbtype.Int4]
@@ -124,8 +120,6 @@ func TestRangeCodecScanRangeTwiceWithUnbounded(t *testing.T) {
 }
 
 func TestRangeCodecDecodeValue(t *testing.T) {
-	skipCockroachDB(t, "Server does not support range types (see https://github.com/cockroachdb/cockroach/issues/27791)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
 
 		for _, tt := range []struct {

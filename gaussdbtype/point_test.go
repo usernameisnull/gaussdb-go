@@ -11,8 +11,6 @@ import (
 )
 
 func TestPointCodec(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type point")
-
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "point", []gaussdbxtest.ValueRoundTripTest{
 		{
 			gaussdbtype.Point{P: gaussdbtype.Vec2{1.234, 5.6789012345}, Valid: true},

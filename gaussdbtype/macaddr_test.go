@@ -26,9 +26,8 @@ func isExpectedEqHardwareAddr(a any) func(any) bool {
 	}
 }
 
+// todo: gaussdb not support some type?
 func TestMacaddrCodec(t *testing.T) {
-	skipCockroachDB(t, "Server does not support type macaddr")
-
 	// Only testing known OID query exec modes as net.HardwareAddr could map to macaddr or macaddr8.
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, gaussdbxtest.KnownOIDQueryExecModes, "macaddr", []gaussdbxtest.ValueRoundTripTest{
 		{

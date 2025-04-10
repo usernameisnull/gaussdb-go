@@ -250,8 +250,6 @@ func TestArrayCodecDecodeValue(t *testing.T) {
 }
 
 func TestArrayCodecScanMultipleDimensions(t *testing.T) {
-	skipCockroachDB(t, "Server does not support nested arrays (https://github.com/cockroachdb/cockroach/issues/36815)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		rows, err := conn.Query(ctx, `select '{{1,2,3,4}, {5,6,7,8}, {9,10,11,12}}'::int4[]`)
@@ -269,8 +267,6 @@ func TestArrayCodecScanMultipleDimensions(t *testing.T) {
 }
 
 func TestArrayCodecScanMultipleDimensionsEmpty(t *testing.T) {
-	skipCockroachDB(t, "Server does not support nested arrays (https://github.com/cockroachdb/cockroach/issues/36815)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		rows, err := conn.Query(ctx, `select '{}'::int4[]`)
 		require.NoError(t, err)
@@ -287,8 +283,6 @@ func TestArrayCodecScanMultipleDimensionsEmpty(t *testing.T) {
 }
 
 func TestArrayCodecScanWrongMultipleDimensions(t *testing.T) {
-	skipCockroachDB(t, "Server does not support nested arrays (https://github.com/cockroachdb/cockroach/issues/36815)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		rows, err := conn.Query(ctx, `select '{{1,2,3,4}, {5,6,7,8}, {9,10,11,12}}'::int4[]`)
 		require.NoError(t, err)
@@ -302,8 +296,6 @@ func TestArrayCodecScanWrongMultipleDimensions(t *testing.T) {
 }
 
 func TestArrayCodecEncodeMultipleDimensions(t *testing.T) {
-	skipCockroachDB(t, "Server does not support nested arrays (https://github.com/cockroachdb/cockroach/issues/36815)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		rows, err := conn.Query(ctx, `select $1::int4[]`, [][]int32{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}})
 		require.NoError(t, err)
@@ -320,8 +312,6 @@ func TestArrayCodecEncodeMultipleDimensions(t *testing.T) {
 }
 
 func TestArrayCodecEncodeMultipleDimensionsRagged(t *testing.T) {
-	skipCockroachDB(t, "Server does not support nested arrays (https://github.com/cockroachdb/cockroach/issues/36815)")
-
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		rows, err := conn.Query(ctx, `select $1::int4[]`, [][]int32{{1, 2, 3, 4}, {5}, {9, 10, 11, 12}})
 		require.Error(t, err, "cannot convert [][]int32 to ArrayGetter because it is a ragged multi-dimensional")
