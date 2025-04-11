@@ -72,10 +72,11 @@ func mustParseNumeric(t *testing.T, src string) gaussdbtype.Numeric {
 	return n
 }
 
+// todo The precision of the NUMERIC type in GaussDB must be between 1 and 1000
 func TestNumericCodec(t *testing.T) {
 	max := new(big.Int).Exp(big.NewInt(10), big.NewInt(147454), nil)
 	max.Add(max, big.NewInt(1))
-	longestNumeric := gaussdbtype.Numeric{Int: max, Exp: -16383, Valid: true}
+	//longestNumeric := gaussdbtype.Numeric{Int: max, Exp: -16383, Valid: true}
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "numeric", []gaussdbxtest.ValueRoundTripTest{
 		{mustParseNumeric(t, "1"), new(gaussdbtype.Numeric), isExpectedEqNumeric(mustParseNumeric(t, "1"))},
@@ -92,13 +93,13 @@ func TestNumericCodec(t *testing.T) {
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 82, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 82, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 83, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 83, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 84, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "43723409723490243842378942378901237502734019231380123"), Exp: 84, Valid: true})},
-		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "913423409823409243892349028349023482934092340892390101"), Exp: -14021, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "913423409823409243892349028349023482934092340892390101"), Exp: -14021, Valid: true})},
+		//{gaussdbtype.Numeric{Int: mustParseBigInt(t, "913423409823409243892349028349023482934092340892390101"), Exp: -14021, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "913423409823409243892349028349023482934092340892390101"), Exp: -14021, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -90, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -90, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -91, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -91, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -92, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -92, Valid: true})},
 		{gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -93, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{Int: mustParseBigInt(t, "13423409823409243892349028349023482934092340892390101"), Exp: -93, Valid: true})},
 		{gaussdbtype.Numeric{NaN: true, Valid: true}, new(gaussdbtype.Numeric), isExpectedEqNumeric(gaussdbtype.Numeric{NaN: true, Valid: true})},
-		{longestNumeric, new(gaussdbtype.Numeric), isExpectedEqNumeric(longestNumeric)},
+		//{longestNumeric, new(gaussdbtype.Numeric), isExpectedEqNumeric(longestNumeric)},
 		{mustParseNumeric(t, "1"), new(int64), isExpectedEq(int64(1))},
 		{math.NaN(), new(float64), func(a any) bool { return math.IsNaN(a.(float64)) }},
 		{float32(math.NaN()), new(float32), func(a any) bool { return math.IsNaN(float64(a.(float32))) }},
