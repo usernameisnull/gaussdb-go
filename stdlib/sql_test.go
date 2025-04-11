@@ -630,7 +630,8 @@ func TestConnBeginTxIsolation(t *testing.T) {
 			{sqlIso: sql.LevelReadCommitted, gaussdbIso: "read committed"},
 			{sqlIso: sql.LevelRepeatableRead, gaussdbIso: "repeatable read"},
 			{sqlIso: sql.LevelSnapshot, gaussdbIso: "repeatable read"},
-			{sqlIso: sql.LevelSerializable, gaussdbIso: "serializable"},
+			// todo GaussDB目前功能上不支持此隔离级别，等价于REPEATABLE READ (参考：https://support.huaweicloud.com/intl/zh-cn/centralized-devg-v2-gaussdb/gaussdb_42_0501.html)
+			{sqlIso: sql.LevelSerializable, gaussdbIso: "repeatable read"},
 		}
 		for i, tt := range supportedTests {
 			func() {
