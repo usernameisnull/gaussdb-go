@@ -2,17 +2,15 @@ package gaussdbtype_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/require"
 )
 
-// todo: gaussdb not support some type?
-func TestMultirangeCodecTranscode(t *testing.T) {
+// todo: gaussdb not support multirange type
+/*func TestMultirangeCodecTranscode(t *testing.T) {
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "int4multirange", []gaussdbxtest.ValueRoundTripTest{
 		{
@@ -67,7 +65,7 @@ func TestMultirangeCodecTranscode(t *testing.T) {
 			},
 		},
 	})
-}
+}*/
 
 // todo: gaussdb not support some type?
 func TestMultirangeCodecDecodeValue(t *testing.T) {
