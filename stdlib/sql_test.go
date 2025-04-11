@@ -614,7 +614,6 @@ func TestTransactionLifeCycle(t *testing.T) {
 	})
 }
 
-// todo: not support?
 func TestConnBeginTxIsolation(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		var defaultIsoLevel string
