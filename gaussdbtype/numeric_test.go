@@ -128,7 +128,8 @@ func TestNumericCodec(t *testing.T) {
 	})
 }
 
-func TestNumericCodecInfinity(t *testing.T) {
+// todo The numeric type of GaussDB does not support input for Infinity and - Infinity
+/*func TestNumericCodecInfinity(t *testing.T) {
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "numeric", []gaussdbxtest.ValueRoundTripTest{
 		{math.Inf(1), new(float64), isExpectedEq(math.Inf(1))},
@@ -140,7 +141,7 @@ func TestNumericCodecInfinity(t *testing.T) {
 		{gaussdbtype.Numeric{InfinityModifier: gaussdbtype.Infinity, Valid: true}, new(string), isExpectedEq("Infinity")},
 		{gaussdbtype.Numeric{InfinityModifier: gaussdbtype.NegativeInfinity, Valid: true}, new(string), isExpectedEq("-Infinity")},
 	})
-}
+}*/
 
 func TestNumericFloat64Valuer(t *testing.T) {
 	for i, tt := range []struct {
