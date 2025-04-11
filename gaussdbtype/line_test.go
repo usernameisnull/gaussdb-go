@@ -1,15 +1,7 @@
 package gaussdbtype_test
 
-import (
-	"context"
-	"testing"
-
-	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
-)
-
-func TestLineTranscode(t *testing.T) {
+// todo GaussDB 暂时不支持 line数据类型
+/*func TestLineTranscode(t *testing.T) {
 	ctr := defaultConnTestRunner
 	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
@@ -55,4 +47,4 @@ func TestLineTranscode(t *testing.T) {
 		{gaussdbtype.Line{}, new(gaussdbtype.Line), isExpectedEq(gaussdbtype.Line{})},
 		{nil, new(gaussdbtype.Line), isExpectedEq(gaussdbtype.Line{})},
 	})
-}
+}*/
