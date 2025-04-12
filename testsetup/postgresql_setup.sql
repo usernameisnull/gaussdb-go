@@ -1,8 +1,7 @@
 -- Create extensions and types.
 create extension if not exists hstore;
 
--- Create database pgx_test
---create database pgx_test;
+create database pgx_test DBCOMPATIBILITY 'pg';
 
 -- Create users for different types of connections and authentication.
 create user pgx_ssl with SYSADMIN PASSWORD 'Gaussdb@123!';

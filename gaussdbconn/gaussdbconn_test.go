@@ -112,12 +112,12 @@ func TestConnectTLS(t *testing.T) {
 
 	conn, err := gaussdbconn.Connect(ctx, connString)
 	require.NoError(t, err)
-
-	result := conn.ExecParams(ctx, `select ssl from pg_stat_ssl where pg_backend_pid() = pid;`, nil, nil, nil, nil).Read()
-	require.NoError(t, result.Err)
-	require.Len(t, result.Rows, 1)
-	require.Len(t, result.Rows[0], 1)
-	require.Equalf(t, "t", string(result.Rows[0][0]), "not a TLS connection")
+	// todo: GaussDB doesn't have pg_stat_ssl view.
+	//result := conn.ExecParams(ctx, `select ssl from pg_stat_ssl where pg_backend_pid() = pid;`, nil, nil, nil, nil).Read()
+	//require.NoError(t, result.Err)
+	//require.Len(t, result.Rows, 1)
+	//require.Len(t, result.Rows[0], 1)
+	//require.Equalf(t, "t", string(result.Rows[0][0]), "not a TLS connection")
 
 	closeConn(t, conn)
 }
@@ -157,6 +157,7 @@ func TestConnectTLSPasswordProtectedClientCertWithGetSSLPasswordConfigOption(t *
 	defer cancel()
 
 	connString := os.Getenv("PGX_TEST_TLS_CLIENT_CONN_STRING")
+	// todo: need client cert
 	if connString == "" {
 		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TLS_CLIENT_CONN_STRING")
 	}
@@ -356,7 +357,7 @@ func TestConnectInvalidUser(t *testing.T) {
 	config, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
-	config.User = "pgxinvalidusertest"
+	config.User = "invalid_user_test"
 
 	_, err = gaussdbconn.ConnectConfig(ctx, config)
 	require.Error(t, err)
@@ -1625,81 +1626,85 @@ begin
 end$$;`)
 	err = multiResult.Close()
 	require.NoError(t, err)
-	assert.Equal(t, "NOTICE", notice.SeverityUnlocalized)
+	// todo: gaussdb not return the 'V' field.This is identical to the 'S' field except that the contents are never localized.
+	//assert.Equal(t, "NOTICE", notice.SeverityUnlocalized)
+	assert.Equal(t, "NOTICE", notice.Severity)
 	assert.Equal(t, "hello, world", notice.Message)
 
 	ensureConnValid(t, gaussdbConn)
 }
 
-func TestConnOnNotification(t *testing.T) {
-	t.Parallel()
+// todo: LISTEN statement is not yet supported. (SQLSTATE 0A000)
+//func TestConnOnNotification(t *testing.T) {
+//	t.Parallel()
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+//	defer cancel()
+//
+//	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+//	require.NoError(t, err)
+//
+//	var msg string
+//	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
+//		msg = n.Payload
+//	}
+//
+//	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
+//	require.NoError(t, err)
+//	defer closeConn(t, gaussdbConn)
+//
+//	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
+//	require.NoError(t, err)
+//
+//	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
+//	require.NoError(t, err)
+//	defer closeConn(t, notifier)
+//	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
+//	require.NoError(t, err)
+//
+//	_, err = gaussdbConn.Exec(ctx, "select 1").ReadAll()
+//	require.NoError(t, err)
+//
+//	assert.Equal(t, "bar", msg)
+//
+//	ensureConnValid(t, gaussdbConn)
+//}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
-	require.NoError(t, err)
-
-	var msg string
-	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
-		msg = n.Payload
-	}
-
-	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
-	require.NoError(t, err)
-	defer closeConn(t, gaussdbConn)
-
-	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
-	require.NoError(t, err)
-
-	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
-	require.NoError(t, err)
-	defer closeConn(t, notifier)
-	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
-	require.NoError(t, err)
-
-	_, err = gaussdbConn.Exec(ctx, "select 1").ReadAll()
-	require.NoError(t, err)
-
-	assert.Equal(t, "bar", msg)
-
-	ensureConnValid(t, gaussdbConn)
-}
-
-func TestConnWaitForNotification(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
-	require.NoError(t, err)
-
-	var msg string
-	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
-		msg = n.Payload
-	}
-
-	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
-	require.NoError(t, err)
-	defer closeConn(t, gaussdbConn)
-
-	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
-	require.NoError(t, err)
-
-	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
-	require.NoError(t, err)
-	defer closeConn(t, notifier)
-	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
-	require.NoError(t, err)
-
-	err = gaussdbConn.WaitForNotification(ctx)
-	require.NoError(t, err)
-
-	assert.Equal(t, "bar", msg)
-
-	ensureConnValid(t, gaussdbConn)
-}
+// todo: LISTEN statement is not yet supported. (SQLSTATE 0A000)
+//func TestConnWaitForNotification(t *testing.T) {
+//	t.Parallel()
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+//	defer cancel()
+//
+//	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+//	require.NoError(t, err)
+//
+//	var msg string
+//	config.OnNotification = func(c *gaussdbconn.GaussdbConn, n *gaussdbconn.Notification) {
+//		msg = n.Payload
+//	}
+//
+//	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
+//	require.NoError(t, err)
+//	defer closeConn(t, gaussdbConn)
+//
+//	_, err = gaussdbConn.Exec(ctx, "listen foo").ReadAll()
+//	require.NoError(t, err)
+//
+//	notifier, err := gaussdbconn.ConnectConfig(ctx, config)
+//	require.NoError(t, err)
+//	defer closeConn(t, notifier)
+//	_, err = notifier.Exec(ctx, "notify foo, 'bar'").ReadAll()
+//	require.NoError(t, err)
+//
+//	err = gaussdbConn.WaitForNotification(ctx)
+//	require.NoError(t, err)
+//
+//	assert.Equal(t, "bar", msg)
+//
+//	ensureConnValid(t, gaussdbConn)
+//}
 
 func TestConnWaitForNotificationPrecanceled(t *testing.T) {
 	t.Parallel()
@@ -2186,8 +2191,6 @@ func TestConnCopyFromQueryNoTableError(t *testing.T) {
 	ensureConnValid(t, gaussdbConn)
 }
 
-// https://github.com/jackc/gaussdbConn/issues/21
-// todo: Only support CREATE TRIGGER on regular row table. (SQLSTATE 0A000)
 func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 	t.Parallel()
 
@@ -2197,8 +2200,10 @@ func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
-
-	_, err = gaussdbConn.Exec(ctx, `create temporary table sentences(
+	// todo: gaussdb can't use temporary table here, complaints: Only support CREATE TRIGGER on regular row table. (SQLSTATE 0A000)
+	_, err = gaussdbConn.Exec(ctx, `
+	drop table if exists sentences;
+	create table sentences(
 		t text,
 		ts tsvector
 	)`).ReadAll()
@@ -2573,41 +2578,42 @@ func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 	ensureConnValid(t, gaussdbConn)
 }
 
-func TestConnCheckConn(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-
-	// Intentionally using TCP connection for more predictable close behavior. (Not sure if Unix domain sockets would behave subtly different.)
-
-	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
-	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
-	}
-
-	c1, err := gaussdbconn.Connect(ctx, connString)
-	require.NoError(t, err)
-	defer c1.Close(ctx)
-
-	err = c1.CheckConn()
-	require.NoError(t, err)
-
-	c2, err := gaussdbconn.Connect(ctx, connString)
-	require.NoError(t, err)
-	defer c2.Close(ctx)
-
-	_, err = c2.Exec(ctx, fmt.Sprintf("select pg_terminate_backend(%d)", c1.PID())).ReadAll()
-	require.NoError(t, err)
-
-	// It may take a while for the server to kill the backend. Retry until the error is detected or the test context is
-	// canceled.
-	for err == nil && ctx.Err() == nil {
-		time.Sleep(50 * time.Millisecond)
-		err = c1.CheckConn()
-	}
-	require.Error(t, err)
-}
+// todo: CheckConn is deprecated, method .PID() has problem similar to TestFatalTxError
+//func TestConnCheckConn(t *testing.T) {
+//	t.Parallel()
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+//	defer cancel()
+//
+//	// Intentionally using TCP connection for more predictable close behavior. (Not sure if Unix domain sockets would behave subtly different.)
+//
+//	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+//	if connString == "" {
+//		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+//	}
+//
+//	c1, err := gaussdbconn.Connect(ctx, connString)
+//	require.NoError(t, err)
+//	defer c1.Close(ctx)
+//
+//	err = c1.CheckConn()
+//	require.NoError(t, err)
+//
+//	c2, err := gaussdbconn.Connect(ctx, connString)
+//	require.NoError(t, err)
+//	defer c2.Close(ctx)
+//
+//	_, err = c2.Exec(ctx, fmt.Sprintf("select pg_terminate_backend(%d)", c1.PID())).ReadAll()
+//	require.NoError(t, err)
+//
+//	// It may take a while for the server to kill the backend. Retry until the error is detected or the test context is
+//	// canceled.
+//	for err == nil && ctx.Err() == nil {
+//		time.Sleep(50 * time.Millisecond)
+//		err = c1.CheckConn()
+//	}
+//	require.Error(t, err)
+//}
 
 func TestConnPing(t *testing.T) {
 	t.Parallel()

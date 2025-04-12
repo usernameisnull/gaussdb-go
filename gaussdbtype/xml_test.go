@@ -84,45 +84,43 @@ func TestXMLCodecUnmarshalSQLNull(t *testing.T) {
 func TestXMLCodecPointerToPointerToString(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		var s *string
-		err := conn.QueryRow(ctx, "select ''::xml").Scan(&s)
-		require.NoError(t, err)
-		//todo: gaussdb return nil
-		require.Nil(t, s)
+		// todo: gaussdb not support "select ''::xml", complaints: invalid XML content (SQLSTATE 2200N)
+		//err := conn.QueryRow(ctx, "select ''::xml").Scan(&s)
+		//require.NoError(t, err)
+		//require.Nil(t, s)
 		//require.NotNil(t, s)
 		//require.Equal(t, "", *s)
 
-		err = conn.QueryRow(ctx, "select null::xml").Scan(&s)
+		err := conn.QueryRow(ctx, "select null::xml").Scan(&s)
 		require.NoError(t, err)
 		require.Nil(t, s)
 	})
 }
 
-// todo: in opengauss it complaints: "This functionality requires the server to be built with libxml support", but gaussdb support it.
-//func TestXMLCodecDecodeValue(t *testing.T) {
-//	skipCockroachDB(t, "CockroachDB does not support XML.")
-//	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
-//		for _, tt := range []struct {
-//			sql      string
-//			expected any
-//		}{
-//			{
-//				sql:      `select '<foo>bar</foo>'::xml`,
-//				expected: []byte("<foo>bar</foo>"),
-//			},
-//		} {
-//			t.Run(tt.sql, func(t *testing.T) {
-//				rows, err := conn.Query(ctx, tt.sql)
-//				require.NoError(t, err)
-//
-//				for rows.Next() {
-//					values, err := rows.Values()
-//					require.NoError(t, err)
-//					require.Len(t, values, 1)
-//					require.Equal(t, tt.expected, values[0])
-//				}
-//
-//				require.NoError(t, rows.Err())
-//			})
-//		}
-//	})
-//}
+func TestXMLCodecDecodeValue(t *testing.T) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
+		for _, tt := range []struct {
+			sql      string
+			expected any
+		}{
+			{
+				sql:      `select '<foo>bar</foo>'::xml`,
+				expected: []byte("<foo>bar</foo>"),
+			},
+		} {
+			t.Run(tt.sql, func(t *testing.T) {
+				rows, err := conn.Query(ctx, tt.sql)
+				require.NoError(t, err)
+
+				for rows.Next() {
+					values, err := rows.Values()
+					require.NoError(t, err)
+					require.Len(t, values, 1)
+					require.Equal(t, tt.expected, values[0])
+				}
+
+				require.NoError(t, rows.Err())
+			})
+		}
+	})
+}
