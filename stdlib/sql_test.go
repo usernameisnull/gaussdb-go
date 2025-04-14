@@ -436,17 +436,14 @@ func TestConnQueryFailure(t *testing.T) {
 	})
 }
 
-// todo: opengauss not support cardinality, but gaussdb support it.
-//func TestConnSimpleSlicePassThrough(t *testing.T) {
-//	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
-//		skipCockroachDB(t, db, "Server does not support cardinality function")
-//
-//		var n int64
-//		err := db.QueryRow("select cardinality($1::text[])", []string{"a", "b", "c"}).Scan(&n)
-//		require.NoError(t, err)
-//		assert.EqualValues(t, 3, n)
-//	})
-//}
+func TestConnSimpleSlicePassThrough(t *testing.T) {
+	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
+		var n int64
+		err := db.QueryRow("select cardinality($1::text[])", []string{"a", "b", "c"}).Scan(&n)
+		require.NoError(t, err)
+		assert.EqualValues(t, 3, n)
+	})
+}
 
 func TestConnQueryScanGoArray(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
@@ -1125,9 +1122,8 @@ func TestConnQueryRowConstraintErrors(t *testing.T) {
 			n int not null, unique (n),
 			unique (n) deferrable initially deferred )`)
 		require.NoError(t, err)
-		// todo: opengauss not support cascade key word, but gaussdb support, so remove cascade.
-		//_, err = db.Exec(`drop function if exists test_trigger cascade`)
-		_, err = db.Exec(`drop function if exists test_trigger`)
+		// todo: gaussdb needs function parameter, https://doc.hcs.huawei.com/db/en-us/gaussdb/24.7.30.10/devg-dist/gaussdb-12-0595.html
+		_, err = db.Exec(`drop function if exists test_trigger() cascade`)
 		require.NoError(t, err)
 
 		_, err = db.Exec(`create function test_trigger() returns trigger language plpgsql as $$
@@ -1138,12 +1134,12 @@ func TestConnQueryRowConstraintErrors(t *testing.T) {
 		return new;
 	end$$`)
 		require.NoError(t, err)
-
+		// todo: gaussdb use `procedure` key word not `function`
 		_, err = db.Exec(`create constraint trigger test
 			after insert or update on defer_test
 			deferrable initially deferred
 			for each row
-			execute function test_trigger()`)
+			execute procedure test_trigger()`)
 		require.NoError(t, err)
 
 		_, err = db.Exec(`insert into defer_test (id, n) values ('a', 1), ('b', 2), ('c', 3)`)

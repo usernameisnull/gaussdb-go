@@ -290,6 +290,11 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 			if strings.EqualFold(gaussdbError.Severity, "FATAL") {
 				return false
 			}
+			// in gaussdb when 'Invalid username/password,login denied.', it's ERROR severity not FATAL.
+			// related test case: TestConnectInvalidUser
+			if strings.EqualFold(gaussdbError.Severity, "ERROR") && gaussdbError.Code == "28P01" {
+				return false
+			}
 			return true
 		},
 	}

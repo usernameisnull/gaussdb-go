@@ -52,8 +52,7 @@ func TestDateCodecTextEncode(t *testing.T) {
 		{source: gaussdbtype.Date{Time: time.Date(789, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "0789-01-02"},
 		{source: gaussdbtype.Date{Time: time.Date(89, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "0089-01-02"},
 		{source: gaussdbtype.Date{Time: time.Date(9, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "0009-01-02"},
-		// todo: simple protocol: ERROR: invalid data for "year =  12200", value must be between -4712 and 9999, and not be 0 (SQLSTATE 22020)
-		//{source: gaussdbtype.Date{Time: time.Date(12200, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "12200-01-02"},
+		{source: gaussdbtype.Date{Time: time.Date(12200, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "12200-01-02"},
 		{source: gaussdbtype.Date{Time: time.Date(9999, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true}, result: "9999-01-02"},
 		{source: gaussdbtype.Date{InfinityModifier: gaussdbtype.Infinity, Valid: true}, result: "infinity"},
 		{source: gaussdbtype.Date{InfinityModifier: gaussdbtype.NegativeInfinity, Valid: true}, result: "-infinity"},

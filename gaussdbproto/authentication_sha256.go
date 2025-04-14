@@ -20,10 +20,10 @@ type AuthenticationSHA256 struct {
 // Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationSHA256) Backend() {}
 
-// Backend identifies this message as an authentication response.
+// AuthenticationResponse identifies this message as an authentication response.
 func (*AuthenticationSHA256) AuthenticationResponse() {}
 
-// Decode decodes src into dst. src must contain the complete message with the exception of the initial 1 byte message
+// Decode decodes src into dst. src must contain the complete message except the initial 1 byte message
 // type identifier and 4 byte message length.
 func (dst *AuthenticationSHA256) Decode(src []byte) error {
 	if len(src) < 4 {
@@ -39,6 +39,9 @@ func (dst *AuthenticationSHA256) Decode(src []byte) error {
 	readBuf := ReadBuf(src)
 	dst.r = &readBuf
 
+	if len(src) < 82 {
+		return &invalidMessageFormatErr{messageType: "AuthenticationSASL", details: "at least 82 bytes"}
+	}
 	authMechanisms := src[8:82]
 	for len(authMechanisms) > 1 {
 		idx := bytes.IndexByte(authMechanisms, 0)
