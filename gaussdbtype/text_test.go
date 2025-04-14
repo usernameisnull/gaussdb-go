@@ -74,8 +74,7 @@ func TestTextCodecBPChar(t *testing.T) {
 		{nil, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},
 		{"   ", new(string), isExpectedEq("   ")},
 		{"", new(string), isExpectedEq("   ")},
-		// todo char(3) 的 3 字节限制无法存储 " 嗨 "（5 字节）
-		//{" 嗨 ", new(string), isExpectedEq(" 嗨 ")},
+		//{" 嗨 ", new(string), isExpectedEq(" 嗨 ")}, // todo The 3-byte limit of char (3) cannot store "hi" (5 bytes)
 	})
 }
 
