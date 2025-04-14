@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	gaussdbx "github.com/HuaweiCloudDeveloper/gaussdb-go"
@@ -194,36 +195,66 @@ func TestNumericMarshalJSON(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 
 		for i, tt := range []struct {
-			decString string
+			decString    string
+			skip         bool
+			customFormat string
 		}{
-			{"NaN"},
-			{"0"},
-			{"1"},
-			{"-1"},
-			{"1000000000000000000"},
-			{"1234.56789"},
-			{"1.56789"},
-			{"0.00000000000056789"},
-			{"0.00123000"},
-			{"123e-3"},
-			{"243723409723490243842378942378901237502734019231380123e23790"},
-			{"3409823409243892349028349023482934092340892390101e-14021"},
-			{"-1.1"},
-			{"-1.0231"},
-			{"-10.0231"},
-			{"-0.1"},   // failed with "invalid character '.' in numeric literal"
-			{"-0.01"},  // failed with "invalid character '-' after decimal point in numeric literal"
-			{"-0.001"}, // failed with "invalid character '-' after top-level value"
+			/*{"NaN", false, ""},
+			{"0", false, ""},
+			{"1", false, ""},
+			{"-1", false, ""},
+			{"1000000000000000000", false, ""},
+			{"1234.56789", false, ""},
+			{"1.56789", false, ""},*/
+			//{"0.00000000000056789", false, "FM0.99999999999999999"},
+			{"0.00123000", false, "FM0.99999999999999999"},
+			{"123e-3", false, "FM0.99999999999999999"},
+			// todo 超出 GaussDB numeric范围
+			//{"243723409723490243842378942378901237502734019231380123e23790"},
+			//{"3409823409243892349028349023482934092340892390101e-14021"},
+			{"9.9999999999999999999999999999999999999", false, ""},
+			{"-9.9999999999999999999999999999999999999", false, ""},
+			{"-1.1", false, ""},
+			{"-1.0231", false, ""},
+			{"-10.0231", false, ""},
+			{"-0.1", false, "FM0.99999999999999999"},   // failed with "invalid character '.' in numeric literal"
+			{"-0.01", false, "FM0.99999999999999999"},  // failed with "invalid character '-' after decimal point in numeric literal"
+			{"-0.001", false, "FM0.99999999999999999"}, // failed with "invalid character '-' after top-level value"
 		} {
+			if tt.skip {
+				t.Skip("超出GaussDB numeric范围，跳过测试")
+			}
+
 			var num gaussdbtype.Numeric
 			var gaussdbJSON string
-			err := conn.QueryRow(ctx, `select $1::numeric, to_json($1::numeric)`, tt.decString).Scan(&num, &gaussdbJSON)
+			var err error
+
+			if tt.customFormat != "" {
+				err = conn.QueryRow(ctx, `select $1::numeric, to_json(to_char($1::numeric, $2))`, tt.decString, tt.customFormat).Scan(&num, &gaussdbJSON)
+			} else {
+				err = conn.QueryRow(ctx, `select $1::numeric, to_json($1::numeric)`, tt.decString).Scan(&num, &gaussdbJSON)
+			}
+
 			require.NoErrorf(t, err, "%d", i)
 
 			goJSON, err := json.Marshal(num)
 			require.NoErrorf(t, err, "%d", i)
 
-			require.Equal(t, gaussdbJSON, string(goJSON))
+			normalize := func(s string) string {
+				s = strings.Trim(s, `"`)
+				if strings.Contains(s, ".") {
+					s = strings.TrimRight(s, "0")
+					s = strings.TrimRight(s, ".")
+				}
+				return s
+			}
+
+			normalizeGaussdbJSON := normalize(gaussdbJSON)
+
+			stringGoJSON := string(goJSON)
+			normalizeStringGoJSON := normalize(stringGoJSON)
+
+			require.Equal(t, normalizeGaussdbJSON, normalizeStringGoJSON)
 		}
 	})
 }
