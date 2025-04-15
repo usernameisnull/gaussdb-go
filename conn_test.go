@@ -1189,11 +1189,12 @@ func TestStmtCacheInvalidationConn(t *testing.T) {
 	nextErr := rows.Err()
 	rows.Close()
 	for _, err := range []error{nextErr, rows.Err()} {
+		// same as TestStmtCacheInvalidationTx
 		if err == nil {
-			t.Fatal(`expected "cached plan must not change result type": no error`)
+			t.Fatal(`expected "Cached plan must not change result type": no error`)
 		}
-		if !strings.Contains(err.Error(), "cached plan must not change result type") {
-			t.Fatalf(`expected "cached plan must not change result type", got: "%s"`, err.Error())
+		if !strings.Contains(err.Error(), "Cached plan must not change result type") {
+			t.Fatalf(`expected "Cached plan must not change result type", got: "%s"`, err.Error())
 		}
 	}
 
@@ -1254,11 +1255,12 @@ func TestStmtCacheInvalidationTx(t *testing.T) {
 	nextErr := rows.Err()
 	rows.Close()
 	for _, err := range []error{nextErr, rows.Err()} {
+		// todo: opengauss always return "cached ...", gaussdb return "Cached ..."
 		if err == nil {
-			t.Fatal(`expected "cached plan must not change result type": no error`)
+			t.Fatal(`expected "Cached plan must not change result type": no error`)
 		}
-		if !strings.Contains(err.Error(), "cached plan must not change result type") {
-			t.Fatalf(`expected "cached plan must not change result type", got: "%s"`, err.Error())
+		if !strings.Contains(err.Error(), "Cached plan must not change result type") {
+			t.Fatalf(`expected "Cached plan must not change result type", got: "%s"`, err.Error())
 		}
 	}
 
