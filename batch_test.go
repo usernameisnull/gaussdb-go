@@ -2,6 +2,7 @@ package gaussdbgo_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -1022,8 +1023,14 @@ func TestConnSendBatchErrorDoesNotLeaveOrphanedPreparedStatement(t *testing.T) {
 		batch.Queue("select col1 from foo")
 		batch.Queue("select col1 from baz")
 		err := conn.SendBatch(ctx, batch).Close()
-		require.EqualError(t, err, `ERROR: relation "baz" does not exist on gaussdb (SQLSTATE 42P01)`)
+		// todo: opengauss, gaussdb return different error.
+		//require.EqualError(t, err, `ERROR: relation "baz" does not exist on gaussdb (SQLSTATE 42P01)`)
+		require.Contains(t, err.Error(), `ERROR: Relation "baz" does not exist on`)
+		var gaussdbConnErr *gaussdbconn.GaussdbError
 
+		ok := errors.As(err, &gaussdbConnErr)
+		require.True(t, ok)
+		require.EqualValues(t, gaussdbConnErr.Code, "42P01")
 		mustExec(t, conn, `create temporary table baz(col1 text primary key);`)
 
 		// Since table baz now exists, the batch should succeed.

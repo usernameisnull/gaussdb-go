@@ -981,7 +981,8 @@ func TestQueryRowErrors(t *testing.T) {
 		scanArgs  []any
 		err       string
 	}{
-		{"select $1::badtype", []any{"Jack"}, []any{&actual.i16}, `type "badtype" does not exist`},
+		// todo: gaussdb: 'ERROR: Type "badtype" does not exist. (SQLSTATE 42704)', opengauss: 'ERROR: type "badtype" does not exist (SQLSTATE 42704)'
+		{"select $1::badtype", []any{"Jack"}, []any{&actual.i16}, `Type "badtype" does not exist`},
 		{"SYNTAX ERROR", []any{}, []any{&actual.i16}, "SQLSTATE 42601"},
 		{"select $1::text", []any{"Jack"}, []any{&actual.i16}, "cannot scan text (OID 25) in text format into *int16"},
 		{"select $1::point", []any{int(705)}, []any{&actual.s}, "unable to encode 705 into binary format for point (OID 600)"},
@@ -1496,8 +1497,8 @@ func TestQueryContextErrorWhileReceivingRows(t *testing.T) {
 		}
 		rowCount++
 	}
-
-	if rows.Err() == nil || rows.Err().Error() != "ERROR: division by zero (SQLSTATE 22012)" {
+	// todo: opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
+	if rows.Err() == nil || rows.Err().Error() != "ERROR: Division by zero. (SQLSTATE 22012)" {
 		t.Fatalf("Expected division by zero error, but got %v", rows.Err())
 	}
 
@@ -1543,7 +1544,8 @@ func TestQueryRowContextErrorWhileReceivingRow(t *testing.T) {
 
 	var result int
 	err := conn.QueryRow(ctx, "select 10/0").Scan(&result)
-	if err == nil || err.Error() != "ERROR: division by zero (SQLSTATE 22012)" {
+	// same as TestQueryContextErrorWhileReceivingRows
+	if err == nil || err.Error() != "ERROR: Division by zero. (SQLSTATE 22012)" {
 		t.Fatalf("Expected division by zero error, but got %v", err)
 	}
 
