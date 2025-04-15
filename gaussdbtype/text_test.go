@@ -74,21 +74,21 @@ func TestTextCodecBPChar(t *testing.T) {
 		{nil, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},
 		{"   ", new(string), isExpectedEq("   ")},
 		{"", new(string), isExpectedEq("   ")},
-		{" 嗨 ", new(string), isExpectedEq(" 嗨 ")},
+		//{" 嗨 ", new(string), isExpectedEq(" 嗨 ")}, // todo The 3-byte limit of char (3) cannot store "hi" (5 bytes)
 	})
 }
 
-// ACLItem is used for PostgreSQL's aclitem data type. A sample aclitem
+// ACLItem is used for GaussDB's aclitem data type. A sample aclitem
 // might look like this:
 //
-//	postgres=arwdDxt/postgres
+//	root=arwdDxt/root
 //
 // Note, however, that because the user/role name part of an aclitem is
 // an identifier, it follows all the usual formatting rules for SQL
 // identifiers: if it contains spaces and other special characters,
 // it should appear in double-quotes:
 //
-//	postgres=arwdDxt/"role with spaces"
+//	root=arwdDxt/"role with spaces"
 //
 // It only supports the text format.
 func TestTextCodecACLItem(t *testing.T) {
@@ -97,9 +97,9 @@ func TestTextCodecACLItem(t *testing.T) {
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, ctr, nil, "aclitem", []gaussdbxtest.ValueRoundTripTest{
 		{
-			gaussdbtype.Text{String: "postgres=arwdDxt/postgres", Valid: true},
+			gaussdbtype.Text{String: "root=arwdDxt/root", Valid: true},
 			new(gaussdbtype.Text),
-			isExpectedEq(gaussdbtype.Text{String: "postgres=arwdDxt/postgres", Valid: true}),
+			isExpectedEq(gaussdbtype.Text{String: "root=arwdDxt/root", Valid: true}),
 		},
 		{gaussdbtype.Text{}, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},
 		{nil, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},

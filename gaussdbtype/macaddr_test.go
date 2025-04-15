@@ -26,7 +26,6 @@ func isExpectedEqHardwareAddr(a any) func(any) bool {
 	}
 }
 
-// todo: gaussdb not support some type?
 func TestMacaddrCodec(t *testing.T) {
 	// Only testing known OID query exec modes as net.HardwareAddr could map to macaddr or macaddr8.
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, gaussdbxtest.KnownOIDQueryExecModes, "macaddr", []gaussdbxtest.ValueRoundTripTest{
@@ -48,7 +47,8 @@ func TestMacaddrCodec(t *testing.T) {
 		{nil, new(*net.HardwareAddr), isExpectedEq((*net.HardwareAddr)(nil))},
 	})
 
-	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, gaussdbxtest.KnownOIDQueryExecModes, "macaddr8", []gaussdbxtest.ValueRoundTripTest{
+	// todo: gaussdb not support macaddr8 type
+	/*gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, gaussdbxtest.KnownOIDQueryExecModes, "macaddr8", []gaussdbxtest.ValueRoundTripTest{
 		{
 			mustParseMacaddr(t, "01:23:45:67:89:ab:01:08"),
 			new(net.HardwareAddr),
@@ -65,5 +65,5 @@ func TestMacaddrCodec(t *testing.T) {
 			isExpectedEq("01:23:45:67:89:ab:01:08"),
 		},
 		{nil, new(*net.HardwareAddr), isExpectedEq((*net.HardwareAddr)(nil))},
-	})
+	})*/
 }
