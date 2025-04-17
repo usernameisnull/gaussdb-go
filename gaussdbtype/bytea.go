@@ -45,7 +45,7 @@ func (b *PreallocBytes) ScanBytes(v []byte) error {
 	return nil
 }
 
-// UndecodedBytes can be used as a scan target to get the raw bytes from PostgreSQL without any decoding.
+// UndecodedBytes can be used as a scan target to get the raw bytes from GaussDB without any decoding.
 type UndecodedBytes []byte
 
 type scanPlanAnyToUndecodedBytes struct{}

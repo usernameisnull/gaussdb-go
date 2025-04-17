@@ -14,7 +14,7 @@ type AuthenticationSASL struct {
 	AuthMechanisms []string
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationSASL) Backend() {}
 
 // Backend identifies this message as an authentication response.

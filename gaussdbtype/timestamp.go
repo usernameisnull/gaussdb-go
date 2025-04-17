@@ -22,9 +22,9 @@ type TimestampValuer interface {
 	TimestampValue() (Timestamp, error)
 }
 
-// Timestamp represents the PostgreSQL timestamp type.
+// Timestamp represents the GaussDB timestamp type.
 type Timestamp struct {
-	Time             time.Time // Time zone will be ignored when encoding to PostgreSQL.
+	Time             time.Time // Time zone will be ignored when encoding to GaussDB.
 	InfinityModifier InfinityModifier
 	Valid            bool
 }
@@ -107,7 +107,7 @@ func (ts *Timestamp) UnmarshalJSON(b []byte) error {
 	default:
 		// Parse time with or without timezonr
 		tss := *s
-		//		PostgreSQL uses ISO 8601 without timezone for to_json function and casting from a string to timestampt
+		//		GaussDB uses ISO 8601 without timezone for to_json function and casting from a string to timestampt
 		tim, err := time.Parse(time.RFC3339Nano, tss)
 		if err == nil {
 			*ts = Timestamp{Time: tim, Valid: true}

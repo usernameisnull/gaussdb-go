@@ -50,7 +50,7 @@ func defaultHost() string {
 	candidatePaths := []string{
 		"/var/run/postgresql", // Debian
 		"/private/tmp",        // OSX - homebrew
-		"/tmp",                // standard PostgreSQL
+		"/tmp",                // standard GaussDB
 	}
 
 	for _, path := range candidatePaths {

@@ -8,7 +8,7 @@ type GSSResponse struct {
 	Data []byte
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (g *GSSResponse) Frontend() {}
 
 func (g *GSSResponse) Decode(data []byte) error {

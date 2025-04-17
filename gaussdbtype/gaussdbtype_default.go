@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	// defaultMap contains default mappings between PostgreSQL server types and Go type handling logic.
+	// defaultMap contains default mappings between GaussDB server types and Go type handling logic.
 	defaultMap         *Map
 	defaultMapInitOnce = sync.Once{}
 )
@@ -174,12 +174,12 @@ func initDefaultMap() {
 	defaultMap.RegisterType(&Type{Name: "_xid8", OID: XID8ArrayOID, Codec: &ArrayCodec{ElementType: defaultMap.oidToType[XID8OID]}})
 	defaultMap.RegisterType(&Type{Name: "_xml", OID: XMLArrayOID, Codec: &ArrayCodec{ElementType: defaultMap.oidToType[XMLOID]}})
 
-	// Integer types that directly map to a PostgreSQL type
+	// Integer types that directly map to a GaussDB type
 	registerDefaultGaussdbTypeVariants[int16](defaultMap, "int2")
 	registerDefaultGaussdbTypeVariants[int32](defaultMap, "int4")
 	registerDefaultGaussdbTypeVariants[int64](defaultMap, "int8")
 
-	// Integer types that do not have a direct match to a PostgreSQL type
+	// Integer types that do not have a direct match to a GaussDB type
 	registerDefaultGaussdbTypeVariants[int8](defaultMap, "int8")
 	registerDefaultGaussdbTypeVariants[int](defaultMap, "int8")
 	registerDefaultGaussdbTypeVariants[uint8](defaultMap, "int8")
@@ -213,8 +213,8 @@ func initDefaultMap() {
 	registerDefaultGaussdbTypeVariants[Multirange[Range[Date]]](defaultMap, "datemultirange")
 	registerDefaultGaussdbTypeVariants[Float4](defaultMap, "float4")
 	registerDefaultGaussdbTypeVariants[Float8](defaultMap, "float8")
-	registerDefaultGaussdbTypeVariants[Range[Float8]](defaultMap, "numrange")                  // There is no PostgreSQL builtin float8range so map it to numrange.
-	registerDefaultGaussdbTypeVariants[Multirange[Range[Float8]]](defaultMap, "nummultirange") // There is no PostgreSQL builtin float8multirange so map it to nummultirange.
+	registerDefaultGaussdbTypeVariants[Range[Float8]](defaultMap, "numrange")                  // There is no GaussDB builtin float8range so map it to numrange.
+	registerDefaultGaussdbTypeVariants[Multirange[Range[Float8]]](defaultMap, "nummultirange") // There is no GaussDB builtin float8multirange so map it to nummultirange.
 	registerDefaultGaussdbTypeVariants[Int2](defaultMap, "int2")
 	registerDefaultGaussdbTypeVariants[Int4](defaultMap, "int4")
 	registerDefaultGaussdbTypeVariants[Range[Int4]](defaultMap, "int4range")

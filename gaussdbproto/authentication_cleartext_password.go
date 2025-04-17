@@ -12,7 +12,7 @@ import (
 type AuthenticationCleartextPassword struct {
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationCleartextPassword) Backend() {}
 
 // Backend identifies this message as an authentication response.

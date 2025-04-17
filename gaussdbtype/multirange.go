@@ -10,7 +10,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// MultirangeGetter is a type that can be converted into a PostgreSQL multirange.
+// MultirangeGetter is a type that can be converted into a GaussDB multirange.
 type MultirangeGetter interface {
 	// IsNull returns true if the value is SQL NULL.
 	IsNull() bool
@@ -25,7 +25,7 @@ type MultirangeGetter interface {
 	IndexType() any
 }
 
-// MultirangeSetter is a type can be set from a PostgreSQL multirange.
+// MultirangeSetter is a type can be set from a GaussDB multirange.
 type MultirangeSetter interface {
 	// ScanNull sets the value to SQL NULL.
 	ScanNull() error

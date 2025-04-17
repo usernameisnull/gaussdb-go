@@ -1,16 +1,16 @@
-// Package gaussdbtype converts between Go and PostgreSQL values.
+// Package gaussdbtype converts between Go and GaussDB values.
 /*
-The primary type is the Map type. It is a map of PostgreSQL types identified by OID (object ID) to a Codec. A Codec is
-responsible for converting between Go and PostgreSQL values. NewMap creates a Map with all supported standard PostgreSQL
+The primary type is the Map type. It is a map of GaussDB types identified by OID (object ID) to a Codec. A Codec is
+responsible for converting between Go and GaussDB values. NewMap creates a Map with all supported standard GaussDB
 types already registered. Additional types can be registered with Map.RegisterType.
 
-Use Map.Scan and Map.Encode to decode PostgreSQL values to Go and encode Go values to PostgreSQL respectively.
+Use Map.Scan and Map.Encode to decode GaussDB values to Go and encode Go values to GaussDB respectively.
 
 Base Type Mapping
 
-gaussdbtype maps between all common base types directly between Go and PostgreSQL. In particular:
+gaussdbtype maps between all common base types directly between Go and GaussDB. In particular:
 
-    Go           PostgreSQL
+    Go           GaussDB
     -----------------------
     string        varchar
                   text
@@ -58,25 +58,25 @@ to explicitly set their Valid field to true, otherwise the parameter's value wil
 
 JSON Support
 
-gaussdbtype automatically marshals and unmarshals data from json and jsonb PostgreSQL types.
+gaussdbtype automatically marshals and unmarshals data from json and jsonb GaussDB types.
 
-Extending Existing PostgreSQL Type Support
+Extending Existing GaussDB Type Support
 
 Generally, all Codecs will support interfaces that can be implemented to enable scanning and encoding. For example,
 PointCodec can use any Go type that implements the PointScanner and PointValuer interfaces. So rather than use
 gaussdbtype.Point and application can directly use its own point type with gaussdbtype as long as it implements those interfaces.
 
-See example_custom_type_test.go for an example of a custom type for the PostgreSQL point type.
+See example_custom_type_test.go for an example of a custom type for the GaussDB point type.
 
-Sometimes pgx supports a PostgreSQL type such as numeric but the Go type is in an external package that does not have
+Sometimes pgx supports a GaussDB type such as numeric but the Go type is in an external package that does not have
 pgx support such as github.com/shopspring/decimal. These types can be registered with gaussdbtype with custom conversion
 logic.
 
-New PostgreSQL Type Support
+New GaussDB Type Support
 
-gaussdbtype uses the PostgreSQL OID to determine how to encode or decode a value. gaussdbtype supports array, composite, domain,
-and enum types. However, any type created in PostgreSQL with CREATE TYPE will receive a new OID. This means that the OID
-of each new PostgreSQL type must be registered for gaussdbtype to handle values of that type with the correct Codec.
+gaussdbtype uses the GaussDB OID to determine how to encode or decode a value. gaussdbtype supports array, composite, domain,
+and enum types. However, any type created in GaussDB with CREATE TYPE will receive a new OID. This means that the OID
+of each new GaussDB type must be registered for gaussdbtype to handle values of that type with the correct Codec.
 
 The pgx.Conn LoadType method can return a *Type for array, composite, domain, and enum types by inspecting the database
 metadata. This *Type can then be registered with Map.RegisterType.
@@ -106,28 +106,28 @@ A type cannot be registered unless all types it depends on are already registere
 registered until its element type is registered.
 
 ArrayCodec implements support for arrays. If gaussdbtype supports type T then it can easily support []T by registering an
-ArrayCodec for the appropriate PostgreSQL OID. In addition, Array[T] type can support multi-dimensional arrays.
+ArrayCodec for the appropriate GaussDB OID. In addition, Array[T] type can support multi-dimensional arrays.
 
-CompositeCodec implements support for PostgreSQL composite types. Go structs can be scanned into if the public fields of
-the struct are in the exact order and type of the PostgreSQL type or by implementing CompositeIndexScanner and
+CompositeCodec implements support for GaussDB composite types. Go structs can be scanned into if the public fields of
+the struct are in the exact order and type of the GaussDB type or by implementing CompositeIndexScanner and
 CompositeIndexGetter.
 
 Domain types are treated as their underlying type if the underlying type and the domain type are registered.
 
-PostgreSQL enums can usually be treated as text. However, EnumCodec implements support for interning strings which can
+GaussDB enums can usually be treated as text. However, EnumCodec implements support for interning strings which can
 reduce memory usage.
 
 While gaussdbtype will often still work with unregistered types it is highly recommended that all types be registered due to
 an improvement in performance and the elimination of certain edge cases.
 
-If an entirely new PostgreSQL type (e.g. PostGIS types) is used then the application or a library can create a new
+If an entirely new GaussDB type (e.g. PostGIS types) is used then the application or a library can create a new
 Codec. Then the OID / Codec mapping can be registered with Map.RegisterType. There is no difference between a Codec
 defined and registered by the application and a Codec built in to gaussdbtype. See any of the Codecs in gaussdbtype for Codec
 examples and for examples of type registration.
 
 Encoding Unknown Types
 
-gaussdbtype works best when the OID of the PostgreSQL type is known. But in some cases such as using the simple protocol the
+gaussdbtype works best when the OID of the GaussDB type is known. But in some cases such as using the simple protocol the
 OID is unknown. In this case Map.RegisterDefaultGaussdbType can be used to register an assumed OID for a particular Go type.
 
 Renamed Types
@@ -179,9 +179,9 @@ internally separated.
 
 Reducing Compiled Binary Size
 
-pgx.QueryExecModeExec and pgx.QueryExecModeSimpleProtocol require the default PostgreSQL type to be registered for each
+pgx.QueryExecModeExec and pgx.QueryExecModeSimpleProtocol require the default GaussDB type to be registered for each
 Go type used as a query parameter. By default pgx does this for all supported types and their array variants. If an
-application does not use those query execution modes or manually registers the default PostgreSQL type for the types it
+application does not use those query execution modes or manually registers the default GaussDB type for the types it
 uses as query parameters it can use the build tag nogaussdbregisterdefaulttypes. This omits the default type registration
 and reduces the compiled binary size by ~2MB.
 */

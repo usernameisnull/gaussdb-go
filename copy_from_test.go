@@ -411,7 +411,7 @@ func TestConnCopyFromJSON(t *testing.T) {
 
 	for _, typeName := range []string{"json", "jsonb"} {
 		if _, ok := conn.TypeMap().TypeForName(typeName); !ok {
-			return // No JSON/JSONB type -- must be running against old PostgreSQL
+			return // No JSON/JSONB type -- must be running against old GaussDB
 		}
 	}
 

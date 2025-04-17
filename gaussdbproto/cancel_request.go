@@ -15,7 +15,7 @@ type CancelRequest struct {
 	SecretKey uint32
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*CancelRequest) Frontend() {}
 
 func (dst *CancelRequest) Decode(src []byte) error {

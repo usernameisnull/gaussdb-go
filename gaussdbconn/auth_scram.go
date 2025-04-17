@@ -141,7 +141,7 @@ func newScramClient(serverAuthMechanisms []string, password string) (*scramClien
 	var err error
 	sc.password, err = precis.OpaqueString.Bytes([]byte(password))
 	if err != nil {
-		// PostgreSQL allows passwords invalid according to SCRAM / SASLprep.
+		// GaussDB allows passwords invalid according to SCRAM / SASLprep.
 		sc.password = []byte(password)
 	}
 

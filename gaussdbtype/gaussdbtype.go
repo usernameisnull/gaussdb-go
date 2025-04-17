@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// PostgreSQL oids for common types
+// GaussDB oids for common types
 const (
 	BoolOID                = 16
 	ByteaOID               = 17
@@ -148,13 +148,13 @@ func (im InfinityModifier) String() string {
 	}
 }
 
-// PostgreSQL format codes
+// GaussDB format codes
 const (
 	TextFormatCode   = 0
 	BinaryFormatCode = 1
 )
 
-// A Codec converts between Go and PostgreSQL values. A Codec must not be mutated after it is registered with a Map.
+// A Codec converts between Go and GaussDB values. A Codec must not be mutated after it is registered with a Map.
 type Codec interface {
 	// FormatSupported returns true if the format is supported.
 	FormatSupported(int16) bool
@@ -162,11 +162,11 @@ type Codec interface {
 	// PreferredFormat returns the preferred format.
 	PreferredFormat() int16
 
-	// PlanEncode returns an EncodePlan for encoding value into PostgreSQL format for oid and format. If no plan can be
+	// PlanEncode returns an EncodePlan for encoding value into GaussDB format for oid and format. If no plan can be
 	// found then nil is returned.
 	PlanEncode(m *Map, oid uint32, format int16, value any) EncodePlan
 
-	// PlanScan returns a ScanPlan for scanning a PostgreSQL value into a destination with the same type as target. If
+	// PlanScan returns a ScanPlan for scanning a GaussDB value into a destination with the same type as target. If
 	// no plan can be found then nil is returned.
 	PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan
 
@@ -185,15 +185,15 @@ func (e *nullAssignmentError) Error() string {
 	return fmt.Sprintf("cannot assign NULL to %T", e.dst)
 }
 
-// Type represents a PostgreSQL data type. It must not be mutated after it is registered with a Map.
+// Type represents a GaussDB data type. It must not be mutated after it is registered with a Map.
 type Type struct {
 	Codec Codec
 	Name  string
 	OID   uint32
 }
 
-// Map is the mapping between PostgreSQL server types and Go type handling logic. It can encode values for
-// transmission to a PostgreSQL server and scan received values.
+// Map is the mapping between GaussDB server types and Go type handling logic. It can encode values for
+// transmission to a GaussDB server and scan received values.
 type Map struct {
 	oidToType         map[uint32]*Type
 	nameToType        map[string]*Type
@@ -284,8 +284,8 @@ func (m *Map) RegisterType(t *Type) {
 	}
 }
 
-// RegisterDefaultGaussdbType registers a mapping of a Go type to a PostgreSQL type name. Typically the data type to be
-// encoded or decoded is determined by the PostgreSQL OID. But if the OID of a value to be encoded or decoded is
+// RegisterDefaultGaussdbType registers a mapping of a Go type to a GaussDB type name. Typically the data type to be
+// encoded or decoded is determined by the GaussDB OID. But if the OID of a value to be encoded or decoded is
 // unknown, this additional mapping will be used by TypeForValue to determine a suitable data type.
 func (m *Map) RegisterDefaultGaussdbType(value any, name string) {
 	m.reflectTypeToName[reflect.TypeOf(value)] = name
@@ -443,7 +443,7 @@ type scanPlanFail struct {
 
 func (plan *scanPlanFail) Scan(src []byte, dst any) error {
 	// If src is NULL it might be possible to scan into dst even though it is the types are not compatible. While this
-	// may seem to be a contrived case it can occur when selecting NULL directly. PostgreSQL assigns it the type of text.
+	// may seem to be a contrived case it can occur when selecting NULL directly. GaussDB assigns it the type of text.
 	// It would be surprising to the caller to have to cast the NULL (e.g. `select null::int`). So try to figure out a
 	// compatible data type for dst and scan with that.
 	if src == nil {
@@ -1206,7 +1206,7 @@ func codecDecodeToTextFormat(codec Codec, m *Map, oid uint32, format int16, src 
 	}
 }
 
-// PlanEncode returns an Encode plan for encoding value into PostgreSQL format for oid and format. If no plan can be
+// PlanEncode returns an Encode plan for encoding value into GaussDB format for oid and format. If no plan can be
 // found then nil is returned.
 func (m *Map) PlanEncode(oid uint32, format int16, value any) EncodePlan {
 	return m.planEncodeDepth(oid, format, value, 0)
@@ -1251,7 +1251,7 @@ func (m *Map) planEncode(oid uint32, format int16, value any, depth int) EncodeP
 	} else {
 		// If no type for the OID was found, then either it is unknowable (e.g. the simple protocol) or it is an
 		// unregistered type. In either case try to find the type and OID that matches the value (e.g. a []byte would be
-		// registered to PostgreSQL bytea).
+		// registered to GaussDB bytea).
 		if dataType, ok := m.TypeForValue(value); ok {
 			dt = dataType
 			oid = dt.OID // Preserve assumed OID in case we are recursively called below.
@@ -1989,7 +1989,7 @@ func (m *Map) Encode(oid uint32, formatCode int16, value any, buf []byte) (newBu
 // type needs assistance from Map to implement the sql.Scanner interface. It is not necessary for types like Box that
 // implement sql.Scanner directly.
 //
-// This uses the type of v to look up the PostgreSQL OID that v presumably came from. This means v must be registered
+// This uses the type of v to look up the GaussDB OID that v presumably came from. This means v must be registered
 // with m by calling RegisterDefaultGaussdbType.
 func (m *Map) SQLScanner(v any) sql.Scanner {
 	if s, ok := v.(sql.Scanner); ok {

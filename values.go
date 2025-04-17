@@ -7,7 +7,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// PostgreSQL format codes
+// GaussDB format codes
 const (
 	TextFormatCode   = 0
 	BinaryFormatCode = 1

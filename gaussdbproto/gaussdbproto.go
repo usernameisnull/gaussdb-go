@@ -8,12 +8,12 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// maxMessageBodyLen is the maximum length of a message body in bytes. See PG_LARGE_MESSAGE_LIMIT in the PostgreSQL
+// maxMessageBodyLen is the maximum length of a message body in bytes. See PG_LARGE_MESSAGE_LIMIT in the GaussDB
 // source. It is defined as (MaxAllocSize - 1). MaxAllocSize is defined as 0x3fffffff.
 const maxMessageBodyLen = (0x3fffffff - 1)
 
 // Message is the interface implemented by an object that can decode and encode
-// a particular PostgreSQL message.
+// a particular GaussDB message.
 type Message interface {
 	// Decode is allowed and expected to retain a reference to data after
 	// returning (unlike encoding.BinaryUnmarshaler).

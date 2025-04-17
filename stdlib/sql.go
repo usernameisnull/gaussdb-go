@@ -32,7 +32,7 @@
 //	connStr := stdlib.RegisterConnConfig(connConfig)
 //	db, _ := sql.Open("pgx", connStr)
 //
-// pgx uses standard PostgreSQL positional parameters in queries. e.g. $1, $2. It does not support named parameters.
+// pgx uses standard GaussDB positional parameters in queries. e.g. $1, $2. It does not support named parameters.
 //
 //	db.QueryRow("select * from users where id=$1", userID)
 //
@@ -55,9 +55,9 @@
 //	  // handle error that occurred while using *gaussdbgo.Conn
 //	}
 //
-// # PostgreSQL Specific Data Types
+// # GaussDB Specific Data Types
 //
-// The pgtype package provides support for PostgreSQL specific types. *pgtype.Map.SQLScanner is an adapter that makes
+// The pgtype package provides support for GaussDB specific types. *pgtype.Map.SQLScanner is an adapter that makes
 // these types usable as a sql.Scanner.
 //
 //	m := pgtype.NewMap()

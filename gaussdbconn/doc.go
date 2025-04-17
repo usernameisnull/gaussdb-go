@@ -1,6 +1,6 @@
-// Package pgconn is a low-level PostgreSQL database driver.
+// Package pgconn is a low-level GaussDB database driver.
 /*
-pgconn provides lower level access to a PostgreSQL connection than a database/sql or pgx connection. It operates at
+pgconn provides lower level access to a GaussDB connection than a database/sql or pgx connection. It operates at
 nearly the same level is the C library libpq.
 
 Establishing a Connection
@@ -32,7 +32,7 @@ This can be especially useful when queries that are frequently canceled and the 
 a problem. DeadlineContextWatcherHandler and CancelRequestContextWatcherHandler can be used to introduce a delay before
 interrupting the query in such a way as to close the connection.
 
-The CancelRequest method may be used to request the PostgreSQL server cancel an in-progress query without forcing the
+The CancelRequest method may be used to request the GaussDB server cancel an in-progress query without forcing the
 client to abort.
 */
 package gaussdbconn

@@ -354,7 +354,7 @@ func (e ScanArgError) Unwrap() error {
 //
 // typeMap - OID to Go type mapping.
 // fieldDescriptions - OID and format of values
-// values - the raw data as returned from the PostgreSQL server
+// values - the raw data as returned from the GaussDB server
 // dest - the destination that values will be decoded into
 func ScanRow(typeMap *gaussdbtype.Map, fieldDescriptions []gaussdbconn.FieldDescription, values [][]byte, dest ...any) error {
 	if len(fieldDescriptions) != len(values) {

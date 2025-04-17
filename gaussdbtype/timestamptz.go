@@ -29,7 +29,7 @@ type TimestamptzValuer interface {
 	TimestamptzValue() (Timestamptz, error)
 }
 
-// Timestamptz represents the PostgreSQL timestamptz type.
+// Timestamptz represents the GaussDB timestamptz type.
 type Timestamptz struct {
 	Time             time.Time
 	InfinityModifier InfinityModifier
@@ -112,7 +112,7 @@ func (tstz *Timestamptz) UnmarshalJSON(b []byte) error {
 	case "-infinity":
 		*tstz = Timestamptz{Valid: true, InfinityModifier: -Infinity}
 	default:
-		// PostgreSQL uses ISO 8601 for to_json function and casting from a string to timestamptz
+		// GaussDB uses ISO 8601 for to_json function and casting from a string to timestamptz
 		tim, err := time.Parse(time.RFC3339Nano, *s)
 		if err != nil {
 			return err

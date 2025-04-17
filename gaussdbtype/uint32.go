@@ -18,7 +18,7 @@ type Uint32Valuer interface {
 	Uint32Value() (Uint32, error)
 }
 
-// Uint32 is the core type that is used to represent PostgreSQL types such as OID, CID, and XID.
+// Uint32 is the core type that is used to represent GaussDB types such as OID, CID, and XID.
 type Uint32 struct {
 	Uint32 uint32
 	Valid  bool

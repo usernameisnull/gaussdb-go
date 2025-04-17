@@ -32,18 +32,18 @@ const (
 	connStatusBusy
 )
 
-// Notice represents a notice response message reported by the PostgreSQL server. Be aware that this is distinct from
+// Notice represents a notice response message reported by the GaussDB server. Be aware that this is distinct from
 // LISTEN/NOTIFY notification.
 type Notice GaussdbError
 
-// Notification is a message received from the PostgreSQL LISTEN/NOTIFY system
+// Notification is a message received from the GaussDB LISTEN/NOTIFY system
 type Notification struct {
 	PID     uint32 // backend pid that sent the notification
 	Channel string // channel from which notification was received
 	Payload string
 }
 
-// DialFunc is a function that can be used to connect to a PostgreSQL server.
+// DialFunc is a function that can be used to connect to a GaussDB server.
 type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // LookupFunc is a function that can be used to lookup IPs addrs from host. Optionally an ip:port combination can be
@@ -59,19 +59,19 @@ type BuildFrontendFunc func(r io.Reader, w io.Writer) *gaussdbproto.Frontend
 // aware of the origin of the error, but it must not invoke any query method.
 type GaussdbErrorHandler func(*GaussdbConn, *GaussdbError) bool
 
-// NoticeHandler is a function that can handle notices received from the PostgreSQL server. Notices can be received at
+// NoticeHandler is a function that can handle notices received from the GaussDB server. Notices can be received at
 // any time, usually during handling of a query response. The *GaussdbConn is provided so the handler is aware of the origin
 // of the notice, but it must not invoke any query method. Be aware that this is distinct from LISTEN/NOTIFY
 // notification.
 type NoticeHandler func(*GaussdbConn, *Notice)
 
-// NotificationHandler is a function that can handle notifications received from the PostgreSQL server. Notifications
+// NotificationHandler is a function that can handle notifications received from the GaussDB server. Notifications
 // can be received at any time, usually during handling of a query response. The *GaussdbConn is provided so the handler is
 // aware of the origin of the notice, but it must not invoke any query method. Be aware that this is distinct from a
 // notice event.
 type NotificationHandler func(*GaussdbConn, *Notification)
 
-// GaussdbConn is a low-level PostgreSQL connection handle. It is not safe for concurrent usage.
+// GaussdbConn is a low-level GaussDB connection handle. It is not safe for concurrent usage.
 type GaussdbConn struct {
 	scratch []byte
 
@@ -108,7 +108,7 @@ type GaussdbConn struct {
 	cleanupDone chan struct{}
 }
 
-// Connect establishes a connection to a PostgreSQL server using the environment and connString (in URL or keyword/value
+// Connect establishes a connection to a GaussDB server using the environment and connString (in URL or keyword/value
 // format) to provide configuration. See documentation for [ParseConfig] for details. ctx can be used to cancel a
 // connect attempt.
 func Connect(ctx context.Context, connString string) (*GaussdbConn, error) {
@@ -120,7 +120,7 @@ func Connect(ctx context.Context, connString string) (*GaussdbConn, error) {
 	return ConnectConfig(ctx, config)
 }
 
-// Connect establishes a connection to a PostgreSQL server using the environment and connString (in URL or keyword/value
+// Connect establishes a connection to a GaussDB server using the environment and connString (in URL or keyword/value
 // format) and ParseConfigOptions to provide additional configuration. See documentation for [ParseConfig] for details.
 // ctx can be used to cancel a connect attempt.
 func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptions ParseConfigOptions) (*GaussdbConn, error) {
@@ -132,7 +132,7 @@ func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptio
 	return ConnectConfig(ctx, config)
 }
 
-// ConnectConfig establishes a connection to a PostgreSQL server using config. config must have been constructed with
+// ConnectConfig establishes a connection to a GaussDB server using config. config must have been constructed with
 // [ParseConfig]. ctx can be used to cancel a connect attempt.
 //
 // If config.Fallbacks are present they will sequentially be tried in case of error establishing network connection. An
@@ -502,7 +502,7 @@ func (gaussdbConn *GaussdbConn) signalMessage() chan struct{} {
 	return ch
 }
 
-// ReceiveMessage receives one wire protocol message from the PostgreSQL server. It must only be used when the
+// ReceiveMessage receives one wire protocol message from the GaussDB server. It must only be used when the
 // connection is not busy. e.g. It is an error to call ReceiveMessage while reading the result of a query. The messages
 // are still handled by the core gaussdbconn message handling system so receiving a NotificationResponse will still trigger
 // the OnNotification callback.
@@ -639,7 +639,7 @@ func (gaussdbConn *GaussdbConn) Frontend() *gaussdbproto.Frontend {
 }
 
 // Close closes a connection. It is safe to call Close on an already closed connection. Close attempts a clean close by
-// sending the exit message to PostgreSQL. However, this could block so ctx is available to limit the time to wait. The
+// sending the exit message to GaussDB. However, this could block so ctx is available to limit the time to wait. The
 // underlying net.Conn.Close() will always be called regardless of any other errors.
 func (gaussdbConn *GaussdbConn) Close(ctx context.Context) error {
 	if gaussdbConn.status == connStatusClosed {
@@ -751,7 +751,7 @@ func (gaussdbConn *GaussdbConn) ParameterStatus(key string) string {
 	return gaussdbConn.parameterStatuses[key]
 }
 
-// CommandTag is the status text returned by PostgreSQL for a query.
+// CommandTag is the status text returned by GaussDB for a query.
 type CommandTag struct {
 	s string
 }
@@ -850,7 +850,7 @@ type StatementDescription struct {
 // Prepare creates a prepared statement. If the name is empty, the anonymous prepared statement will be used. This
 // allows Prepare to also to describe statements without creating a server-side prepared statement.
 //
-// Prepare does not send a PREPARE statement to the server. It uses the PostgreSQL Parse and Describe protocol messages
+// Prepare does not send a PREPARE statement to the server. It uses the GaussDB Parse and Describe protocol messages
 // directly.
 func (gaussdbConn *GaussdbConn) Prepare(ctx context.Context, name, sql string, paramOIDs []uint32) (*StatementDescription, error) {
 	if err := gaussdbConn.lock(); err != nil {
@@ -910,7 +910,7 @@ readloop:
 
 // Deallocate deallocates a prepared statement.
 //
-// Deallocate does not send a DEALLOCATE statement to the server. It uses the PostgreSQL Close protocol message
+// Deallocate does not send a DEALLOCATE statement to the server. It uses the GaussDB Close protocol message
 // directly. This has slightly different behavior than executing DEALLOCATE statement.
 //   - Deallocate can succeed in an aborted transaction.
 //   - Deallocating a non-existent prepared statement is not an error.
@@ -983,7 +983,7 @@ func noticeResponseToNotice(msg *gaussdbproto.NoticeResponse) *Notice {
 	return (*Notice)(gaussdbError)
 }
 
-// CancelRequest sends a cancel request to the PostgreSQL server. It returns an error if unable to deliver the cancel
+// CancelRequest sends a cancel request to the GaussDB server. It returns an error if unable to deliver the cancel
 // request, but lack of an error does not ensure that the query was canceled. As specified in the documentation, there
 // is no way to be sure a query was canceled.
 func (gaussdbConn *GaussdbConn) CancelRequest(ctx context.Context) error {
@@ -1070,7 +1070,7 @@ func (gaussdbConn *GaussdbConn) WaitForNotification(ctx context.Context) error {
 	}
 }
 
-// Exec executes SQL via the PostgreSQL simple query protocol. SQL may contain multiple queries. Execution is
+// Exec executes SQL via the GaussDB simple query protocol. SQL may contain multiple queries. Execution is
 // implicitly wrapped in a transaction unless a transaction is already in progress or SQL contains transaction control
 // statements.
 //
@@ -1114,7 +1114,7 @@ func (gaussdbConn *GaussdbConn) Exec(ctx context.Context, sql string) *MultiResu
 	return multiResult
 }
 
-// ExecParams executes a command via the PostgreSQL extended query protocol.
+// ExecParams executes a command via the GaussDB extended query protocol.
 //
 // sql is a SQL command string. It may only contain one query. Parameter substitution is positional using $1, $2, $3,
 // etc.
@@ -1147,7 +1147,7 @@ func (gaussdbConn *GaussdbConn) ExecParams(ctx context.Context, sql string, para
 	return result
 }
 
-// ExecPrepared enqueues the execution of a prepared statement via the PostgreSQL extended query protocol.
+// ExecPrepared enqueues the execution of a prepared statement via the GaussDB extended query protocol.
 //
 // paramValues are the parameter values. It must be encoded in the format given by paramFormats.
 //
@@ -1281,9 +1281,9 @@ func (gaussdbConn *GaussdbConn) CopyTo(ctx context.Context, w io.Writer, sql str
 	}
 }
 
-// CopyFrom executes the copy command sql and copies all of r to the PostgreSQL server.
+// CopyFrom executes the copy command sql and copies all of r to the GaussDB server.
 //
-// Note: context cancellation will only interrupt operations on the underlying PostgreSQL network connection. Reads on r
+// Note: context cancellation will only interrupt operations on the underlying GaussDB network connection. Reads on r
 // could still block.
 func (gaussdbConn *GaussdbConn) CopyFrom(ctx context.Context, r io.Reader, sql string) (CommandTag, error) {
 	if err := gaussdbConn.lock(); err != nil {
@@ -1698,7 +1698,7 @@ func (rr *ResultReader) concludeCommand(commandTag CommandTag, err error) {
 	rr.commandConcluded = true
 }
 
-// Batch is a collection of queries that can be sent to the PostgreSQL server in a single round-trip.
+// Batch is a collection of queries that can be sent to the GaussDB server in a single round-trip.
 type Batch struct {
 	buf []byte
 	err error
@@ -1890,7 +1890,7 @@ func (gaussdbConn *GaussdbConn) flushWithPotentialWriteReadDeadlock() error {
 // require sending a ping to the server. ctx can be used to cancel this operation. This should be called before any
 // operation that will use the underlying net.Conn directly. e.g. Before Conn() or Hijack().
 //
-// This should not be confused with the PostgreSQL protocol Sync message.
+// This should not be confused with the GaussDB protocol Sync message.
 func (gaussdbConn *GaussdbConn) SyncConn(ctx context.Context) error {
 	for i := 0; i < 10; i++ {
 		if gaussdbConn.bgReader.Status() == bgreader.StatusStopped && gaussdbConn.frontend.ReadBufferLen() == 0 {
@@ -1952,7 +1952,7 @@ func (gaussdbConn *GaussdbConn) Hijack() (*HijackedConn, error) {
 	}, nil
 }
 
-// Construct created a GaussdbConn from an already established connection to a PostgreSQL server. This is the inverse of
+// Construct created a GaussdbConn from an already established connection to a GaussDB server. This is the inverse of
 // GaussdbConn.Hijack. The connection must be in an idle state.
 //
 // hc.Frontend is replaced by a new pgproto3.Frontend built by hc.Config.BuildFrontend.

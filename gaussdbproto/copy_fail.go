@@ -9,7 +9,7 @@ type CopyFail struct {
 	Message string
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*CopyFail) Frontend() {}
 
 // Decode decodes src into dst. src must contain the complete message with the exception of the initial 1 byte message

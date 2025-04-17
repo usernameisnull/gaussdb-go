@@ -6,7 +6,7 @@ import (
 
 type ParseComplete struct{}
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*ParseComplete) Backend() {}
 
 // Decode decodes src into dst. src must contain the complete message with the exception of the initial 1 byte message

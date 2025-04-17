@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-// ArrayGetter is a type that can be converted into a PostgreSQL array.
+// ArrayGetter is a type that can be converted into a GaussDB array.
 
-// RecordCodec is a codec for the generic PostgreSQL record type such as is created with the "row" function. Record can
-// only decode the binary format. The text format output format from PostgreSQL does not include type information and
-// is therefore impossible to decode. Encoding is impossible because PostgreSQL does not support input of generic
+// RecordCodec is a codec for the generic GaussDB record type such as is created with the "row" function. Record can
+// only decode the binary format. The text format output format from GaussDB does not include type information and
+// is therefore impossible to decode. Encoding is impossible because GaussDB does not support input of generic
 // records.
 type RecordCodec struct{}
 

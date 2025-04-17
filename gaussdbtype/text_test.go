@@ -36,14 +36,14 @@ func TestTextCodec(t *testing.T) {
 	}
 }
 
-// name is PostgreSQL's special 63-byte data type, used for identifiers like table names.  The pg_class.relname column
+// name is GaussDB's special 63-byte data type, used for identifiers like table names.  The pg_class.relname column
 // is a good example of where the name data type is used.
 //
-// TextCodec does not do length checking. Inputting a longer name into PostgreSQL will result in silent truncation to
+// TextCodec does not do length checking. Inputting a longer name into GaussDB will result in silent truncation to
 // 63 bytes.
 //
 // Length checking would be possible with a Codec specialized for "name" but it would be perfect because a
-// custom-compiled PostgreSQL could have set NAMEDATALEN to a different value rather than the default 63.
+// custom-compiled GaussDB could have set NAMEDATALEN to a different value rather than the default 63.
 //
 // So this is simply a smoke test of the name type.
 func TestTextCodecName(t *testing.T) {

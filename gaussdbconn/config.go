@@ -27,7 +27,7 @@ type AfterConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
 type ValidateConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
 type GetSSLPasswordFunc func(ctx context.Context) string
 
-// Config is the settings used to establish a connection to a PostgreSQL server. It must be created by [ParseConfig]. A
+// Config is the settings used to establish a connection to a GaussDB server. It must be created by [ParseConfig]. A
 // manually initialized Config will cause ConnectConfig to panic.
 type Config struct {
 	minReadBufferSize int64 // The minimum size of the internal read buffer. Default 8192.
@@ -53,7 +53,7 @@ type Config struct {
 	KerberosSpn     string
 	Fallbacks       []*FallbackConfig
 
-	// ValidateConnect is called during a connection attempt after a successful authentication with the PostgreSQL server.
+	// ValidateConnect is called during a connection attempt after a successful authentication with the GaussDB server.
 	// It can be used to validate that the server is acceptable. If this returns an error the connection is closed and the next
 	// fallback config is tried. This allows implementing high availability behavior such as libpq does with target_session_attrs.
 	ValidateConnect ValidateConnectFunc
@@ -147,7 +147,7 @@ func isAbsolutePath(path string) bool {
 	return strings.HasPrefix(path, "/") || isWindowsPath(path)
 }
 
-// NetworkAddress converts a PostgreSQL host and port into network and address suitable for use with
+// NetworkAddress converts a GaussDB host and port into network and address suitable for use with
 // net.Dial.
 func NetworkAddress(host string, port uint16) (network, address string) {
 	if isAbsolutePath(host) {
@@ -160,7 +160,7 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 	return network, address
 }
 
-// ParseConfig builds a *Config from connString with similar behavior to the PostgreSQL standard C library libpq. It
+// ParseConfig builds a *Config from connString with similar behavior to the GaussDB standard C library libpq. It
 // uses the same defaults as libpq (e.g. port=5432) and understands most PG* environment variables. ParseConfig closely
 // matches the parsing behavior of libpq. connString may either be in URL format or keyword = value format.
 //
@@ -227,7 +227,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 	connStringSettings := make(map[string]string)
 	if connString != "" {
 		var err error
-		// connString may be a database URL or in PostgreSQL keyword/value format
+		// connString may be a database URL or in GaussDB keyword/value format
 		if strings.HasPrefix(connString, "gaussdb://") {
 			connStringSettings, err = parseURLSettings(connString)
 			if err != nil {

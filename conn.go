@@ -62,7 +62,7 @@ func (cc *ConnConfig) Copy() *ConnConfig {
 // ConnString returns the connection string as parsed by pgx.ParseConfig into pgx.ConnConfig.
 func (cc *ConnConfig) ConnString() string { return cc.connString }
 
-// Conn is a PostgreSQL connection handle. It is not safe for concurrent usage. Use a connection pool to manage access
+// Conn is a GaussDB connection handle. It is not safe for concurrent usage. Use a connection pool to manage access
 // to multiple database connections from multiple goroutines.
 type Conn struct {
 	gaussdbConn        *gaussdbconn.GaussdbConn
@@ -87,7 +87,7 @@ type Conn struct {
 	eqb  ExtendedQueryBuilder
 }
 
-// Identifier a PostgreSQL identifier or name. Identifiers can be composed of
+// Identifier a GaussDB identifier or name. Identifiers can be composed of
 // multiple parts such as ["schema", "table"] or ["table", "column"].
 type Identifier []string
 
@@ -129,7 +129,7 @@ var (
 	errDisabledDescriptionCache = fmt.Errorf("cannot use QueryExecModeCacheDescribe with disabled description cache")
 )
 
-// Connect establishes a connection with a PostgreSQL server with a connection string. See
+// Connect establishes a connection with a GaussDB server with a connection string. See
 // pgconn.Connect for details.
 func Connect(ctx context.Context, connString string) (*Conn, error) {
 	connConfig, err := ParseConfig(connString)
@@ -149,7 +149,7 @@ func ConnectWithOptions(ctx context.Context, connString string, options ParseCon
 	return connect(ctx, connConfig)
 }
 
-// ConnectConfig establishes a connection with a PostgreSQL server with a configuration struct.
+// ConnectConfig establishes a connection with a GaussDB server with a configuration struct.
 // connConfig must have been created by ParseConfig.
 func ConnectConfig(ctx context.Context, connConfig *ConnConfig) (*Conn, error) {
 	// In general this improves safety. In particular avoid the config.Config.OnNotification mutation from affecting other
@@ -308,7 +308,7 @@ func (c *Conn) Close(ctx context.Context) error {
 // placeholders are referenced positionally as $1, $2, etc. name can be used instead of sql with Query, QueryRow, and
 // Exec to execute the statement. It can also be used with Batch.Queue.
 //
-// The underlying PostgreSQL identifier for the prepared statement will be name if name != sql or a digest of sql if
+// The underlying GaussDB identifier for the prepared statement will be name if name != sql or a digest of sql if
 // name == sql.
 //
 // Prepare is idempotent; i.e. it is safe to call Prepare multiple times with the same name and sql arguments. This
@@ -395,7 +395,7 @@ func (c *Conn) bufferNotifications(_ *gaussdbconn.GaussdbConn, n *gaussdbconn.No
 	c.notifications = append(c.notifications, n)
 }
 
-// WaitForNotification waits for a PostgreSQL notification. It wraps the underlying pgconn notification system in a
+// WaitForNotification waits for a GaussDB notification. It wraps the underlying pgconn notification system in a
 // slightly more convenient form.
 func (c *Conn) WaitForNotification(ctx context.Context) (*gaussdbconn.Notification, error) {
 	var n *gaussdbconn.Notification
@@ -440,7 +440,7 @@ func (c *Conn) Ping(ctx context.Context) error {
 }
 
 // GaussdbConn returns the underlying *pgconn.GaussdbConn. This is an escape hatch method that allows lower level access to the
-// PostgreSQL connection than pgx exposes.
+// GaussDB connection than pgx exposes.
 //
 // It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *pgconn.GaussdbConn
 // is used and the connection must be returned to the same state before any *pgx.Conn methods are again used.
@@ -637,11 +637,11 @@ const (
 	// even when the database schema is modified concurrently.
 	QueryExecModeDescribeExec
 
-	// Assume the PostgreSQL query parameter types based on the Go type of the arguments. This uses the extended protocol
+	// Assume the GaussDB query parameter types based on the Go type of the arguments. This uses the extended protocol
 	// with text formatted parameters and results. Queries are executed in a single round trip. Type mappings can be
 	// registered with pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are
-	// unregistered or ambiguous. e.g. A map[string]string may have the PostgreSQL type json or hstore. Modes that know
-	// the PostgreSQL type can use a map[string]string directly as an argument. This mode cannot.
+	// unregistered or ambiguous. e.g. A map[string]string may have the GaussDB type json or hstore. Modes that know
+	// the GaussDB type can use a map[string]string directly as an argument. This mode cannot.
 	//
 	// On rare occasions user defined types may behave differently when encoded in the text format instead of the binary
 	// format. For example, this could happen if a "type RomanNumeral int32" implements fmt.Stringer to format integers as
@@ -653,11 +653,11 @@ const (
 	// should implement pgtype.Int64Valuer.
 	QueryExecModeExec
 
-	// Use the simple protocol. Assume the PostgreSQL query parameter types based on the Go type of the arguments. This is
-	// especially significant for []byte values. []byte values are encoded as PostgreSQL bytea. string must be used
+	// Use the simple protocol. Assume the GaussDB query parameter types based on the Go type of the arguments. This is
+	// especially significant for []byte values. []byte values are encoded as GaussDB bytea. string must be used
 	// instead for text type values including json and jsonb. Type mappings can be registered with
 	// pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are unregistered or ambiguous.
-	// e.g. A map[string]string may have the PostgreSQL type json or hstore. Modes that know the PostgreSQL type can use a
+	// e.g. A map[string]string may have the GaussDB type json or hstore. Modes that know the GaussDB type can use a
 	// map[string]string directly as an argument. This mode cannot. Queries are executed in a single round trip.
 	//
 	// QueryExecModeSimpleProtocol should have the user application visible behavior as QueryExecModeExec. This includes
@@ -667,7 +667,7 @@ const (
 	//
 	// QueryExecModeSimpleProtocol uses client side parameter interpolation. All values are quoted and escaped. Prefer
 	// QueryExecModeExec over QueryExecModeSimpleProtocol whenever possible. In general QueryExecModeSimpleProtocol should
-	// only be used if connecting to a proxy server, connection pool server, or non-PostgreSQL server that does not
+	// only be used if connecting to a proxy server, connection pool server, or non-GaussDB server that does not
 	// support the extended protocol.
 	QueryExecModeSimpleProtocol
 )

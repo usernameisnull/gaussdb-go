@@ -2372,8 +2372,8 @@ func testConnContextCanceledCancelsRunningQueryOnServer(t *testing.T, connString
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
-	// Getting the actual PostgreSQL server process ID (PID) from a query executed through pgbouncer is not straightforward
-	// because pgbouncer abstracts the underlying database connections, and it doesn't expose the PID of the PostgreSQL
+	// Getting the actual GaussDB server process ID (PID) from a query executed through pgbouncer is not straightforward
+	// because pgbouncer abstracts the underlying database connections, and it doesn't expose the PID of the GaussDB
 	// server process to clients. However, we can check if the query is running by checking the generated query ID.
 	queryID := fmt.Sprintf("%s testConnContextCanceled %d", dbType, time.Now().UnixNano())
 
