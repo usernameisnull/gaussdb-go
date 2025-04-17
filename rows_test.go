@@ -43,7 +43,6 @@ func (ers *testErrRowScanner) ScanRow(rows gaussdbgo.Rows) error {
 	return errors.New(string(*ers))
 }
 
-// https://github.com/jackc/pgx/issues/1654
 func TestRowScannerErrorIsFatalToRows(t *testing.T) {
 	t.Parallel()
 
@@ -260,8 +259,7 @@ func TestCollectOneRowIgnoresExtraRows(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1334
-func TestCollectOneRowPrefersPostgreSQLErrorOverErrNoRows(t *testing.T) {
+func TestCollectOneRowPrefersGaussDBErrorOverErrNoRows(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
 		_, err := conn.Exec(ctx, `create temporary table t (name text not null unique)`)
 		require.NoError(t, err)

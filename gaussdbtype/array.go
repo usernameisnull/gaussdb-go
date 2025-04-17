@@ -362,8 +362,6 @@ func quoteArrayElement(src string) string {
 }
 
 func isSpace(ch byte) bool {
-	// see array_isspace:
-	// https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/arrayfuncs.c
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\v' || ch == '\f'
 }
 

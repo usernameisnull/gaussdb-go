@@ -806,7 +806,6 @@ func TestConnCopyFromAutomaticStringConversion(t *testing.T) {
 	ensureConnValid(t, conn)
 }
 
-// https://github.com/jackc/pgx/discussions/1891
 func TestConnCopyFromAutomaticStringConversionArray(t *testing.T) {
 	t.Parallel()
 

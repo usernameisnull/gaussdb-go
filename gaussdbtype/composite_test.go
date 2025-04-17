@@ -203,8 +203,6 @@ create type point3d as (
 
 // Test for composite type from table instead of create type. Table types have system / hidden columns like tableoid,
 // cmax, xmax, etc. These are not included when sending or receiving composite types.
-//
-// https://github.com/jackc/pgx/issues/1576
 func TestCompositeCodecTranscodeStructWrapperForTable(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 

@@ -1,4 +1,4 @@
-// Package pgtype converts between Go and PostgreSQL values.
+// Package gaussdbtype converts between Go and PostgreSQL values.
 /*
 The primary type is the Map type. It is a map of PostgreSQL types identified by OID (object ID) to a Codec. A Codec is
 responsible for converting between Go and PostgreSQL values. NewMap creates a Map with all supported standard PostgreSQL
@@ -8,7 +8,7 @@ Use Map.Scan and Map.Encode to decode PostgreSQL values to Go and encode Go valu
 
 Base Type Mapping
 
-pgtype maps between all common base types directly between Go and PostgreSQL. In particular:
+gaussdbtype maps between all common base types directly between Go and PostgreSQL. In particular:
 
     Go           PostgreSQL
     -----------------------
@@ -43,41 +43,40 @@ pgtype maps between all common base types directly between Go and PostgreSQL. In
 
 Null Values
 
-pgtype can map NULLs in two ways. The first is types that can directly represent NULL such as Int4. They work in a
+gaussdbtype can map NULLs in two ways. The first is types that can directly represent NULL such as Int4. They work in a
 similar fashion to database/sql. The second is to use a pointer to a pointer.
 
-    var foo pgtype.Text
+    var foo gaussdbtype.Text
     var bar *string
     err := conn.QueryRow("select foo, bar from widgets where id=$1", 42).Scan(&foo, &bar)
     if err != nil {
         return err
     }
 
-When using nullable pgtype types as parameters for queries, one has to remember
+When using nullable gaussdbtype types as parameters for queries, one has to remember
 to explicitly set their Valid field to true, otherwise the parameter's value will be NULL.
 
 JSON Support
 
-pgtype automatically marshals and unmarshals data from json and jsonb PostgreSQL types.
+gaussdbtype automatically marshals and unmarshals data from json and jsonb PostgreSQL types.
 
 Extending Existing PostgreSQL Type Support
 
 Generally, all Codecs will support interfaces that can be implemented to enable scanning and encoding. For example,
 PointCodec can use any Go type that implements the PointScanner and PointValuer interfaces. So rather than use
-pgtype.Point and application can directly use its own point type with pgtype as long as it implements those interfaces.
+gaussdbtype.Point and application can directly use its own point type with gaussdbtype as long as it implements those interfaces.
 
 See example_custom_type_test.go for an example of a custom type for the PostgreSQL point type.
 
 Sometimes pgx supports a PostgreSQL type such as numeric but the Go type is in an external package that does not have
-pgx support such as github.com/shopspring/decimal. These types can be registered with pgtype with custom conversion
-logic. See https://github.com/jackc/pgx-shopspring-decimal and https://github.com/jackc/pgx-gofrs-uuid for example
-integrations.
+pgx support such as github.com/shopspring/decimal. These types can be registered with gaussdbtype with custom conversion
+logic.
 
 New PostgreSQL Type Support
 
-pgtype uses the PostgreSQL OID to determine how to encode or decode a value. pgtype supports array, composite, domain,
+gaussdbtype uses the PostgreSQL OID to determine how to encode or decode a value. gaussdbtype supports array, composite, domain,
 and enum types. However, any type created in PostgreSQL with CREATE TYPE will receive a new OID. This means that the OID
-of each new PostgreSQL type must be registered for pgtype to handle values of that type with the correct Codec.
+of each new PostgreSQL type must be registered for gaussdbtype to handle values of that type with the correct Codec.
 
 The pgx.Conn LoadType method can return a *Type for array, composite, domain, and enum types by inspecting the database
 metadata. This *Type can then be registered with Map.RegisterType.
@@ -106,7 +105,7 @@ For example, the following function could be called after a connection is establ
 A type cannot be registered unless all types it depends on are already registered. e.g. An array type cannot be
 registered until its element type is registered.
 
-ArrayCodec implements support for arrays. If pgtype supports type T then it can easily support []T by registering an
+ArrayCodec implements support for arrays. If gaussdbtype supports type T then it can easily support []T by registering an
 ArrayCodec for the appropriate PostgreSQL OID. In addition, Array[T] type can support multi-dimensional arrays.
 
 CompositeCodec implements support for PostgreSQL composite types. Go structs can be scanned into if the public fields of
@@ -118,33 +117,33 @@ Domain types are treated as their underlying type if the underlying type and the
 PostgreSQL enums can usually be treated as text. However, EnumCodec implements support for interning strings which can
 reduce memory usage.
 
-While pgtype will often still work with unregistered types it is highly recommended that all types be registered due to
+While gaussdbtype will often still work with unregistered types it is highly recommended that all types be registered due to
 an improvement in performance and the elimination of certain edge cases.
 
 If an entirely new PostgreSQL type (e.g. PostGIS types) is used then the application or a library can create a new
 Codec. Then the OID / Codec mapping can be registered with Map.RegisterType. There is no difference between a Codec
-defined and registered by the application and a Codec built in to pgtype. See any of the Codecs in pgtype for Codec
+defined and registered by the application and a Codec built in to gaussdbtype. See any of the Codecs in gaussdbtype for Codec
 examples and for examples of type registration.
 
 Encoding Unknown Types
 
-pgtype works best when the OID of the PostgreSQL type is known. But in some cases such as using the simple protocol the
+gaussdbtype works best when the OID of the PostgreSQL type is known. But in some cases such as using the simple protocol the
 OID is unknown. In this case Map.RegisterDefaultGaussdbType can be used to register an assumed OID for a particular Go type.
 
 Renamed Types
 
-If pgtype does not recognize a type and that type is a renamed simple type simple (e.g. type MyInt32 int32) pgtype acts
+If gaussdbtype does not recognize a type and that type is a renamed simple type simple (e.g. type MyInt32 int32) gaussdbtype acts
 as if it is the underlying type. It currently cannot automatically detect the underlying type of renamed structs (eg.g.
 type MyTime time.Time).
 
 Compatibility with database/sql
 
-pgtype also includes support for custom types implementing the database/sql.Scanner and database/sql/driver.Valuer
+gaussdbtype also includes support for custom types implementing the database/sql.Scanner and database/sql/driver.Valuer
 interfaces.
 
 Encoding Typed Nils
 
-pgtype encodes untyped and typed nils (e.g. nil and []byte(nil)) to the SQL NULL value without going through the Codec
+gaussdbtype encodes untyped and typed nils (e.g. nil and []byte(nil)) to the SQL NULL value without going through the Codec
 system. This means that Codecs and other encoding logic do not have to handle nil or *T(nil).
 
 However, database/sql compatibility requires Value to be called on T(nil) when T implements driver.Valuer. Therefore,
@@ -154,7 +153,7 @@ https://github.com/golang/go/commit/0ce1d79a6a771f7449ec493b993ed2a720917870.
 
 Child Records
 
-pgtype's support for arrays and composite records can be used to load records and their children in a single query.  See
+gaussdbtype's support for arrays and composite records can be used to load records and their children in a single query.  See
 example_child_records_test.go for an example.
 
 Overview of Scanning Implementation
@@ -172,9 +171,7 @@ the Codec (see TryFindUnderlyingTypeScanPlan).
 
 These plan wrappers are contained in Map.TryWrapScanPlanFuncs. By default these contain shared logic to handle renamed
 types, pointers to pointers, slices, composite types, etc. Additional plan wrappers can be added to seamlessly integrate
-types that do not support pgx directly. For example, the before mentioned
-https://github.com/jackc/pgx-shopspring-decimal package detects decimal.Decimal values, wraps them in something
-implementing NumericScanner and passes that to the Codec.
+types that do not support pgx directly.
 
 Map.Scan and Map.Encode are convenience methods that wrap Map.PlanScan and Map.PlanEncode.  Determining how to scan or
 encode a particular type may be a time consuming operation. Hence the planning and execution steps of a conversion are

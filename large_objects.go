@@ -8,15 +8,12 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbtype"
 )
 
-// The PostgreSQL wire protocol has a limit of 1 GB - 1 per message. See definition of
-// PQ_LARGE_MESSAGE_LIMIT in the PostgreSQL source code. To allow for the other data
+// To allow for the other data
 // in the message,maxLargeObjectMessageLength should be no larger than 1 GB - 1 KB.
 var maxLargeObjectMessageLength = 1024*1024*1024 - 1024
 
 // LargeObjects is a structure used to access the large objects API. It is only valid within the transaction where it
 // was created.
-//
-// For more details see: http://www.postgresql.org/docs/current/static/largeobjects.html
 type LargeObjects struct {
 	tx Tx
 }

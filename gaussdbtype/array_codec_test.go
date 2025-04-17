@@ -136,7 +136,6 @@ func TestArrayCodecNamedSliceType(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1488
 func TestArrayCodecAnySliceArgument(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		type _int16Slice []int16
@@ -159,7 +158,6 @@ func TestArrayCodecAnySliceArgument(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1442
 func TestArrayCodecAnyArray(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		type _point3 [3]float32
@@ -182,7 +180,6 @@ func TestArrayCodecAnyArray(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1273#issuecomment-1218262703
 func TestArrayCodecSliceArgConversion(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		arg := []string{
@@ -319,7 +316,6 @@ func TestArrayCodecEncodeMultipleDimensionsRagged(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1494
 func TestArrayCodecDecodeTextArrayWithTextOfNULL(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		{

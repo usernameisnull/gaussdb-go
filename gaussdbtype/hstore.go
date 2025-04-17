@@ -141,9 +141,6 @@ func (encodePlanHstoreCodecText) Encode(value any, buf []byte) (newBuf []byte, e
 			buf = append(buf, ',', ' ')
 		}
 
-		// unconditionally quote hstore keys/values like Postgres does
-		// this avoids a Mac OS X Postgres hstore parsing bug:
-		// https://www.postgresql.org/message-id/CA%2BHWA9awUW0%2BRV_gO9r1ABZwGoZxPztcJxPy8vMFSTbTfi4jig%40mail.gmail.com
 		buf = append(buf, '"')
 		buf = append(buf, quoteArrayReplacer.Replace(k)...)
 		buf = append(buf, '"')

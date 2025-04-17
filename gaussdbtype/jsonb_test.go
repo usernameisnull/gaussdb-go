@@ -74,7 +74,6 @@ func TestJSONBCodecUnmarshalSQLNull(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1681
 func TestJSONBCodecEncodeJSONMarshalerThatCanBeWrapped(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		var jsonStr string

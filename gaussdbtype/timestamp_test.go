@@ -70,7 +70,6 @@ func TestTimestampCodecWithScanLocationLocal(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/v4/pgtype/pull/128
 func TestTimestampTranscodeBigTimeBinary(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		in := &gaussdbtype.Timestamp{Time: time.Date(294276, 12, 31, 23, 59, 59, 999999000, time.UTC), Valid: true}

@@ -113,7 +113,7 @@ func TestConfigContainsConnStr(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "postgres://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbgo.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -551,7 +551,6 @@ func TestPrepareWithDigestedName(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/pull/1795
 func TestDeallocateInAbortedTransaction(t *testing.T) {
 	t.Parallel()
 
@@ -921,7 +920,7 @@ func TestConnInitTypeMap(t *testing.T) {
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
 
-	// spot check that the standard postgres type names aren't qualified
+	// spot check that the standard gaussdb type names aren't qualified
 	nameOIDs := map[string]uint32{
 		"_int8": gaussdbtype.Int8ArrayOID,
 		"int8":  gaussdbtype.Int8OID,
@@ -1333,7 +1332,6 @@ func TestRawValuesUnderlyingMemoryReused(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1847
 func TestConnDeallocateInvalidatedCachedStatementsWhenCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -1363,7 +1361,6 @@ func TestConnDeallocateInvalidatedCachedStatementsWhenCanceled(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1847
 func TestConnDeallocateInvalidatedCachedStatementsInTransactionWithBatch(t *testing.T) {
 	t.Parallel()
 

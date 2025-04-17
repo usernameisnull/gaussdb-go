@@ -132,12 +132,11 @@ func ConnectWithOptions(ctx context.Context, connString string, parseConfigOptio
 	return ConnectConfig(ctx, config)
 }
 
-// Connect establishes a connection to a PostgreSQL server using config. config must have been constructed with
+// ConnectConfig establishes a connection to a PostgreSQL server using config. config must have been constructed with
 // [ParseConfig]. ctx can be used to cancel a connect attempt.
 //
 // If config.Fallbacks are present they will sequentially be tried in case of error establishing network connection. An
-// authentication error will terminate the chain of attempts (like libpq:
-// https://www.postgresql.org/docs/11/libpq-connect.html#LIBPQ-MULTIPLE-HOSTS) and be returned as the error.
+// authentication error will terminate the chain of attempts and be returned as the error.
 func ConnectConfig(ctx context.Context, config *Config) (*GaussdbConn, error) {
 	// Default values are set in ParseConfig. Enforce initial creation by ParseConfig rather than setting defaults from
 	// zero values.
@@ -507,9 +506,6 @@ func (gaussdbConn *GaussdbConn) signalMessage() chan struct{} {
 // connection is not busy. e.g. It is an error to call ReceiveMessage while reading the result of a query. The messages
 // are still handled by the core gaussdbconn message handling system so receiving a NotificationResponse will still trigger
 // the OnNotification callback.
-//
-// This is a very low level method that requires deep understanding of the PostgreSQL wire protocol to use correctly.
-// See https://www.postgresql.org/docs/current/protocol.html.
 func (gaussdbConn *GaussdbConn) ReceiveMessage(ctx context.Context) (gaussdbproto.BackendMessage, error) {
 	if err := gaussdbConn.lock(); err != nil {
 		return nil, err
@@ -628,8 +624,6 @@ func (gaussdbConn *GaussdbConn) PID() uint32 {
 //	'I' - idle / not in transaction
 //	'T' - in a transaction
 //	'E' - in a failed transaction
-//
-// See https://www.postgresql.org/docs/current/protocol-message-formats.html.
 func (gaussdbConn *GaussdbConn) TxStatus() byte {
 	return gaussdbConn.txStatus
 }
@@ -671,8 +665,6 @@ func (gaussdbConn *GaussdbConn) Close(ctx context.Context) error {
 	// Ignore any errors sending Terminate message and waiting for server to close connection.
 	// This mimics the behavior of libpq PQfinish. It calls closePGconn which calls sendTerminateConn which purposefully
 	// ignores errors.
-	//
-	// See https://github.com/jackc/pgx/issues/637
 	gaussdbConn.frontend.Send(&gaussdbproto.Terminate{})
 	gaussdbConn.flushWithPotentialWriteReadDeadlock()
 
@@ -993,7 +985,7 @@ func noticeResponseToNotice(msg *gaussdbproto.NoticeResponse) *Notice {
 
 // CancelRequest sends a cancel request to the PostgreSQL server. It returns an error if unable to deliver the cancel
 // request, but lack of an error does not ensure that the query was canceled. As specified in the documentation, there
-// is no way to be sure a query was canceled. See https://www.postgresql.org/docs/11/protocol-flow.html#id-1.10.5.7.9
+// is no way to be sure a query was canceled.
 func (gaussdbConn *GaussdbConn) CancelRequest(ctx context.Context) error {
 	// Open a cancellation request to the same server. The address is taken from the net.Conn directly instead of reusing
 	// the connection config. This is important in high availability configurations where fallback connections may be
@@ -1041,7 +1033,6 @@ func (gaussdbConn *GaussdbConn) CancelRequest(ctx context.Context) error {
 	}
 
 	// Wait for the cancel request to be acknowledged by the server.
-	// It copies the behavior of the libpq: https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
 	_, _ = cancelConn.Read(buf)
 
 	return nil
@@ -2006,10 +1997,6 @@ func Construct(hc *HijackedConn) (*GaussdbConn, error) {
 // synchronization points are implicitly transactional unless explicit transaction control statements have been issued.
 //
 // The context the pipeline was started with is in effect for the entire life of the Pipeline.
-//
-// For a deeper understanding of pipeline mode see the PostgreSQL documentation for the extended query protocol
-// (https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY) and the libpq pipeline mode
-// (https://www.postgresql.org/docs/current/libpq-pipeline-mode.html).
 type Pipeline struct {
 	conn *GaussdbConn
 	ctx  context.Context

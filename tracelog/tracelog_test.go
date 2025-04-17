@@ -179,7 +179,6 @@ func TestLogQuery(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1365
 func TestLogQueryArgsHandlesUTF8(t *testing.T) {
 	t.Parallel()
 
@@ -472,7 +471,6 @@ func TestLogPrepare(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/pull/2120
 func TestConcurrentUsage(t *testing.T) {
 	t.Parallel()
 

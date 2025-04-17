@@ -239,11 +239,11 @@ func (c *Conn) LoadTypes(ctx context.Context, typeNames []string) ([]*gaussdbtyp
 	return result, nil
 }
 
-// serverVersion returns the postgresql server version.
+// serverVersion returns the gaussdb server version.
 func serverVersion(c *Conn) (int64, error) {
 	serverVersionStr := c.GaussdbConn().ParameterStatus("server_version")
 	serverVersionStr = regexp.MustCompile(`^[0-9]+`).FindString(serverVersionStr)
-	// if not PostgreSQL do nothing
+	// if not GaussDB do nothing
 	if serverVersionStr == "" {
 		return 0, fmt.Errorf("Cannot identify server version in %q", serverVersionStr)
 	}

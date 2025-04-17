@@ -153,7 +153,7 @@ func ConnectWithOptions(ctx context.Context, connString string, options ParseCon
 // connConfig must have been created by ParseConfig.
 func ConnectConfig(ctx context.Context, connConfig *ConnConfig) (*Conn, error) {
 	// In general this improves safety. In particular avoid the config.Config.OnNotification mutation from affecting other
-	// connections with the same config. See https://github.com/jackc/pgx/issues/618.
+	// connections with the same config.
 	connConfig = connConfig.Copy()
 
 	return connect(ctx, connConfig)

@@ -1000,7 +1000,6 @@ func TestEncodeTypeRename(t *testing.T) {
 // 	}
 // }
 
-// https://github.com/jackc/pgx/issues/810
 func TestRowsScanNilThenScanValue(t *testing.T) {
 	t.Parallel()
 

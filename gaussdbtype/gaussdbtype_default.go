@@ -97,9 +97,6 @@ func initDefaultMap() {
 		// *any. Wrap xml.Marshal with a function that copies the data into a new byte slice in this case. Not implementing
 		// directly in XMLCodec.DecodeValue to allow for the unlikely possibility that someone uses an alternative XML
 		// unmarshaler that does support unmarshalling into *any.
-		//
-		// https://github.com/jackc/pgx/issues/2227
-		// https://github.com/jackc/pgx/pull/2228
 		Unmarshal: func(data []byte, v any) error {
 			if v, ok := v.(*any); ok {
 				dstBuf := make([]byte, len(data))

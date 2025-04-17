@@ -74,7 +74,7 @@ func (cr *connResource) getPoolRows(c *Conn, r gaussdbgo.Rows) *poolRows {
 // Pool allows for connection reuse.
 type Pool struct {
 	// 64 bit fields accessed with atomics must be at beginning of struct to guarantee alignment for certain 32-bit
-	// architectures. See BUGS section of https://pkg.go.dev/sync/atomic and https://github.com/jackc/pgx/issues/1288.
+	// architectures.
 	newConnsCount        int64
 	lifetimeDestroyCount int64
 	idleDestroyCount     int64
@@ -292,9 +292,6 @@ func NewWithConfig(ctx context.Context, config *Config) (*Pool, error) {
 //
 //	# Example Keyword/Value
 //	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca pool_max_conns=10 pool_max_conn_lifetime=1h30m
-//
-//	# Example URL
-//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca&pool_max_conns=10&pool_max_conn_lifetime=1h30m
 func ParseConfig(connString string) (*Config, error) {
 	connConfig, err := gaussdbgo.ParseConfig(connString)
 	if err != nil {
