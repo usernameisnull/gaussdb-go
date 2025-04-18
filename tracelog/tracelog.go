@@ -13,7 +13,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go"
 )
 
-// LogLevel represents the pgx logging level. See LogLevel* constants for
+// LogLevel represents the gaussdbgo logging level. See LogLevel* constants for
 // possible values.
 type LogLevel int
 

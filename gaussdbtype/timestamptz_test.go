@@ -81,7 +81,6 @@ func TestTimestamptzTranscodeBigTimeBinary(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgtype/issues/74
 func TestTimestamptzDecodeTextInvalid(t *testing.T) {
 	c := &gaussdbtype.TimestamptzCodec{}
 	var tstz gaussdbtype.Timestamptz

@@ -193,7 +193,7 @@ func TestHstoreCodec(t *testing.T) {
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, ctr, gaussdbxtest.KnownOIDQueryExecModes, "hstore", tests)
 
-	// run the tests using pgtype.Hstore as input and output types, and test all query modes
+	// run the tests using gaussdbtype.Hstore as input and output types, and test all query modes
 	for i := range tests {
 		var h gaussdbtype.Hstore
 		switch typedParam := tests[i].Param.(type) {
@@ -384,7 +384,7 @@ func BenchmarkHstoreScan(b *testing.B) {
 		}
 	})
 
-	// benchmark the []byte scan API used by pgconn
+	// benchmark the []byte scan API used by gaussdbconn
 	scanConfigs := []struct {
 		name       string
 		scanPlan   gaussdbtype.ScanPlan

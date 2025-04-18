@@ -179,7 +179,7 @@ func TestConnQueryValuesWhenUnableToDecode(t *testing.T) {
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
 
-	// Note that this relies on pgtype.Record not supporting the text protocol. This seems safe as it is impossible to
+	// Note that this relies on gaussdbtype.Record not supporting the text protocol. This seems safe as it is impossible to
 	// decode the text protocol because unlike the binary protocol there is no way to determine the OIDs of the elements.
 	rows, err := conn.Query(context.Background(), "select (array[1::oid], null)", gaussdbgo.QueryResultFormats{gaussdbgo.TextFormatCode})
 	require.NoError(t, err)
@@ -720,7 +720,7 @@ func TestQueryRowCoreIntegerEncoding(t *testing.T) {
 		sql      string
 		queryArg any
 	}{
-		// Check any integer type where value is outside pg:int2 range cannot be encoded
+		// Check any integer type where value is outside int2 range cannot be encoded
 		{"select $1::int2", int(32769)},
 		{"select $1::int2", int32(32769)},
 		{"select $1::int2", int32(32769)},
@@ -730,12 +730,12 @@ func TestQueryRowCoreIntegerEncoding(t *testing.T) {
 		{"select $1::int2", uint32(32769)},
 		{"select $1::int2", uint64(32769)},
 
-		// Check any integer type where value is outside pg:int4 range cannot be encoded
+		// Check any integer type where value is outside int4 range cannot be encoded
 		{"select $1::int4", int64(2147483649)},
 		{"select $1::int4", uint32(2147483649)},
 		{"select $1::int4", uint64(2147483649)},
 
-		// Check any integer type where value is outside pg:int8 range cannot be encoded
+		// Check any integer type where value is outside int8 range cannot be encoded
 		{"select $1::int8", uint64(9223372036854775809)},
 	}
 
@@ -1391,7 +1391,7 @@ func TestConnQueryDatabaseSQLNullX(t *testing.T) {
 		boolValid:    sql.NullBool{Bool: true, Valid: true},
 		int64Valid:   sql.NullInt64{Int64: 123, Valid: true},
 		float64Valid: sql.NullFloat64{Float64: 3.14, Valid: true},
-		stringValid:  sql.NullString{String: "pgx", Valid: true},
+		stringValid:  sql.NullString{String: "gaussdbgo", Valid: true},
 	}
 
 	var actual row

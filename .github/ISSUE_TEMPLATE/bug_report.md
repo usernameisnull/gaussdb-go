@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,8 +47,8 @@ A clear and concise description of what actually happened.
 
 **Version**
  - Go: `$ go version` -> [e.g. go version go1.18.3 darwin/amd64]
- - PostgreSQL: `$ psql --no-psqlrc --tuples-only -c 'select version()'` -> [e.g. PostgreSQL 14.4 on x86_64-apple-darwin21.5.0, compiled by Apple clang version 13.1.6 (clang-1316.0.21.2.5), 64-bit]
- - pgx: `$ grep 'github.com/jackc/pgx/v[0-9]' go.mod` -> [e.g. v4.16.1]
+ - GaussDB: `$ gsql --no-psqlrc --tuples-only -c 'select version()'` -> [e.g. GaussDB 9.2.4 on x86_64-apple-darwin21.5.0, compiled by Apple clang version 13.1.6 (clang-1316.0.21.2.5), 64-bit]
+ - gaussdbgo: `$ grep 'github.com/HuaweiCloudDeveloper/gaussdb-go/v[0-9]' go.mod` -> [e.g. v4.16.1]
 
 **Additional context**
 Add any other context about the problem here.

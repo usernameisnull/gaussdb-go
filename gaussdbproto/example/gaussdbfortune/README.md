@@ -1,25 +1,25 @@
-# pgfortune
+# gaussdbfortune
 
-pgfortune is a mock PostgreSQL server that responds to every query with a fortune.
+gaussdbfortune is a mock GaussDB server that responds to every query with a fortune.
 
 ## Installation
 
 Install `fortune` and `cowsay`. They should be available in any Unix package manager (apt, yum, brew, etc.)
 
 ```
-go get -u github.com/jackc/pgproto3/example/pgfortune
+go get -u github.com/HuaweiCloudDeveloper/gaussdb-go/example/gaussdbfortune
 ```
 
 ## Usage
 
 ```
-$ pgfortune
+$ gaussdbfortune
 ```
 
-By default pgfortune listens on 127.0.0.1:15432 and responds to queries with `fortune | cowsay -f elephant`. These are
+By default gaussdbfortune listens on 127.0.0.1:15432 and responds to queries with `fortune | cowsay -f elephant`. These are
 configurable with the `listen` and `response-command` arguments respectively.
 
-While `pgfortune` is running connect to it with `psql`.
+While `gaussdbfortune` is running connect to it with `psql`.
 
 ```
 $ psql -h 127.0.0.1 -p 15432

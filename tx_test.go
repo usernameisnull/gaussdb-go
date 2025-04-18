@@ -198,7 +198,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	}
 
 	err = tx2.Commit(ctx)
-	if gaussdbErr, ok := err.(*pgconn.gaussdbError); !ok || gaussdbErr.Code != "40001" {
+	if gaussdbErr, ok := err.(*gaussdbconn.gaussdbError); !ok || gaussdbErr.Code != "40001" {
 		t.Fatalf("Expected serialization error 40001, got %#v", err)
 	}
 

@@ -1,12 +1,12 @@
 # Description
 
-This is a sample REST URL shortener service implemented using pgx as the connector to a PostgreSQL data store.
+This is a sample REST URL shortener service implemented using gaussdbgo as the connector to a GaussDB data store.
 
 # Usage
 
-Create a PostgreSQL database and run structure.sql into it to create the necessary data schema.
+Create a GaussDB database and run structure.sql into it to create the necessary data schema.
 
-Configure the database connection with `DATABASE_URL` or standard PostgreSQL (`PG*`) environment variables or
+Configure the database connection with `DATABASE_URL` or standard GaussDB (`PG*`) environment variables or
 
 Run main.go:
 

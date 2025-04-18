@@ -1,4 +1,4 @@
-package pgtype
+package gausdbtype
 
 import (
 	"database/sql/driver"
@@ -8,7 +8,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/pgio"
+	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
 type Int64Scanner interface {
@@ -154,7 +154,7 @@ type encodePlanInt<%= pg_byte_size %>CodecBinaryInt<%= pg_bit_size %> struct{}
 
 func (encodePlanInt<%= pg_byte_size %>CodecBinaryInt<%= pg_bit_size %>) Encode(value any, buf []byte) (newBuf []byte, err error) {
   n := value.(int<%= pg_bit_size %>)
-  return pgio.AppendInt<%= pg_bit_size %>(buf, int<%= pg_bit_size %>(n)), nil
+  return  gaussdbio.AppendInt<%= pg_bit_size %>(buf, int<%= pg_bit_size %>(n)), nil
 }
 
 type encodePlanInt<%= pg_byte_size %>CodecTextInt<%= pg_bit_size %> struct{}
@@ -183,7 +183,7 @@ func (encodePlanInt<%= pg_byte_size %>CodecBinaryInt64Valuer) Encode(value any, 
 		return nil, fmt.Errorf("%d is less than minimum value for int<%= pg_byte_size %>", n.Int64)
 	}
 
-  return pgio.AppendInt<%= pg_bit_size %>(buf, int<%= pg_bit_size %>(n.Int64)), nil
+  return  gaussdbio.AppendInt<%= pg_bit_size %>(buf, int<%= pg_bit_size %>(n.Int64)), nil
 }
 
 type encodePlanInt<%= pg_byte_size %>CodecTextInt64Valuer struct{}
@@ -294,7 +294,7 @@ func (c Int<%= pg_byte_size %>Codec) DecodeValue(m *Map, oid uint32, format int1
 	return n, nil
 }
 
-<%# PostgreSQL binary format integer to fixed size Go integers %>
+<%# GaussDB binary format integer to fixed size Go integers %>
 <% [8, 16, 32, 64].each do |dst_bit_size| %>
 type scanPlanBinaryInt<%= pg_byte_size %>ToInt<%= dst_bit_size %> struct{}
 
@@ -361,7 +361,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint<%= dst_bit_size %>) Scan(src []
 }
 <% end %>
 
-<%# PostgreSQL binary format integer to Go machine integers %>
+<%# GaussDB binary format integer to Go machine integers %>
 type scanPlanBinaryInt<%= pg_byte_size %>ToInt struct{}
 
 func (scanPlanBinaryInt<%= pg_byte_size %>ToInt) Scan(src []byte, dst any) error {
@@ -424,7 +424,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint) Scan(src []byte, dst any) erro
 	return nil
 }
 
-<%# PostgreSQL binary format integer to Go Int64Scanner %>
+<%# GaussDB binary format integer to Go Int64Scanner %>
 type scanPlanBinaryInt<%= pg_byte_size %>ToInt64Scanner struct{}
 
 func (scanPlanBinaryInt<%= pg_byte_size %>ToInt64Scanner) Scan(src []byte, dst any) error {
@@ -447,7 +447,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt64Scanner) Scan(src []byte, dst a
   return s.ScanInt64(Int8{Int64: n, Valid: true})
 }
 
-<%# PostgreSQL binary format integer to Go TextScanner %>
+<%# GaussDB binary format integer to Go TextScanner %>
 type scanPlanBinaryInt<%= pg_byte_size %>ToTextScanner struct{}
 
 func (scanPlanBinaryInt<%= pg_byte_size %>ToTextScanner) Scan(src []byte, dst any) error {

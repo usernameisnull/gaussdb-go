@@ -1314,7 +1314,7 @@ func (qr *queryRecorder) SetWriteDeadline(t time.Time) error {
 	return qr.conn.SetWriteDeadline(t)
 }
 
-// BenchmarkSelectRowsRawPrepared hijacks a pgconn connection and inserts a queryRecorder. It then executes the query
+// BenchmarkSelectRowsRawPrepared hijacks a gaussdbconn connection and inserts a queryRecorder. It then executes the query
 // once. The benchmark is simply sending the exact query bytes over the wire to the server and reading the expected
 // number of bytes back. It does nothing else. This should be the theoretical maximum performance a Go application
 // could achieve.

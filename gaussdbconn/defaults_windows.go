@@ -50,7 +50,7 @@ func defaultSettings() map[string]string {
 }
 
 // defaultHost attempts to mimic libpq's default host. libpq uses the default unix socket location on *nix and localhost
-// on Windows. The default socket location is compiled into libpq. Since pgx does not have access to that default it
+// on Windows. The default socket location is compiled into libpq. Since gaussdbgo does not have access to that default it
 // checks the existence of common locations.
 func defaultHost() string {
 	return "localhost"

@@ -35,7 +35,7 @@ type ConnConfig struct {
 	// "cache_describe" query exec mode.
 	DescriptionCacheCapacity int
 
-	// DefaultQueryExecMode controls the default mode for executing queries. By default pgx uses the extended protocol
+	// DefaultQueryExecMode controls the default mode for executing queries. By default gaussdbgo uses the extended protocol
 	// and automatically prepares and caches prepared statements. However, this may be incompatible with proxies such as
 	// PGBouncer. In this case it may be preferable to use QueryExecModeExec or QueryExecModeSimpleProtocol. The same
 	// functionality can be controlled on a per query basis by passing a QueryExecMode as the first query argument.
@@ -59,7 +59,7 @@ func (cc *ConnConfig) Copy() *ConnConfig {
 	return newConfig
 }
 
-// ConnString returns the connection string as parsed by pgx.ParseConfig into pgx.ConnConfig.
+// ConnString returns the connection string as parsed by gaussdbgo.ParseConfig into gaussdbgo.ConnConfig.
 func (cc *ConnConfig) ConnString() string { return cc.connString }
 
 // Conn is a GaussDB connection handle. It is not safe for concurrent usage. Use a connection pool to manage access
@@ -130,7 +130,7 @@ var (
 )
 
 // Connect establishes a connection with a GaussDB server with a connection string. See
-// pgconn.Connect for details.
+// gaussdbconn.Connect for details.
 func Connect(ctx context.Context, connString string) (*Conn, error) {
 	connConfig, err := ParseConfig(connString)
 	if err != nil {
@@ -218,7 +218,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 	return connConfig, nil
 }
 
-// ParseConfig creates a ConnConfig from a connection string. ParseConfig handles all options that [pgconn.ParseConfig]
+// ParseConfig creates a ConnConfig from a connection string. ParseConfig handles all options that [gaussdbconn.ParseConfig]
 // does. In addition, it accepts the following options:
 //
 //   - default_query_exec_mode.
@@ -267,7 +267,7 @@ func connect(ctx context.Context, config *ConnConfig) (c *Conn, err error) {
 		c.prepareTracer = t
 	}
 
-	// Only install pgx notification system if no other callback handler is present.
+	// Only install gaussdbgo notification system if no other callback handler is present.
 	if config.Config.OnNotification == nil {
 		config.Config.OnNotification = c.bufferNotifications
 	}
@@ -395,7 +395,7 @@ func (c *Conn) bufferNotifications(_ *gaussdbconn.GaussdbConn, n *gaussdbconn.No
 	c.notifications = append(c.notifications, n)
 }
 
-// WaitForNotification waits for a GaussDB notification. It wraps the underlying pgconn notification system in a
+// WaitForNotification waits for a GaussDB notification. It wraps the underlying gaussdbconn notification system in a
 // slightly more convenient form.
 func (c *Conn) WaitForNotification(ctx context.Context) (*gaussdbconn.Notification, error) {
 	var n *gaussdbconn.Notification
@@ -434,16 +434,16 @@ func quoteIdentifier(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
 }
 
-// Ping delegates to the underlying *pgconn.GaussdbConn.Ping.
+// Ping delegates to the underlying *gaussdbconn.GaussdbConn.Ping.
 func (c *Conn) Ping(ctx context.Context) error {
 	return c.gaussdbConn.Ping(ctx)
 }
 
-// GaussdbConn returns the underlying *pgconn.GaussdbConn. This is an escape hatch method that allows lower level access to the
-// GaussDB connection than pgx exposes.
+// GaussdbConn returns the underlying *gaussdbconn.GaussdbConn. This is an escape hatch method that allows lower level access to the
+// GaussDB connection than gaussdbgo exposes.
 //
-// It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *pgconn.GaussdbConn
-// is used and the connection must be returned to the same state before any *pgx.Conn methods are again used.
+// It is strongly recommended that the connection be idle (no in-progress queries) before the underlying *gaussdbconn.GaussdbConn
+// is used and the connection must be returned to the same state before any *gaussdbgo.Conn methods are again used.
 func (c *Conn) GaussdbConn() *gaussdbconn.GaussdbConn { return c.gaussdbConn }
 
 // TypeMap returns the connection info used for this connection.
@@ -639,7 +639,7 @@ const (
 
 	// Assume the GaussDB query parameter types based on the Go type of the arguments. This uses the extended protocol
 	// with text formatted parameters and results. Queries are executed in a single round trip. Type mappings can be
-	// registered with pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are
+	// registered with gaussdbtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are
 	// unregistered or ambiguous. e.g. A map[string]string may have the GaussDB type json or hstore. Modes that know
 	// the GaussDB type can use a map[string]string directly as an argument. This mode cannot.
 	//
@@ -648,15 +648,15 @@ const (
 	// Roman numerals (e.g. 7 is VII). The binary format would properly encode the integer 7 as the binary value for 7.
 	// But the text format would encode the integer 7 as the string "VII". As QueryExecModeExec uses the text format, it
 	// is possible that changing query mode from another mode to QueryExecModeExec could change the behavior of the query.
-	// This should not occur with types pgx supports directly and can be avoided by registering the types with
-	// pgtype.Map.RegisterDefaultGaussdbType and implementing the appropriate type interfaces. In the cas of RomanNumeral, it
-	// should implement pgtype.Int64Valuer.
+	// This should not occur with types gaussdbgo supports directly and can be avoided by registering the types with
+	// gaussdbtype.Map.RegisterDefaultGaussdbType and implementing the appropriate type interfaces. In the cas of RomanNumeral, it
+	// should implement gaussdbtype.Int64Valuer.
 	QueryExecModeExec
 
 	// Use the simple protocol. Assume the GaussDB query parameter types based on the Go type of the arguments. This is
 	// especially significant for []byte values. []byte values are encoded as GaussDB bytea. string must be used
 	// instead for text type values including json and jsonb. Type mappings can be registered with
-	// pgtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are unregistered or ambiguous.
+	// gaussdbtype.Map.RegisterDefaultGaussdbType. Queries will be rejected that have arguments that are unregistered or ambiguous.
 	// e.g. A map[string]string may have the GaussDB type json or hstore. Modes that know the GaussDB type can use a
 	// map[string]string directly as an argument. This mode cannot. Queries are executed in a single round trip.
 	//
@@ -1243,8 +1243,8 @@ func (c *Conn) sanitizeForSimpleQuery(sql string, args ...any) (string, error) {
 	return sanitize.SanitizeSQL(sql, valueArgs...)
 }
 
-// LoadType inspects the database for typeName and produces a pgtype.Type suitable for registration. typeName must be
-// the name of a type where the underlying type(s) is already understood by pgx. It is for derived types. In particular,
+// LoadType inspects the database for typeName and produces a gaussdbtype.Type suitable for registration. typeName must be
+// the name of a type where the underlying type(s) is already understood by gaussdbgo. It is for derived types. In particular,
 // typeName must be one of the following:
 //   - An array type name of a type that is already registered. e.g. "_foo" when "foo" is registered.
 //   - A composite type name where all field types are already registered.

@@ -1,11 +1,11 @@
 # Description
 
-This is a sample todo list implemented using pgx as the connector to a
-PostgreSQL data store.
+This is a sample todo list implemented using gaussdbgo as the connector to a
+GaussDB data store.
 
 # Usage
 
-Create a PostgreSQL database and run structure.sql into it to create the
+Create a GaussDB database and run structure.sql into it to create the
 necessary data schema.
 
 Example:
@@ -19,7 +19,7 @@ Build todo:
 
 ## Connection configuration
 
-The database connection is configured via DATABASE_URL and standard PostgreSQL environment variables (PGHOST, PGUSER, etc.)
+The database connection is configured via DATABASE_URL and standard GaussDB environment variables (PGHOST, PGUSER, etc.)
 
 You can either export them then run todo:
 

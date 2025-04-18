@@ -20,7 +20,7 @@ var newGSS NewGSSFunc
 //	import "github.com/otan/gopgkrb5"
 //
 //	func init() {
-//		pgconn.RegisterGSSProvider(func() (pgconn.GSS, error) { return gopgkrb5.NewGSS() })
+//		gaussdbconn.RegisterGSSProvider(func() (gaussdbconn.GSS, error) { return gopgkrb5.NewGSS() })
 //	}
 func RegisterGSSProvider(newGSSArg NewGSSFunc) {
 	newGSS = newGSSArg

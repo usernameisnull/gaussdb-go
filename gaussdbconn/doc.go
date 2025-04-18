@@ -1,7 +1,7 @@
-// Package pgconn is a low-level GaussDB database driver.
+// Package gaussdbconn is a low-level GaussDB database driver.
 /*
-pgconn provides lower level access to a GaussDB connection than a database/sql or pgx connection. It operates at
-nearly the same level is the C library libpq.
+gaussdbconn provides lower level access to a GaussDB connection than a database/sql or gaussdbgo connection.
+It operates at nearly the same level is the C library libpq.
 
 Establishing a Connection
 

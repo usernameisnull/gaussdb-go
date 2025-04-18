@@ -1,4 +1,4 @@
-// Package stdlib is the compatibility layer from pgx to database/sql.
+// Package stdlib is the compatibility layer from gaussdbgo to database/sql.
 //
 // A database/sql connection can be established through sql.Open.
 //
@@ -30,14 +30,14 @@
 //	connConfig, _ := gaussdbgo.ParseConfig(os.Getenv("DATABASE_URL"))
 //	connConfig.Tracer = &tracelog.TraceLog{Logger: myLogger, LogLevel: tracelog.LogLevelInfo}
 //	connStr := stdlib.RegisterConnConfig(connConfig)
-//	db, _ := sql.Open("pgx", connStr)
+//	db, _ := sql.Open("gaussdb", connStr)
 //
-// pgx uses standard GaussDB positional parameters in queries. e.g. $1, $2. It does not support named parameters.
+// gaussdbgo uses standard GaussDB positional parameters in queries. e.g. $1, $2. It does not support named parameters.
 //
 //	db.QueryRow("select * from users where id=$1", userID)
 //
 // (*sql.Conn) Raw() can be used to get a *gaussdbgo.Conn from the standard database/sql.DB connection pool. This allows
-// operations that use pgx specific functionality.
+// operations that use gaussdbgo specific functionality.
 //
 //	// Given db is a *sql.DB
 //	conn, err := db.Conn(context.Background())
@@ -47,7 +47,7 @@
 //
 //	err = conn.Raw(func(driverConn any) error {
 //	  conn := driverConn.(*stdlib.Conn).Conn() // conn is a *gaussdbgo.Conn
-//	  // Do pgx specific stuff with conn
+//	  // Do gaussdbgo specific stuff with conn
 //	  conn.CopyFrom(...)
 //	  return nil
 //	})
@@ -57,10 +57,10 @@
 //
 // # GaussDB Specific Data Types
 //
-// The pgtype package provides support for GaussDB specific types. *pgtype.Map.SQLScanner is an adapter that makes
+// The gaussdbtype package provides support for GaussDB specific types. *gaussdbtype.Map.SQLScanner is an adapter that makes
 // these types usable as a sql.Scanner.
 //
-//	m := pgtype.NewMap()
+//	m := gaussdbtype.NewMap()
 //	var a []int64
 //	err := db.QueryRow("select '{1,2,3}'::bigint[]").Scan(m.SQLScanner(&a))
 package stdlib
@@ -190,10 +190,10 @@ func GetConnector(config gaussdbgo.ConnConfig, opts ...OptionOpenDB) driver.Conn
 	return c
 }
 
-// GetPoolConnector creates a new driver.Connector from the given *pgxpool.Pool. By using this be sure to set the
+// GetPoolConnector creates a new driver.Connector from the given *gaussdbxpool.Pool. By using this be sure to set the
 // maximum idle connections of the *sql.DB created with this connector to zero since they must be managed from the
-// *pgxpool.Pool. This is required to avoid acquiring all the connections from the pgxpool and starving any direct
-// users of the pgxpool.
+// *gaussdbxpool.Pool. This is required to avoid acquiring all the connections from the gaussdbxpool and starving any direct
+// users of the gaussdbxpool.
 func GetPoolConnector(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) driver.Connector {
 	c := connector{
 		pool:         pool,
@@ -213,9 +213,9 @@ func OpenDB(config gaussdbgo.ConnConfig, opts ...OptionOpenDB) *sql.DB {
 	return sql.OpenDB(c)
 }
 
-// OpenDBFromPool creates a new *sql.DB from the given *pgxpool.Pool. Note that this method automatically sets the
-// maximum number of idle connections in *sql.DB to zero, since they must be managed from the *pgxpool.Pool. This is
-// required to avoid acquiring all the connections from the pgxpool and starving any direct users of the pgxpool.
+// OpenDBFromPool creates a new *sql.DB from the given *gaussdbxpool.Pool. Note that this method automatically sets the
+// maximum number of idle connections in *sql.DB to zero, since they must be managed from the *gaussdbxpool.Pool. This is
+// required to avoid acquiring all the connections from the gaussdbxpool and starving any direct users of the gaussdbxpool.
 func OpenDBFromPool(pool *gaussdbxpool.Pool, opts ...OptionOpenDB) *sql.DB {
 	c := GetPoolConnector(pool, opts...)
 	db := sql.OpenDB(c)
@@ -290,7 +290,7 @@ func (c connector) Driver() driver.Driver {
 }
 
 // GetDefaultDriver returns the driver initialized in the init function
-// and used when the pgx driver is registered.
+// and used when the gaussdbgo driver is registered.
 func GetDefaultDriver() driver.Driver {
 	return gaussdbDriver
 }
@@ -390,9 +390,9 @@ type Conn struct {
 	resetSessionFunc     func(context.Context, *gaussdbgo.Conn) error // Function is called before a connection is reused
 	lastResetSessionTime time.Time
 
-	// psRefCounts contains reference counts for prepared statements. Prepare uses the underlying pgx logic to generate
+	// psRefCounts contains reference counts for prepared statements. Prepare uses the underlying gaussdbgo logic to generate
 	// deterministic statement names from the statement text. If this query has already been prepared then the existing
-	// *pgconn.StatementDescription will be returned. However, this means that if Close is called on the returned Stmt
+	// *gaussdbconn.StatementDescription will be returned. However, this means that if Close is called on the returned Stmt
 	// then the underlying prepared statement will be closed even when the underlying prepared statement is still in use
 	// by another database/sql Stmt. To prevent this psRefCounts keeps track of how many database/sql statements are using
 	// the same underlying statement and only closes the underlying statement when the reference count reaches 0.
@@ -523,7 +523,7 @@ func (c *Conn) Ping(ctx context.Context) error {
 }
 
 func (c *Conn) CheckNamedValue(*driver.NamedValue) error {
-	// Underlying pgx supports sql.Scanner and driver.Valuer interfaces natively. So everything can be passed through directly.
+	// Underlying gaussdbgo supports sql.Scanner and driver.Valuer interfaces natively. So everything can be passed through directly.
 	return nil
 }
 

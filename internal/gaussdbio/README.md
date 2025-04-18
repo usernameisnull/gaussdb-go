@@ -1,6 +1,6 @@
-# pgio
+# gaussdbio
 
-Package pgio is a low-level toolkit building messages in the PostgreSQL wire protocol.
+Package gaussdbio is a low-level toolkit building messages in the GaussDB wire protocol.
 
-pgio provides functions for appending integers to a []byte while doing byte
+gaussdbio provides functions for appending integers to a []byte while doing byte
 order conversion.

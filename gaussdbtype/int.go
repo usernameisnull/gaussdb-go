@@ -1,4 +1,4 @@
-// Code generated from pgtype/int.go.erb. DO NOT EDIT.
+// Code generated from gaussdbtype/int.go.erb. DO NOT EDIT.
 
 package gaussdbtype
 

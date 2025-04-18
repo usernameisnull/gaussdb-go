@@ -257,11 +257,11 @@ func (ct *copyFrom) buildCopyBuf(buf []byte, sd *gaussdbconn.StatementDescriptio
 // CopyFrom uses the GaussDB copy protocol to perform bulk data insertion. It returns the number of rows copied and
 // an error.
 //
-// CopyFrom requires all values use the binary format. A pgtype.Type that supports the binary format must be registered
-// for the type of each column. Almost all types implemented by pgx support the binary format.
+// CopyFrom requires all values use the binary format. A gaussdbtype.Type that supports the binary format must be registered
+// for the type of each column. Almost all types implemented by gaussdbgo support the binary format.
 //
 // Even though enum types appear to be strings they still must be registered to use with CopyFrom. This can be done with
-// Conn.LoadType and pgtype.Map.RegisterType.
+// Conn.LoadType and gaussdbtype.Map.RegisterType.
 func (c *Conn) CopyFrom(ctx context.Context, tableName Identifier, columnNames []string, rowSrc CopyFromSource) (int64, error) {
 	ct := &copyFrom{
 		conn:          c,

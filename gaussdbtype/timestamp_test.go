@@ -49,7 +49,7 @@ func TestTimestampCodecWithScanLocationUTC(t *testing.T) {
 	}
 
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, connTestRunner, nil, "timestamp", []gaussdbxtest.ValueRoundTripTest{
-		// Have to use pgtype.Timestamp instead of time.Time as source because otherwise the simple and exec query exec
+		// Have to use gaussdbtype.Timestamp instead of time.Time as source because otherwise the simple and exec query exec
 		// modes will encode the time for timestamptz. That is, they will convert it from local time zone.
 		{gaussdbtype.Timestamp{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local), Valid: true}, new(time.Time), isExpectedEq(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))},
 	})
@@ -85,7 +85,6 @@ func TestTimestampTranscodeBigTimeBinary(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgtype/issues/74
 func TestTimestampCodecDecodeTextInvalid(t *testing.T) {
 	c := &gaussdbtype.TimestampCodec{}
 	var ts gaussdbtype.Timestamp

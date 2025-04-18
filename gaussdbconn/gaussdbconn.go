@@ -429,8 +429,6 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 				// ValidateConnect may execute commands that cause the context to be watched again. Unwatch first to avoid
 				// the watch already in progress panic. This is that last thing done by this method so there is no need to
 				// restart the watch after ValidateConnect returns.
-				//
-				// See https://github.com/jackc/pgconn/issues/40.
 				gaussdbConn.contextWatcher.Unwatch()
 
 				err := config.ValidateConnect(ctx, gaussdbConn)
@@ -633,7 +631,7 @@ func (gaussdbConn *GaussdbConn) SecretKey() uint32 {
 	return gaussdbConn.secretKey
 }
 
-// Frontend returns the underlying *pgproto3.Frontend. This rarely necessary.
+// Frontend returns the underlying *gaussdbproto.Frontend. This rarely necessary.
 func (gaussdbConn *GaussdbConn) Frontend() *gaussdbproto.Frontend {
 	return gaussdbConn.frontend
 }
@@ -654,8 +652,6 @@ func (gaussdbConn *GaussdbConn) Close(ctx context.Context) error {
 		// Close may be called while a cancellable query is in progress. This will most often be triggered by panic when
 		// a defer closes the connection (possibly indirectly via a transaction or a connection pool). Unwatch to end any
 		// previous watch. It is safe to Unwatch regardless of whether a watch is already is progress.
-		//
-		// See https://github.com/jackc/pgconn/issues/29
 		gaussdbConn.contextWatcher.Unwatch()
 
 		gaussdbConn.contextWatcher.Watch(ctx)
@@ -1630,7 +1626,7 @@ func (rr *ResultReader) Close() (CommandTag, error) {
 func (rr *ResultReader) readUntilRowDescription() {
 	for !rr.commandConcluded {
 		// Peek before receive to avoid consuming a DataRow if the result set does not include a RowDescription method.
-		// This should never happen under normal pgconn usage, but it is possible if SendBytes and ReceiveResults are
+		// This should never happen under normal gaussdbconn usage, but it is possible if SendBytes and ReceiveResults are
 		// manually used to construct a query that does not issue a describe statement.
 		msg, _ := rr.gaussdbConn.peekMessage()
 		if _, ok := msg.(*gaussdbproto.DataRow); ok {
@@ -1929,7 +1925,7 @@ type HijackedConn struct {
 }
 
 // Hijack extracts the internal connection data. gaussdbConn must be in an idle state. SyncConn should be called immediately
-// before Hijack. gaussdbConn is unusable after hijacking. Hijacking is typically only useful when using pgconn to establish
+// before Hijack. gaussdbConn is unusable after hijacking. Hijacking is typically only useful when using gaussdbconn to establish
 // a connection, but taking complete control of the raw connection after that (e.g. a load balancer or proxy).
 //
 // Due to the necessary exposure of internal implementation details, it is not covered by the semantic versioning
@@ -1955,7 +1951,7 @@ func (gaussdbConn *GaussdbConn) Hijack() (*HijackedConn, error) {
 // Construct created a GaussdbConn from an already established connection to a GaussDB server. This is the inverse of
 // GaussdbConn.Hijack. The connection must be in an idle state.
 //
-// hc.Frontend is replaced by a new pgproto3.Frontend built by hc.Config.BuildFrontend.
+// hc.Frontend is replaced by a new gaussdbproto.Frontend built by hc.Config.BuildFrontend.
 //
 // Due to the necessary exposure of internal implementation details, it is not covered by the semantic versioning
 // compatibility.

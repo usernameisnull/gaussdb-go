@@ -79,7 +79,7 @@ func TestTimestampTzTranscode(t *testing.T) {
 	})
 }
 
-// TODO - move these tests to pgtype
+// TODO - move these tests to gaussdbtype
 
 func TestJSONAndJSONBTranscode(t *testing.T) {
 	t.Parallel()

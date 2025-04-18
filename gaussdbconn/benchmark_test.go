@@ -239,7 +239,7 @@ func BenchmarkExecPreparedPossibleToCancel(b *testing.B) {
 }
 
 // func BenchmarkChanToSetDeadlinePossibleToCancel(b *testing.B) {
-// 	conn, err := pgconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+// 	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
 // 	require.Nil(b, err)
 // 	defer closeConn(b, conn)
 

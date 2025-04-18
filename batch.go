@@ -60,7 +60,7 @@ type Batch struct {
 	QueuedQueries []*QueuedQuery
 }
 
-// Queue queues a query to batch b. query can be an SQL query or the name of a prepared statement. The only pgx option
+// Queue queues a query to batch b. query can be an SQL query or the name of a prepared statement. The only gaussdbgo option
 // argument that is supported is QueryRewriter. Queries are executed using the connection's DefaultQueryExecMode.
 //
 // While query can contain multiple statements if the connection's DefaultQueryExecMode is QueryModeSimple, this should

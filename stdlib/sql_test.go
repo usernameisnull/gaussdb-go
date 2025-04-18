@@ -490,7 +490,7 @@ func TestConnQueryScanRange(t *testing.T) {
 	})
 }
 
-// Test type that pgx would handle natively in binary, but since it is not a
+// Test type that gaussdbgo would handle natively in binary, but since it is not a
 // database/sql native type should be passed through as a string
 func TestConnQueryRowGaussdbBinary(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
