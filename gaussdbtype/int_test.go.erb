@@ -1,4 +1,4 @@
-package pgtype_test
+package gaussdbtype_test
 
 import (
 	"math"
@@ -10,7 +10,7 @@ import (
 <% [2, 4, 8].each do |pg_byte_size| %>
 <% pg_bit_size = pg_byte_size * 8 %>
 func TestInt<%= pg_byte_size %>Codec(t *testing.T) {
-	pgxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "int<%= pg_byte_size %>", []pgxtest.ValueRoundTripTest{
+	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, defaultConnTestRunner, nil, "int<%= pg_byte_size %>", [] gaussdbxtest.ValueRoundTripTest{
 		{int8(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
 		{int16(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
 		{int32(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
@@ -21,8 +21,8 @@ func TestInt<%= pg_byte_size %>Codec(t *testing.T) {
 		{uint64(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
 		{int(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
 		{uint(1), new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
-		{pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}, new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
-		{int32(-1), new(pgtype.Int<%= pg_byte_size %>), isExpectedEq(pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: -1, Valid: true})},
+		{ gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}, new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
+		{int32(-1), new( gaussdbtype.Int<%= pg_byte_size %>), isExpectedEq( gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: -1, Valid: true})},
 		{1, new(int8), isExpectedEq(int8(1))},
 		{1, new(int16), isExpectedEq(int16(1))},
 		{1, new(int32), isExpectedEq(int32(1))},
@@ -43,20 +43,20 @@ func TestInt<%= pg_byte_size %>Codec(t *testing.T) {
 		{0, new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(0))},
 		{1, new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(1))},
 		{math.MaxInt<%= pg_bit_size %>, new(int<%= pg_bit_size %>), isExpectedEq(int<%= pg_bit_size %>(math.MaxInt<%= pg_bit_size %>))},
-		{1, new(pgtype.Int<%= pg_byte_size %>), isExpectedEq(pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true})},
+		{1, new( gaussdbtype.Int<%= pg_byte_size %>), isExpectedEq( gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true})},
 		{"1", new(string), isExpectedEq("1")},
-		{pgtype.Int<%= pg_byte_size %>{}, new(pgtype.Int<%= pg_byte_size %>), isExpectedEq(pgtype.Int<%= pg_byte_size %>{})},
+		{ gaussdbtype.Int<%= pg_byte_size %>{}, new( gaussdbtype.Int<%= pg_byte_size %>), isExpectedEq( gaussdbtype.Int<%= pg_byte_size %>{})},
 		{nil, new(*int<%= pg_bit_size %>), isExpectedEq((*int<%= pg_bit_size %>)(nil))},
 	})
 }
 
 func TestInt<%= pg_byte_size %>MarshalJSON(t *testing.T) {
 	successfulTests := []struct {
-		source pgtype.Int<%= pg_byte_size %>
+		source  gaussdbtype.Int<%= pg_byte_size %>
 		result string
 	}{
-		{source: pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 0}, result: "null"},
-		{source: pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}, result: "1"},
+		{source:  gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 0}, result: "null"},
+		{source:  gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}, result: "1"},
 	}
 	for i, tt := range successfulTests {
 		r, err := tt.source.MarshalJSON()
@@ -73,13 +73,13 @@ func TestInt<%= pg_byte_size %>MarshalJSON(t *testing.T) {
 func TestInt<%= pg_byte_size %>UnmarshalJSON(t *testing.T) {
 	successfulTests := []struct {
 		source string
-		result pgtype.Int<%= pg_byte_size %>
+		result  gaussdbtype.Int<%= pg_byte_size %>
 	}{
-		{source: "null", result: pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 0}},
-		{source: "1", result: pgtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}},
+		{source: "null", result:  gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 0}},
+		{source: "1", result:  gaussdbtype.Int<%= pg_byte_size %>{Int<%= pg_bit_size %>: 1, Valid: true}},
 	}
 	for i, tt := range successfulTests {
-		var r pgtype.Int<%= pg_byte_size %>
+		var r  gaussdbtype.Int<%= pg_byte_size %>
 		err := r.UnmarshalJSON([]byte(tt.source))
 		if err != nil {
 			t.Errorf("%d: %v", i, err)

@@ -476,7 +476,7 @@ func TestConnectWithRuntimeParams(t *testing.T) {
 	require.NoError(t, err)
 
 	config.RuntimeParams = map[string]string{
-		"application_name": "pgxtest",
+		"application_name": "gaussdbxtest",
 		"search_path":      "myschema",
 	}
 
@@ -487,7 +487,7 @@ func TestConnectWithRuntimeParams(t *testing.T) {
 	result := conn.ExecParams(ctx, "show application_name", nil, nil, nil, nil).Read()
 	require.Nil(t, result.Err)
 	assert.Equal(t, 1, len(result.Rows))
-	assert.Equal(t, "pgxtest", string(result.Rows[0][0]))
+	assert.Equal(t, "gaussdbxtest", string(result.Rows[0][0]))
 
 	result = conn.ExecParams(ctx, "show search_path", nil, nil, nil, nil).Read()
 	require.Nil(t, result.Err)
@@ -2149,7 +2149,7 @@ func TestConnCopyFromQuerySyntaxError(t *testing.T) {
 	srcBuf := &bytes.Buffer{}
 
 	// Send data even though the COPY FROM command will be rejected with a syntax error. This ensures that this does not
-	// break the connection. See https://github.com/jackc/gaussdbConn/pull/127 for context.
+	// break the connection.
 	inputRows := [][][]byte{}
 	for i := 0; i < 1000; i++ {
 		a := strconv.Itoa(i)
@@ -2240,7 +2240,6 @@ func (d delayedReader) Read(p []byte) (int, error) {
 	return d.r.Read(p)
 }
 
-// https://github.com/jackc/gaussdbConn/issues/128
 func TestConnCopyFromDataWriteAfterErrorAndReturn(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -2539,7 +2538,6 @@ func TestFatalErrorReceivedAfterCommandComplete(t *testing.T) {
 	require.Error(t, err)
 }
 
-// https://github.com/jackc/gaussdbConn/issues/27
 func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 	t.Parallel()
 

@@ -85,7 +85,7 @@ func TestConnectConfigRequiresConnConfigFromParseConfig(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=gaussdbxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbxpool.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -246,7 +246,7 @@ func TestPoolBeforeConnect(t *testing.T) {
 	require.NoError(t, err)
 
 	config.BeforeConnect = func(ctx context.Context, cfg *gaussdbgo.ConnConfig) error {
-		cfg.Config.RuntimeParams["application_name"] = "pgx"
+		cfg.Config.RuntimeParams["application_name"] = "gaussdbgo"
 		return nil
 	}
 
@@ -257,7 +257,7 @@ func TestPoolBeforeConnect(t *testing.T) {
 	var str string
 	err = db.QueryRow(ctx, "SHOW application_name").Scan(&str)
 	require.NoError(t, err)
-	assert.EqualValues(t, "pgx", str)
+	assert.EqualValues(t, "gaussdbgo", str)
 }
 
 func TestPoolAfterConnect(t *testing.T) {
@@ -963,8 +963,8 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	defer db.Close()
 
 	createSql := `
-		drop table if exists pgxpooltx;
-    create temporary table pgxpooltx(
+		drop table if exists gaussdbtooltx;
+    create temporary table gaussdbtooltx(
       id integer,
       unique (id)
     );
@@ -974,19 +974,19 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		db.Exec(ctx, "drop table pgxpooltx")
+		db.Exec(ctx, "drop table gaussdbtooltx")
 	}()
 
 	err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
-		_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (1)")
+		_, err := db.Exec(ctx, "insert into gaussdbtooltx(id) values (1)")
 		require.NoError(t, err)
 
 		err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
-			_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (2)")
+			_, err := db.Exec(ctx, "insert into gaussdbtooltx(id) values (2)")
 			require.NoError(t, err)
 
 			err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
-				_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (3)")
+				_, err := db.Exec(ctx, "insert into gaussdbtooltx(id) values (3)")
 				require.NoError(t, err)
 				return nil
 			})
@@ -999,7 +999,7 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	require.NoError(t, err)
 
 	var n int64
-	err = db.QueryRow(ctx, "select count(*) from pgxpooltx").Scan(&n)
+	err = db.QueryRow(ctx, "select count(*) from gaussdbtooltx").Scan(&n)
 	require.NoError(t, err)
 	require.EqualValues(t, 3, n)
 }
@@ -1013,8 +1013,8 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	defer db.Close()
 
 	createSql := `
-		drop table if exists pgxpooltx;
-    create temporary table pgxpooltx(
+		drop table if exists gaussdbtooltx;
+    create temporary table gaussdbtooltx(
       id integer,
       unique (id)
     );
@@ -1024,21 +1024,21 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		db.Exec(ctx, "drop table pgxpooltx")
+		db.Exec(ctx, "drop table gaussdbtooltx")
 	}()
 
 	err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
-		_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (1)")
+		_, err := db.Exec(ctx, "insert into gaussdbtooltx(id) values (1)")
 		require.NoError(t, err)
 
 		err = gaussdbgo.BeginFunc(ctx, db, func(db gaussdbgo.Tx) error {
-			_, err := db.Exec(ctx, "insert into pgxpooltx(id) values (2)")
+			_, err := db.Exec(ctx, "insert into gaussdbtooltx(id) values (2)")
 			require.NoError(t, err)
 			return errors.New("do a rollback")
 		})
 		require.EqualError(t, err, "do a rollback")
 
-		_, err = db.Exec(ctx, "insert into pgxpooltx(id) values (3)")
+		_, err = db.Exec(ctx, "insert into gaussdbtooltx(id) values (3)")
 		require.NoError(t, err)
 
 		return nil
@@ -1046,7 +1046,7 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	require.NoError(t, err)
 
 	var n int64
-	err = db.QueryRow(ctx, "select count(*) from pgxpooltx").Scan(&n)
+	err = db.QueryRow(ctx, "select count(*) from gaussdbtooltx").Scan(&n)
 	require.NoError(t, err)
 	require.EqualValues(t, 2, n)
 }

@@ -188,7 +188,6 @@ func (ss *scannerString) Scan(v any) error {
 	return nil
 }
 
-// https://github.com/jackc/pgtype/issues/197
 func TestMapScanUnregisteredOIDIntoRenamedStringSQLScanner(t *testing.T) {
 	m := gaussdbtype.NewMap()
 
@@ -239,7 +238,6 @@ func TestScanPlanBinaryInt32ScanScanner(t *testing.T) {
 	assert.Nil(t, ptr)
 }
 
-// Test for https://github.com/jackc/pgtype/issues/164
 func TestScanPlanInterface(t *testing.T) {
 	m := gaussdbtype.NewMap()
 	src := []byte{0, 42}

@@ -160,7 +160,7 @@ func (c *Config) Copy() *Config {
 	return newConfig
 }
 
-// ConnString returns the connection string as parsed by pgxpool.ParseConfig into pgxpool.Config.
+// ConnString returns the connection string as parsed by gaussdbxpool.ParseConfig into gaussdbxpool.Config.
 func (c *Config) ConnString() string { return c.ConnConfig.ConnString() }
 
 // New creates a new Pool. See [ParseConfig] for information on connString format.
@@ -291,7 +291,7 @@ func NewWithConfig(ctx context.Context, config *Config) (*Pool, error) {
 // See Config for definitions of these arguments.
 //
 //	# Example Keyword/Value
-//	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca pool_max_conns=10 pool_max_conn_lifetime=1h30m
+//	user=jack password=secret host=gaussdb.example.com port=5432 dbname=mydb sslmode=verify-ca pool_max_conns=10 pool_max_conn_lifetime=1h30m
 func ParseConfig(connString string) (*Config, error) {
 	connConfig, err := gaussdbgo.ParseConfig(connString)
 	if err != nil {
@@ -584,7 +584,7 @@ func (p *Pool) Reset() {
 // Config returns a copy of config that was used to initialize this pool.
 func (p *Pool) Config() *Config { return p.config.Copy() }
 
-// Stat returns a pgxpool.Stat struct with a snapshot of Pool statistics.
+// Stat returns a gaussdbxpool.Stat struct with a snapshot of Pool statistics.
 func (p *Pool) Stat() *Stat {
 	return &Stat{
 		s:                    p.p.Stat(),
@@ -667,7 +667,7 @@ func (p *Pool) SendBatch(ctx context.Context, b *gaussdbgo.Batch) gaussdbgo.Batc
 
 // Begin acquires a connection from the Pool and starts a transaction. Unlike database/sql, the context only affects the begin command. i.e. there is no
 // auto-rollback on context cancellation. Begin initiates a transaction block without explicitly setting a transaction mode for the block (see BeginTx with TxOptions if transaction mode is required).
-// *pgxpool.Tx is returned, which implements the gaussdbgo.Tx interface.
+// *gaussdbxpool.Tx is returned, which implements the gaussdbgo.Tx interface.
 // Commit or Rollback must be called on the returned transaction to finalize the transaction block.
 func (p *Pool) Begin(ctx context.Context) (gaussdbgo.Tx, error) {
 	return p.BeginTx(ctx, gaussdbgo.TxOptions{})
@@ -675,7 +675,7 @@ func (p *Pool) Begin(ctx context.Context) (gaussdbgo.Tx, error) {
 
 // BeginTx acquires a connection from the Pool and starts a transaction with gaussdbgo.TxOptions determining the transaction mode.
 // Unlike database/sql, the context only affects the begin command. i.e. there is no auto-rollback on context cancellation.
-// *pgxpool.Tx is returned, which implements the gaussdbgo.Tx interface.
+// *gaussdbxpool.Tx is returned, which implements the gaussdbgo.Tx interface.
 // Commit or Rollback must be called on the returned transaction to finalize the transaction block.
 func (p *Pool) BeginTx(ctx context.Context, txOptions gaussdbgo.TxOptions) (gaussdbgo.Tx, error) {
 	c, err := p.Acquire(ctx)

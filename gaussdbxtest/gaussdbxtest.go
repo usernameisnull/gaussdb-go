@@ -1,4 +1,4 @@
-// Package pgxtest provides utilities for testing pgx and packages that integrate with gaussdbgo.
+// Package gaussdbxtest provides utilities for testing gaussdbgo and packages that integrate with gaussdbgo.
 package gaussdbxtest
 
 import (

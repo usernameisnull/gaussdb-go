@@ -70,7 +70,7 @@ Use Exec to execute a query that does not return a result set.
 
 GaussDB Data Types
 
-gaussdbgo uses the pgtype package to converting Go values to and from GaussDB values. It supports many GaussDB types
+gaussdbgo uses the gaussdbtype package to converting Go values to and from GaussDB values. It supports many GaussDB types
 directly and is customizable and extendable. User defined data types such as enums, domains,  and composite types may
 require type registration. See that package's documentation for details.
 
@@ -184,6 +184,6 @@ For debug tracing of the actual GaussDB wire protocol messages see github.com/Hu
 Lower Level GaussDB Functionality
 
 github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn contains a lower level GaussDB driver .gaussdbgo.Conn in
-implemented on top of pgconn. The Conn.GaussdbConn() method can be used to access this lower layer.
+implemented on top of gaussdbconn. The Conn.GaussdbConn() method can be used to access this lower layer.
 */
 package gaussdbgo

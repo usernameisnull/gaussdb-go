@@ -20,7 +20,7 @@ type TimeValuer interface {
 // Time represents the GaussDB time type. The GaussDB time is a time of day without time zone.
 //
 // Time is represented as the number of microseconds since midnight in the same way that GaussDB does. Other time and
-// date types in pgtype can use time.Time as the underlying representation. However, pgtype.Time type cannot due to
+// date types in gaussdbtype can use time.Time as the underlying representation. However, gaussdbtype.Time type cannot due to
 // needing to handle 24:00:00. time.Time converts that to 00:00:00 on the following day.
 //
 // The time with time zone type is not supported. Use of time with time zone is discouraged by the GaussDB documentation.

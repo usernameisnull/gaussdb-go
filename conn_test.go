@@ -88,7 +88,7 @@ func TestConnectWithPreferSimpleProtocol(t *testing.T) {
 	defer closeConn(t, conn)
 
 	// If simple protocol is used we should be able to correctly scan the result
-	// into a pgtype.Text as the integer will have been encoded in text.
+	// into a gaussdbtype.Text as the integer will have been encoded in text.
 
 	var s gaussdbtype.Text
 	err := conn.QueryRow(context.Background(), "select $1::int4", 42).Scan(&s)
@@ -113,7 +113,7 @@ func TestConfigContainsConnStr(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=gaussdbxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbgo.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -652,7 +652,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	notification, err = listener.WaitForNotification(ctx)
-	assert.True(t, pgconn.Timeout(err))
+	assert.True(t, gaussdbconn.Timeout(err))
 	assert.Nil(t, notification)
 
 	// listener can listen again after a timeout
@@ -968,7 +968,7 @@ func TestConnInitTypeMap(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
 
 		// Domain type uint64 is a GaussDB domain of underlying type numeric.
 
@@ -1103,7 +1103,7 @@ func TestLoadRangeType(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
+	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
 
 		tx, err := conn.Begin(ctx)
 		require.NoError(t, err)
@@ -1116,30 +1116,30 @@ func TestLoadRangeType(t *testing.T) {
 		newRangeType, err := conn.LoadType(ctx, "examplefloatrange")
 		require.NoError(t, err)
 		conn.TypeMap().RegisterType(newRangeType)
-		conn.TypeMap().RegisterDefaultGaussdbType(pgtype.Range[float64]{}, "examplefloatrange")
+		conn.TypeMap().RegisterDefaultGaussdbType(gaussdbtype.Range[float64]{}, "examplefloatrange")
 
 		newMultiRangeType, err := conn.LoadType(ctx, "examplefloatmultirange")
 		require.NoError(t, err)
 		conn.TypeMap().RegisterType(newMultiRangeType)
-		conn.TypeMap().RegisterDefaultGaussdbType(pgtype.Multirange[pgtype.Range[float64]]{}, "examplefloatmultirange")
+		conn.TypeMap().RegisterDefaultGaussdbType(gaussdbtype.Multirange[gaussdbtype.Range[float64]]{}, "examplefloatmultirange")
 
-		var inputMultiRangeType = pgtype.Multirange[pgtype.Range[float64]]{
+		var inputMultiRangeType = gaussdbtype.Multirange[gaussdbtype.Range[float64]]{
 			{
 				Lower:     1.0,
 				Upper:     2.0,
-				LowerType: pgtype.Inclusive,
-				UpperType: pgtype.Inclusive,
+				LowerType: gaussdbtype.Inclusive,
+				UpperType: gaussdbtype.Inclusive,
 				Valid:     true,
 			},
 			{
 				Lower:     3.0,
 				Upper:     4.0,
-				LowerType: pgtype.Exclusive,
-				UpperType: pgtype.Exclusive,
+				LowerType: gaussdbtype.Exclusive,
+				UpperType: gaussdbtype.Exclusive,
 				Valid:     true,
 			},
 		}
-		var outputMultiRangeType pgtype.Multirange[pgtype.Range[float64]]
+		var outputMultiRangeType gaussdbtype.Multirange[gaussdbtype.Range[float64]]
 		err = tx.QueryRow(ctx, "SELECT $1::examplefloatmultirange", inputMultiRangeType).Scan(&outputMultiRangeType)
 		require.NoError(t, err)
 		require.Equal(t, inputMultiRangeType, outputMultiRangeType)

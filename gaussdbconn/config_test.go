@@ -200,7 +200,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "database url everything",
-			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&application_name=pgxtest&search_path=myschema&connect_timeout=5",
+			connString: "gaussdb://jack:secret@localhost:5432/mydb?sslmode=disable&application_name=gaussdbxtest&search_path=myschema&connect_timeout=5",
 			config: &gaussdbconn.Config{
 				User:           "jack",
 				Password:       "secret",
@@ -210,7 +210,7 @@ func TestParseConfig(t *testing.T) {
 				TLSConfig:      nil,
 				ConnectTimeout: 5 * time.Second,
 				RuntimeParams: map[string]string{
-					"application_name": "pgxtest",
+					"application_name": "gaussdbxtest",
 					"search_path":      "myschema",
 				},
 			},
@@ -338,7 +338,7 @@ func TestParseConfig(t *testing.T) {
 		},
 		{
 			name:       "Key/value everything",
-			connString: "user=jack password=secret host=localhost port=5432 dbname=mydb sslmode=disable application_name=pgxtest search_path=myschema connect_timeout=5",
+			connString: "user=jack password=secret host=localhost port=5432 dbname=mydb sslmode=disable application_name=gaussdbxtest search_path=myschema connect_timeout=5",
 			config: &gaussdbconn.Config{
 				User:           "jack",
 				Password:       "secret",
@@ -348,7 +348,7 @@ func TestParseConfig(t *testing.T) {
 				TLSConfig:      nil,
 				ConnectTimeout: 5 * time.Second,
 				RuntimeParams: map[string]string{
-					"application_name": "pgxtest",
+					"application_name": "gaussdbxtest",
 					"search_path":      "myschema",
 				},
 			},
@@ -477,7 +477,6 @@ func TestParseConfig(t *testing.T) {
 				},
 			},
 		},
-		// https://github.com/jackc/pgconn/issues/72
 		{
 			name:       "URL without host but with port still uses default host",
 			connString: "gaussdb://jack:secret@:1/mydb?sslmode=disable",
@@ -772,7 +771,6 @@ func TestParseConfig(t *testing.T) {
 	}
 }
 
-// https://github.com/jackc/pgconn/issues/47
 func TestParseConfigKVWithTrailingEmptyEqualDoesNotPanic(t *testing.T) {
 	_, err := gaussdbconn.ParseConfig("host= user= password= port= database=")
 	require.NoError(t, err)
@@ -783,7 +781,6 @@ func TestParseConfigKVLeadingEqual(t *testing.T) {
 	require.Error(t, err)
 }
 
-// https://github.com/jackc/pgconn/issues/49
 func TestParseConfigKVTrailingBackslash(t *testing.T) {
 	_, err := gaussdbconn.ParseConfig(`x=x\`)
 	require.Error(t, err)
@@ -791,7 +788,7 @@ func TestParseConfigKVTrailingBackslash(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=gaussdbxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -800,7 +797,7 @@ func TestConfigCopyReturnsEqualConfig(t *testing.T) {
 }
 
 func TestConfigCopyOriginalConfigDidNotChange(t *testing.T) {
-	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5&sslmode=prefer"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=gaussdbxtest&search_path=myschema&connect_timeout=5&sslmode=prefer"
 	original, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -970,7 +967,7 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 				"PGPASSWORD":        "baz",
 				"PGCONNECT_TIMEOUT": "10",
 				"PGSSLMODE":         "disable",
-				"PGAPPNAME":         "pgxtest",
+				"PGAPPNAME":         "gaussdbxtest",
 			},
 			config: &gaussdbconn.Config{
 				Host:           "123.123.123.123",
@@ -980,7 +977,7 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 				Password:       "baz",
 				ConnectTimeout: 10 * time.Second,
 				TLSConfig:      nil,
-				RuntimeParams:  map[string]string{"application_name": "pgxtest"},
+				RuntimeParams:  map[string]string{"application_name": "gaussdbxtest"},
 			},
 		},
 		{

@@ -1,4 +1,4 @@
-package pgtype_test
+package gaussdbtype_test
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 
 <%
   [
-    ["int4", ["int16", "int32", "int64", "uint64", "pgtype.Int4"], [[1, 1], [1, 10], [10, 1], [100, 10]]],
-    ["numeric", ["int64", "float64", "pgtype.Numeric"], [[1, 1], [1, 10], [10, 1], [100, 10]]],
+    ["int4", ["int16", "int32", "int64", "uint64", " gaussdbtype.Int4"], [[1, 1], [1, 10], [10, 1], [100, 10]]],
+    ["numeric", ["int64", "float64", " gaussdbtype.Numeric"], [[1, 1], [1, 10], [10, 1], [100, 10]]],
   ].each do |pg_type, go_types, rows_columns|
 %>
 <% go_types.each do |go_type| %>

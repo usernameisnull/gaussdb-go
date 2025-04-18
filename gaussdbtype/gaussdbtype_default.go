@@ -203,7 +203,7 @@ func initDefaultMap() {
 	registerDefaultGaussdbTypeVariants[netip.Addr](defaultMap, "inet")
 	registerDefaultGaussdbTypeVariants[netip.Prefix](defaultMap, "cidr")
 
-	// pgtype provided structs
+	// gaussdbtype provided structs
 	registerDefaultGaussdbTypeVariants[Bits](defaultMap, "varbit")
 	registerDefaultGaussdbTypeVariants[Bool](defaultMap, "bool")
 	registerDefaultGaussdbTypeVariants[Box](defaultMap, "box")

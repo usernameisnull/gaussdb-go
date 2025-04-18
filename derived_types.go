@@ -186,7 +186,7 @@ func (c *Conn) LoadTypes(ctx context.Context, typeNames []string) ([]*gaussdbtyp
 		case "b": // array
 			dt, ok := m.TypeForOID(ti.Typelem)
 			if !ok {
-				return nil, fmt.Errorf("Array element OID %v not registered while loading pgtype %q", ti.Typelem, ti.TypeName)
+				return nil, fmt.Errorf("Array element OID %v not registered while loading gaussdbtype %q", ti.Typelem, ti.TypeName)
 			}
 			type_ = &gaussdbtype.Type{Name: ti.TypeName, OID: ti.Oid, Codec: &gaussdbtype.ArrayCodec{ElementType: dt}}
 		case "c": // composite

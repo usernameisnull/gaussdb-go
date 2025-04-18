@@ -1,4 +1,4 @@
-// Code generated from pgtype/zeronull/int.go.erb. DO NOT EDIT.
+// Code generated from gaussdbtype/zeronull/int.go.erb. DO NOT EDIT.
 
 package zeronull
 

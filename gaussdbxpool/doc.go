@@ -1,25 +1,25 @@
-// Package pgxpool is a concurrency-safe connection pool for pgx.
+// Package gaussdbxpool is a concurrency-safe connection pool for gaussdbgo.
 /*
-pgxpool implements a nearly identical interface to pgx connections.
+gaussdbxpool implements a nearly identical interface to gaussdbgo connections.
 
 Creating a Pool
 
-The primary way of creating a pool is with [pgxpool.New]:
+The primary way of creating a pool is with [gaussdbxpool.New]:
 
-    pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+    pool, err := gaussdbxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 
-The database connection string can be in URL or keyword/value format. GaussDB settings, pgx settings, and pool settings can be
+The database connection string can be in URL or keyword/value format. GaussDB settings, gaussdbgo settings, and pool settings can be
 specified here. In addition, a config struct can be created by [ParseConfig].
 
-    config, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+    config, err := gaussdbxpool.ParseConfig(os.Getenv("DATABASE_URL"))
     if err != nil {
         // ...
     }
-    config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+    config.AfterConnect = func(ctx context.Context, conn *gaussdbgo.Conn) error {
         // do something with every new connection
     }
 
-    pool, err := pgxpool.NewWithConfig(context.Background(), config)
+    pool, err := gaussdbxpool.NewWithConfig(context.Background(), config)
 
 A pool returns without waiting for any connections to be established. Acquire a connection immediately after creating
 the pool to check if a connection can successfully be established.

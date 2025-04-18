@@ -49,7 +49,7 @@ type Rows interface {
 	// whether result-set reading ended prematurely due to an error. See
 	// Conn.Query for details.
 	//
-	// For simpler error handling, consider using the higher-level pgx v5
+	// For simpler error handling, consider using the higher-level gaussdbgo
 	// CollectRows() and ForEachRow() helpers instead.
 	Next() bool
 
@@ -350,7 +350,7 @@ func (e ScanArgError) Unwrap() error {
 	return e.Err
 }
 
-// ScanRow decodes raw row data into dest. It can be used to scan rows read from the lower level pgconn interface.
+// ScanRow decodes raw row data into dest. It can be used to scan rows read from the lower level gaussdbconn interface.
 //
 // typeMap - OID to Go type mapping.
 // fieldDescriptions - OID and format of values
@@ -379,7 +379,7 @@ func ScanRow(typeMap *gaussdbtype.Map, fieldDescriptions []gaussdbconn.FieldDesc
 }
 
 // RowsFromResultReader returns a Rows that will read from values resultReader and decode with typeMap. It can be used
-// to read from the lower level pgconn interface.
+// to read from the lower level gaussdbconn interface.
 func RowsFromResultReader(typeMap *gaussdbtype.Map, resultReader *gaussdbconn.ResultReader) Rows {
 	return &baseRows{
 		typeMap:      typeMap,

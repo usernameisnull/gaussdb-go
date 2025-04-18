@@ -165,10 +165,10 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 // matches the parsing behavior of libpq. connString may either be in URL format or keyword = value format.
 //
 //	# Example Keyword/Value
-//	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca
+//	user=jack password=secret host=gaussdb.example.com port=5432 dbname=mydb sslmode=verify-ca
 //
 //	# Example URL
-//	gaussdb://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca
+//	gaussdb://jack:secret@gaussdb.example.com:5432/mydb?sslmode=verify-ca
 //
 // The returned *Config may be modified. However, it is strongly recommended that any configuration that can be done
 // through the connection string be done there. In particular the fields Host, Port, TLSConfig, and Fallbacks can be

@@ -7,11 +7,11 @@ rule '.go' => '.go.erb' do |task|
 end
 
 generated_code_files = [
-  "pgtype/int.go",
-  "pgtype/int_test.go",
-  "pgtype/integration_benchmark_test.go",
-  "pgtype/zeronull/int.go",
-  "pgtype/zeronull/int_test.go"
+  "gaussdbtype/int.go",
+  "gaussdbtype/int_test.go",
+  "gaussdbtype/integration_benchmark_test.go",
+  "gaussdbtype/zeronull/int.go",
+  "gaussdbtype/zeronull/int_test.go"
 ]
 
 desc "Generate code"

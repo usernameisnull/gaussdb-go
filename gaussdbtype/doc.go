@@ -68,8 +68,8 @@ gaussdbtype.Point and application can directly use its own point type with gauss
 
 See example_custom_type_test.go for an example of a custom type for the GaussDB point type.
 
-Sometimes pgx supports a GaussDB type such as numeric but the Go type is in an external package that does not have
-pgx support such as github.com/shopspring/decimal. These types can be registered with gaussdbtype with custom conversion
+Sometimes gaussdbgo supports a GaussDB type such as numeric but the Go type is in an external package that does not have
+gaussdbgo support such as github.com/shopspring/decimal. These types can be registered with gaussdbtype with custom conversion
 logic.
 
 New GaussDB Type Support
@@ -78,12 +78,12 @@ gaussdbtype uses the GaussDB OID to determine how to encode or decode a value. g
 and enum types. However, any type created in GaussDB with CREATE TYPE will receive a new OID. This means that the OID
 of each new GaussDB type must be registered for gaussdbtype to handle values of that type with the correct Codec.
 
-The pgx.Conn LoadType method can return a *Type for array, composite, domain, and enum types by inspecting the database
+The gaussdbgo.Conn LoadType method can return a *Type for array, composite, domain, and enum types by inspecting the database
 metadata. This *Type can then be registered with Map.RegisterType.
 
 For example, the following function could be called after a connection is established:
 
-    func RegisterDataTypes(ctx context.Context, conn *pgx.Conn) error {
+    func RegisterDataTypes(ctx context.Context, conn *gaussdbgo.Conn) error {
       dataTypeNames := []string{
         "foo",
         "_foo",
@@ -171,7 +171,7 @@ the Codec (see TryFindUnderlyingTypeScanPlan).
 
 These plan wrappers are contained in Map.TryWrapScanPlanFuncs. By default these contain shared logic to handle renamed
 types, pointers to pointers, slices, composite types, etc. Additional plan wrappers can be added to seamlessly integrate
-types that do not support pgx directly.
+types that do not support gaussdbgo directly.
 
 Map.Scan and Map.Encode are convenience methods that wrap Map.PlanScan and Map.PlanEncode.  Determining how to scan or
 encode a particular type may be a time consuming operation. Hence the planning and execution steps of a conversion are
@@ -179,8 +179,8 @@ internally separated.
 
 Reducing Compiled Binary Size
 
-pgx.QueryExecModeExec and pgx.QueryExecModeSimpleProtocol require the default GaussDB type to be registered for each
-Go type used as a query parameter. By default pgx does this for all supported types and their array variants. If an
+gaussdbgo.QueryExecModeExec and gaussdbgo.QueryExecModeSimpleProtocol require the default GaussDB type to be registered for each
+Go type used as a query parameter. By default gaussdbgo does this for all supported types and their array variants. If an
 application does not use those query execution modes or manually registers the default GaussDB type for the types it
 uses as query parameters it can use the build tag nogaussdbregisterdefaulttypes. This omits the default type registration
 and reduces the compiled binary size by ~2MB.

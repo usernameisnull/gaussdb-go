@@ -4,12 +4,12 @@ package gaussdbgo_test
 
 /*func TestLargeObjects(t *testing.T) {
 	// We use a very short limit to test chunking logic.
-	pgx.SetMaxLargeObjectMessageLength(t, 2)
+	gaussdbgo.SetMaxLargeObjectMessageLength(t, 2)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := pgx.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,19 +24,19 @@ package gaussdbgo_test
 
 /*func TestLargeObjectsSimpleProtocol(t *testing.T) {
 	// We use a very short limit to test chunking logic.
-	pgx.SetMaxLargeObjectMessageLength(t, 2)
+	gaussdbgo.SetMaxLargeObjectMessageLength(t, 2)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := pgx.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeSimpleProtocol
 
-	conn, err := pgx.ConnectConfig(ctx, config)
+	conn, err := gaussdbgo.ConnectConfig(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ package gaussdbgo_test
 	testLargeObjects(t, ctx, tx)
 }*/
 
-/*func testLargeObjects(t *testing.T, ctx context.Context, tx pgx.Tx) {
+/*func testLargeObjects(t *testing.T, ctx context.Context, tx gaussdbgo.Tx) {
 
 	lo := tx.LargeObjects()
 
@@ -58,7 +58,7 @@ package gaussdbgo_test
 		t.Fatal(err)
 	}
 
-	obj, err := lo.Open(ctx, id, pgx.LargeObjectModeRead|pgx.LargeObjectModeWrite)
+	obj, err := lo.Open(ctx, id, gaussdbgo.LargeObjectModeRead|gaussdbgo.LargeObjectModeWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,20 +142,20 @@ package gaussdbgo_test
 		t.Fatal(err)
 	}
 
-	_, err = lo.Open(ctx, id, pgx.LargeObjectModeRead)
-	if e, ok := err.(*pgconn.PgError); !ok || e.Code != "42704" {
+	_, err = lo.Open(ctx, id, gaussdbgo.LargeObjectModeRead)
+	if e, ok := err.(*gaussdbconn.GaussdbError); !ok || e.Code != "42704" {
 		t.Errorf("Expected undefined_object error (42704), got %#v", err)
 	}
 }*/
 
 /*func TestLargeObjectsMultipleTransactions(t *testing.T) {
 	// We use a very short limit to test chunking logic.
-	pgx.SetMaxLargeObjectMessageLength(t, 2)
+	gaussdbgo.SetMaxLargeObjectMessageLength(t, 2)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := pgx.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ package gaussdbgo_test
 		t.Fatal(err)
 	}
 
-	obj, err := lo.Open(ctx, id, pgx.LargeObjectModeWrite)
+	obj, err := lo.Open(ctx, id, gaussdbgo.LargeObjectModeWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ package gaussdbgo_test
 	lo2 := tx2.LargeObjects()
 
 	// Reopen the large object in the new transaction
-	obj2, err := lo2.Open(ctx, id, pgx.LargeObjectModeRead|pgx.LargeObjectModeWrite)
+	obj2, err := lo2.Open(ctx, id, gaussdbgo.LargeObjectModeRead|gaussdbgo.LargeObjectModeWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,8 +284,8 @@ package gaussdbgo_test
 		t.Fatal(err)
 	}
 
-	_, err = lo2.Open(ctx, id, pgx.LargeObjectModeRead)
-	if e, ok := err.(*pgconn.PgError); !ok || e.Code != "42704" {
+	_, err = lo2.Open(ctx, id, gaussdbgo.LargeObjectModeRead)
+	if e, ok := err.(*gaussdbconn.GaussdbError); !ok || e.Code != "42704" {
 		t.Errorf("Expected undefined_object error (42704), got %#v", err)
 	}
 }*/
