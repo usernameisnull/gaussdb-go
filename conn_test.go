@@ -113,7 +113,7 @@ func TestConfigContainsConnStr(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "postgres://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbgo.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -551,7 +551,6 @@ func TestPrepareWithDigestedName(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/pull/1795
 func TestDeallocateInAbortedTransaction(t *testing.T) {
 	t.Parallel()
 
@@ -800,7 +799,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 //	defer otherConn.Close(context.Background())
 //
 //	if _, err := otherConn.Exec(context.Background(), "select pg_terminate_backend($1)", conn.GaussdbConn().PID()); err != nil {
-//		t.Fatalf("Unable to kill backend PostgreSQL process: %v", err)
+//		t.Fatalf("Unable to kill backend GaussDB process: %v", err)
 //	}
 //
 //	wg.Wait()
@@ -825,7 +824,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 //
 //			_, err := otherConn.Exec(context.Background(), "select pg_terminate_backend($1)", conn.GaussdbConn().PID())
 //			if err != nil {
-//				t.Fatalf("Unable to kill backend PostgreSQL process: %v", err)
+//				t.Fatalf("Unable to kill backend GaussDB process: %v", err)
 //			}
 //
 //			err = conn.QueryRow(context.Background(), "select 1").Scan(nil)
@@ -921,7 +920,7 @@ func TestConnInitTypeMap(t *testing.T) {
 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
 	defer closeConn(t, conn)
 
-	// spot check that the standard postgres type names aren't qualified
+	// spot check that the standard gaussdb type names aren't qualified
 	nameOIDs := map[string]uint32{
 		"_int8": gaussdbtype.Int8ArrayOID,
 		"int8":  gaussdbtype.Int8OID,
@@ -971,7 +970,7 @@ func TestConnInitTypeMap(t *testing.T) {
 
 	pgxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
 
-		// Domain type uint64 is a PostgreSQL domain of underlying type numeric.
+		// Domain type uint64 is a GaussDB domain of underlying type numeric.
 
 		// In the extended protocol preparing "select $1::uint64" appears to create a statement that expects a param OID of
 		// uint64 but a result OID of the underlying numeric.
@@ -1333,7 +1332,6 @@ func TestRawValuesUnderlyingMemoryReused(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1847
 func TestConnDeallocateInvalidatedCachedStatementsWhenCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -1363,7 +1361,6 @@ func TestConnDeallocateInvalidatedCachedStatementsWhenCanceled(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1847
 func TestConnDeallocateInvalidatedCachedStatementsInTransactionWithBatch(t *testing.T) {
 	t.Parallel()
 

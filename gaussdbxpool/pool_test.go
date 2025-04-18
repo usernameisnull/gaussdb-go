@@ -85,7 +85,7 @@ func TestConnectConfigRequiresConnConfigFromParseConfig(t *testing.T) {
 }
 
 func TestConfigCopyReturnsEqualConfig(t *testing.T) {
-	connString := "postgres://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
+	connString := "gaussdb://jack:secret@localhost:5432/mydb?application_name=pgxtest&search_path=myschema&connect_timeout=5"
 	original, err := gaussdbxpool.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -698,7 +698,6 @@ func TestPoolQueryRow(t *testing.T) {
 	assert.EqualValues(t, 1, stats.TotalConns())
 }
 
-// https://github.com/jackc/pgx/issues/677
 func TestPoolQueryRowErrNoRows(t *testing.T) {
 	t.Parallel()
 
@@ -713,7 +712,6 @@ func TestPoolQueryRowErrNoRows(t *testing.T) {
 	require.Equal(t, gaussdbgo.ErrNoRows, err)
 }
 
-// https://github.com/jackc/pgx/issues/1628
 func TestPoolQueryRowScanPanicReleasesConnection(t *testing.T) {
 	t.Parallel()
 

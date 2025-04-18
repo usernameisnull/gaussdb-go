@@ -13,7 +13,7 @@ const gssEncReqNumber = 80877104
 type GSSEncRequest struct {
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*GSSEncRequest) Frontend() {}
 
 func (dst *GSSEncRequest) Decode(src []byte) error {

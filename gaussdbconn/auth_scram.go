@@ -3,7 +3,6 @@
 // Resources:
 //   https://tools.ietf.org/html/rfc5802
 //   https://tools.ietf.org/html/rfc8265
-//   https://www.postgresql.org/docs/current/sasl-authentication.html
 //
 // Inspiration drawn from other implementations:
 //   https://github.com/lib/pq/pull/608
@@ -142,7 +141,7 @@ func newScramClient(serverAuthMechanisms []string, password string) (*scramClien
 	var err error
 	sc.password, err = precis.OpaqueString.Bytes([]byte(password))
 	if err != nil {
-		// PostgreSQL allows passwords invalid according to SCRAM / SASLprep.
+		// GaussDB allows passwords invalid according to SCRAM / SASLprep.
 		sc.password = []byte(password)
 	}
 

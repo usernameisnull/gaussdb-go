@@ -12,7 +12,7 @@ import (
 type AuthenticationOk struct {
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationOk) Backend() {}
 
 // Backend identifies this message as an authentication response.

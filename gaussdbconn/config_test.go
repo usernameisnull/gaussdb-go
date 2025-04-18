@@ -836,7 +836,7 @@ func TestNetworkAddress(t *testing.T) {
 	}{
 		{
 			name:    "Default Unix socket address",
-			host:    "/var/run/postgresql",
+			host:    "/var/run/gaussdb",
 			wantNet: "unix",
 		},
 		{

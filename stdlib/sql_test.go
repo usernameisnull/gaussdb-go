@@ -376,7 +376,6 @@ func TestConnConcurrency(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/781
 func TestConnQueryDifferentScanPlansIssue781(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		var s string
@@ -743,8 +742,6 @@ func TestConnPrepareContextSuccess(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/1753#issuecomment-1746033281
-// https://github.com/jackc/pgx/issues/1754#issuecomment-1752004634
 func TestConnMultiplePrepareAndDeallocate(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		sql := "select 42"
@@ -1056,7 +1053,6 @@ func TestQueryLifeCycle(t *testing.T) {
 	})
 }
 
-// https://github.com/jackc/pgx/issues/409
 func TestScanJSONIntoJSONRawMessage(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		var msg json.RawMessage
@@ -1111,7 +1107,6 @@ func TestRegisterConnConfig(t *testing.T) {
 	assert.Equal(t, "select 1", l.data["sql"])
 }
 
-// https://github.com/jackc/pgx/issues/958
 func TestConnQueryRowConstraintErrors(t *testing.T) {
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 

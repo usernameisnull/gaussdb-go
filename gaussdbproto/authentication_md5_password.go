@@ -13,7 +13,7 @@ type AuthenticationMD5Password struct {
 	Salt [4]byte
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationMD5Password) Backend() {}
 
 // Backend identifies this message as an authentication response.

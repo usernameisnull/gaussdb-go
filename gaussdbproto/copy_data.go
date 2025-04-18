@@ -9,10 +9,10 @@ type CopyData struct {
 	Data []byte
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*CopyData) Backend() {}
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*CopyData) Frontend() {}
 
 // Decode decodes src into dst. src must contain the complete message with the exception of the initial 1 byte message

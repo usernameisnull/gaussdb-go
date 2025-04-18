@@ -9,7 +9,7 @@ type PasswordMessage struct {
 	Password string
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*PasswordMessage) Frontend() {}
 
 // InitialResponse identifies this message as an authentication response.

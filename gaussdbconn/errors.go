@@ -26,9 +26,7 @@ func Timeout(err error) bool {
 	return errors.As(err, &timeoutErr)
 }
 
-// GaussdbError represents an error reported by the PostgreSQL server. See
-// http://www.postgresql.org/docs/11/static/protocol-error-fields.html for
-// detailed field description.
+// GaussdbError represents an error reported by the GaussDB server.
 type GaussdbError struct {
 	Severity            string
 	SeverityUnlocalized string

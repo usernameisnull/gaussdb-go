@@ -13,7 +13,7 @@ type AuthenticationSASLContinue struct {
 	Data []byte
 }
 
-// Backend identifies this message as sendable by the PostgreSQL backend.
+// Backend identifies this message as sendable by the GaussDB backend.
 func (*AuthenticationSASLContinue) Backend() {}
 
 // Backend identifies this message as an authentication response.

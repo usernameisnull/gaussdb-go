@@ -7,7 +7,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// RangeValuer is a type that can be converted into a PostgreSQL range.
+// RangeValuer is a type that can be converted into a GaussDB range.
 type RangeValuer interface {
 	// IsNull returns true if the value is SQL NULL.
 	IsNull() bool
@@ -19,7 +19,7 @@ type RangeValuer interface {
 	Bounds() (lower, upper any)
 }
 
-// RangeScanner is a type can be scanned from a PostgreSQL range.
+// RangeScanner is a type can be scanned from a GaussDB range.
 type RangeScanner interface {
 	// ScanNull sets the value to SQL NULL.
 	ScanNull() error

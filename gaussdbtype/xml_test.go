@@ -46,7 +46,6 @@ type xmlStruct struct {
 //	})
 //}
 
-// https://github.com/jackc/pgx/issues/1273#issuecomment-1221414648
 func TestXMLCodecUnmarshalSQLNull(t *testing.T) {
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {
 		// Byte arrays are nilified

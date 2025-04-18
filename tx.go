@@ -85,7 +85,7 @@ func (txOptions TxOptions) beginSQL() string {
 var ErrTxClosed = errors.New("tx is closed")
 
 // ErrTxCommitRollback occurs when an error has occurred in a transaction and
-// Commit() is called. PostgreSQL accepts COMMIT on aborted transactions, but
+// Commit() is called. GaussDB accepts COMMIT on aborted transactions, but
 // it is treated as ROLLBACK.
 var ErrTxCommitRollback = errors.New("commit unexpectedly resulted in rollback")
 

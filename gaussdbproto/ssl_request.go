@@ -13,7 +13,7 @@ const sslRequestNumber = 80877103
 type SSLRequest struct {
 }
 
-// Frontend identifies this message as sendable by a PostgreSQL frontend.
+// Frontend identifies this message as sendable by a GaussDB frontend.
 func (*SSLRequest) Frontend() {}
 
 func (dst *SSLRequest) Decode(src []byte) error {

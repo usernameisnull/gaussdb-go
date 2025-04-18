@@ -90,7 +90,7 @@ func TestJSONAndJSONBTranscode(t *testing.T) {
 	gaussdbxtest.RunWithQueryExecModes(ctx, t, defaultConnTestRunner, nil, func(ctx context.Context, t testing.TB, conn *gaussdbgo.Conn) {
 		for _, typename := range []string{"json", "jsonb"} {
 			if _, ok := conn.TypeMap().TypeForName(typename); !ok {
-				continue // No JSON/JSONB type -- must be running against old PostgreSQL
+				continue // No JSON/JSONB type -- must be running against old GaussDB
 			}
 
 			testJSONString(t, conn, typename)
@@ -107,7 +107,7 @@ func TestJSONAndJSONBTranscodeExtendedOnly(t *testing.T) {
 
 	for _, typename := range []string{"json", "jsonb"} {
 		if _, ok := conn.TypeMap().TypeForName(typename); !ok {
-			continue // No JSON/JSONB type -- must be running against old PostgreSQL
+			continue // No JSON/JSONB type -- must be running against old GaussDB
 		}
 		testJSONSingleLevelStringMap(t, conn, typename)
 		testJSONNestedMap(t, conn, typename)
@@ -1000,7 +1000,6 @@ func TestEncodeTypeRename(t *testing.T) {
 // 	}
 // }
 
-// https://github.com/jackc/pgx/issues/810
 func TestRowsScanNilThenScanValue(t *testing.T) {
 	t.Parallel()
 

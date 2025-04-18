@@ -1148,7 +1148,6 @@ func TestConnExecParamsEmptySQL(t *testing.T) {
 	ensureConnValid(t, gaussdbConn)
 }
 
-// https://github.com/jackc/pgx/issues/859
 func TestResultReaderValuesHaveSameCapacityAsLength(t *testing.T) {
 	t.Parallel()
 
@@ -1177,7 +1176,6 @@ func TestResultReaderValuesHaveSameCapacityAsLength(t *testing.T) {
 	ensureConnValid(t, gaussdbConn)
 }
 
-// https://github.com/jackc/pgx/issues/1987
 func TestResultReaderReadNil(t *testing.T) {
 	t.Parallel()
 
@@ -1511,8 +1509,6 @@ func TestConnExecBatchPrecanceled(t *testing.T) {
 }
 
 // Without concurrent reading and writing large batches can deadlock.
-//
-// See https://github.com/jackc/pgx/issues/374.
 func TestConnExecBatchHuge(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -2344,7 +2340,6 @@ func TestConnCancelRequest(t *testing.T) {
 	ensureConnValid(t, gaussdbConn)
 }
 
-// https://github.com/jackc/pgx/issues/659
 func TestConnContextCanceledCancelsRunningQueryOnServer(t *testing.T) {
 	t.Parallel()
 
@@ -2377,8 +2372,8 @@ func testConnContextCanceledCancelsRunningQueryOnServer(t *testing.T, connString
 	ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
-	// Getting the actual PostgreSQL server process ID (PID) from a query executed through pgbouncer is not straightforward
-	// because pgbouncer abstracts the underlying database connections, and it doesn't expose the PID of the PostgreSQL
+	// Getting the actual GaussDB server process ID (PID) from a query executed through pgbouncer is not straightforward
+	// because pgbouncer abstracts the underlying database connections, and it doesn't expose the PID of the GaussDB
 	// server process to clients. However, we can check if the query is running by checking the generated query ID.
 	queryID := fmt.Sprintf("%s testConnContextCanceled %d", dbType, time.Now().UnixNano())
 
@@ -2479,7 +2474,6 @@ func TestConnCloseWhileCancellableQueryInProgress(t *testing.T) {
 	}
 }
 
-// https://github.com/jackc/pgx/issues/800
 func TestFatalErrorReceivedAfterCommandComplete(t *testing.T) {
 	t.Parallel()
 
@@ -3747,7 +3741,6 @@ func TestSNISupport(t *testing.T) {
 	}
 }
 
-// https://github.com/jackc/pgx/issues/1920
 func TestFatalErrorReceivedInPipelineMode(t *testing.T) {
 	t.Parallel()
 

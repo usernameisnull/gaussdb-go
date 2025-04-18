@@ -1,4 +1,4 @@
-// Package gaussdbmock provides the ability to mock a PostgreSQL server.
+// Package gaussdbmock provides the ability to mock a GaussDB server.
 package gaussdbmock
 
 import (

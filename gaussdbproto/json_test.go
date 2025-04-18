@@ -518,12 +518,12 @@ func TestJSONUnmarshalSASLResponse(t *testing.T) {
 }
 
 func TestJSONUnmarshalStartupMessage(t *testing.T) {
-	data := []byte(`{"Type":"StartupMessage","ProtocolVersion":196659,"Parameters":{"database":"testing","user":"postgres"}}`)
+	data := []byte(`{"Type":"StartupMessage","ProtocolVersion":196659,"Parameters":{"database":"testing","user":"gaussdb"}}`)
 	want := StartupMessage{
 		ProtocolVersion: 196659,
 		Parameters: map[string]string{
 			"database": "testing",
-			"user":     "postgres",
+			"user":     "gaussdb",
 		},
 	}
 

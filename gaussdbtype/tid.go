@@ -18,7 +18,7 @@ type TIDValuer interface {
 	TIDValue() (TID, error)
 }
 
-// TID is PostgreSQL's Tuple Identifier type.
+// TID is GaussDB's Tuple Identifier type.
 //
 // When one does
 //
@@ -28,7 +28,7 @@ type TIDValuer interface {
 //
 // It is currently implemented as a pair unsigned two byte integers.
 // Its conversion functions can be found in src/backend/utils/adt/tid.c
-// in the PostgreSQL sources.
+// in the GaussDB sources.
 type TID struct {
 	BlockNumber  uint32
 	OffsetNumber uint16

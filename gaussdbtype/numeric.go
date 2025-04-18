@@ -13,7 +13,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// PostgreSQL internal numeric storage uses 16-bit "digits" with base of 10,000
+// GaussDB internal numeric storage uses 16-bit "digits" with base of 10,000
 const nbase = 10000
 
 const (

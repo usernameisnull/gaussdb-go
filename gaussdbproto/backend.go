@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// Backend acts as a server for the PostgreSQL wire protocol version 3.
+// Backend acts as a server for the GaussDB wire protocol version 3.
 type Backend struct {
 	cr *chunkReader
 	w  io.Writer

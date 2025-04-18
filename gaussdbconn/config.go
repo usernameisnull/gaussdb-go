@@ -27,7 +27,7 @@ type AfterConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
 type ValidateConnectFunc func(ctx context.Context, gaussdbConn *GaussdbConn) error
 type GetSSLPasswordFunc func(ctx context.Context) string
 
-// Config is the settings used to establish a connection to a PostgreSQL server. It must be created by [ParseConfig]. A
+// Config is the settings used to establish a connection to a GaussDB server. It must be created by [ParseConfig]. A
 // manually initialized Config will cause ConnectConfig to panic.
 type Config struct {
 	minReadBufferSize int64 // The minimum size of the internal read buffer. Default 8192.
@@ -53,7 +53,7 @@ type Config struct {
 	KerberosSpn     string
 	Fallbacks       []*FallbackConfig
 
-	// ValidateConnect is called during a connection attempt after a successful authentication with the PostgreSQL server.
+	// ValidateConnect is called during a connection attempt after a successful authentication with the GaussDB server.
 	// It can be used to validate that the server is acceptable. If this returns an error the connection is closed and the next
 	// fallback config is tried. This allows implementing high availability behavior such as libpq does with target_session_attrs.
 	ValidateConnect ValidateConnectFunc
@@ -147,7 +147,7 @@ func isAbsolutePath(path string) bool {
 	return strings.HasPrefix(path, "/") || isWindowsPath(path)
 }
 
-// NetworkAddress converts a PostgreSQL host and port into network and address suitable for use with
+// NetworkAddress converts a GaussDB host and port into network and address suitable for use with
 // net.Dial.
 func NetworkAddress(host string, port uint16) (network, address string) {
 	if isAbsolutePath(host) {
@@ -160,29 +160,26 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 	return network, address
 }
 
-// ParseConfig builds a *Config from connString with similar behavior to the PostgreSQL standard C library libpq. It
+// ParseConfig builds a *Config from connString with similar behavior to the GaussDB standard C library libpq. It
 // uses the same defaults as libpq (e.g. port=5432) and understands most PG* environment variables. ParseConfig closely
-// matches the parsing behavior of libpq. connString may either be in URL format or keyword = value format. See
-// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING for details. connString also may be empty
-// to only read from the environment. If a password is not supplied it will attempt to read the .pgpass file.
+// matches the parsing behavior of libpq. connString may either be in URL format or keyword = value format.
 //
 //	# Example Keyword/Value
 //	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca
 //
 //	# Example URL
-//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca
+//	gaussdb://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca
 //
 // The returned *Config may be modified. However, it is strongly recommended that any configuration that can be done
 // through the connection string be done there. In particular the fields Host, Port, TLSConfig, and Fallbacks can be
 // interdependent (e.g. TLSConfig needs knowledge of the host to validate the server certificate). These fields should
 // not be modified individually. They should all be modified or all left unchanged.
 //
-// ParseConfig supports specifying multiple hosts in similar manner to libpq. Host and port may include comma separated
-// values that will be tried in order. This can be used as part of a high availability system. See
-// https://www.postgresql.org/docs/11/libpq-connect.html#LIBPQ-MULTIPLE-HOSTS for more information.
+// ParseConfig supports specifying multiple hosts. Host and port may include comma separated
+// values that will be tried in order. This can be used as part of a high availability system.
 //
 //	# Example URL
-//	postgres://jack:secret@foo.example.com:5432,bar.example.com:5432/mydb
+//	gaussdb://jack:secret@foo.example.com:5432,bar.example.com:5432/mydb
 //
 // ParseConfig currently recognizes the following environment variable and their parameter key word equivalents passed
 // via database URL or keyword/value:
@@ -204,30 +201,12 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 //	PGCONNECT_TIMEOUT
 //	PGTARGETSESSIONATTRS
 //
-// See http://www.postgresql.org/docs/11/static/libpq-envars.html for details on the meaning of environment variables.
-//
-// See https://www.postgresql.org/docs/11/libpq-connect.html#LIBPQ-PARAMKEYWORDS for parameter key word names. They are
-// usually but not always the environment variable name downcased and without the "PG" prefix.
-//
-// Important Security Notes:
-//
-// ParseConfig tries to match libpq behavior with regard to PGSSLMODE. This includes defaulting to "prefer" behavior if
-// not set.
-//
-// See http://www.postgresql.org/docs/11/static/libpq-ssl.html#LIBPQ-SSL-PROTECTION for details on what level of
-// security each sslmode provides.
-//
 // The sslmode "prefer" (the default), sslmode "allow", and multiple hosts are implemented via the Fallbacks field of
 // the Config struct. If TLSConfig is manually changed it will not affect the fallbacks. For example, in the case of
 // sslmode "prefer" this means it will first try the main Config settings which use TLS, then it will try the fallback
 // which does not use TLS. This can lead to an unexpected unencrypted connection if the main TLS config is manually
 // changed later but the unencrypted fallback is present. Ensure there are no stale fallbacks when manually setting
 // TLSConfig.
-//
-// Other known differences with libpq:
-//
-// When multiple hosts are specified, libpq allows them to have different passwords set via the .pgpass file. pgconn
-// does not.
 //
 // In addition, ParseConfig accepts the following options:
 //
@@ -239,9 +218,8 @@ func ParseConfig(connString string) (*Config, error) {
 	return ParseConfigWithOptions(connString, parseConfigOptions)
 }
 
-// ParseConfigWithOptions builds a *Config from connString and options with similar behavior to the PostgreSQL standard
-// C library libpq. options contains settings that cannot be specified in a connString such as providing a function to
-// get the SSL password.
+// ParseConfigWithOptions builds a *Config from connString and options.
+// options contains settings that cannot be specified in a connString such as providing a function to  get the SSL password.
 func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Config, error) {
 	defaultSettings := defaultSettings()
 	envSettings := parseEnvSettings()
@@ -249,7 +227,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 	connStringSettings := make(map[string]string)
 	if connString != "" {
 		var err error
-		// connString may be a database URL or in PostgreSQL keyword/value format
+		// connString may be a database URL or in GaussDB keyword/value format
 		if strings.HasPrefix(connString, "gaussdb://") {
 			connStringSettings, err = parseURLSettings(connString)
 			if err != nil {
@@ -700,10 +678,8 @@ func configTLS(settings map[string]string, thisHost string, parseConfigOptions P
 	case "allow", "prefer":
 		tlsConfig.InsecureSkipVerify = true
 	case "require":
-		// According to PostgreSQL documentation, if a root CA file exists,
+		// if a root CA file exists,
 		// the behavior of sslmode=require should be the same as that of verify-ca
-		//
-		// See https://www.postgresql.org/docs/12/libpq-ssl.html
 		if sslrootcert != "" {
 			goto nextCase
 		}

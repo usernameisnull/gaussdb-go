@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-// Frontend acts as a client for the PostgreSQL wire protocol version 3.
+// Frontend acts as a client for the GaussDB wire protocol version 3.
 type Frontend struct {
 	cr *chunkReader
 	w  io.Writer

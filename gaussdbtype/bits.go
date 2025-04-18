@@ -16,7 +16,7 @@ type BitsValuer interface {
 	BitsValue() (Bits, error)
 }
 
-// Bits represents the PostgreSQL bit and varbit types.
+// Bits represents the GaussDB bit and varbit types.
 type Bits struct {
 	Bytes []byte
 	Len   int32 // Number of bits

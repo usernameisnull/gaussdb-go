@@ -2,21 +2,21 @@
 //
 // A database/sql connection can be established through sql.Open.
 //
-//	db, err := sql.Open("pgx", "postgres://pgx_md5:secret@localhost:5432/pgx_test?sslmode=disable")
+//	db, err := sql.Open("gaussdb", "gaussdb://pgx_md5:secret@localhost:5432/pgx_test?sslmode=disable")
 //	if err != nil {
 //	  return err
 //	}
 //
 // Or from a keyword/value string.
 //
-//	db, err := sql.Open("pgx", "user=postgres password=secret host=localhost port=5432 database=pgx_test sslmode=disable")
+//	db, err := sql.Open("gaussdb", "user=gaussdb password=secret host=localhost port=5432 database=pgx_test sslmode=disable")
 //	if err != nil {
 //	  return err
 //	}
 //
-// Or from a *pgxpool.Pool.
+// Or from a *gaussdbxpool.Pool.
 //
-//	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+//	pool, err := gaussdbxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 //	if err != nil {
 //	  return err
 //	}
@@ -32,7 +32,7 @@
 //	connStr := stdlib.RegisterConnConfig(connConfig)
 //	db, _ := sql.Open("pgx", connStr)
 //
-// pgx uses standard PostgreSQL positional parameters in queries. e.g. $1, $2. It does not support named parameters.
+// pgx uses standard GaussDB positional parameters in queries. e.g. $1, $2. It does not support named parameters.
 //
 //	db.QueryRow("select * from users where id=$1", userID)
 //
@@ -55,9 +55,9 @@
 //	  // handle error that occurred while using *gaussdbgo.Conn
 //	}
 //
-// # PostgreSQL Specific Data Types
+// # GaussDB Specific Data Types
 //
-// The pgtype package provides support for PostgreSQL specific types. *pgtype.Map.SQLScanner is an adapter that makes
+// The pgtype package provides support for GaussDB specific types. *pgtype.Map.SQLScanner is an adapter that makes
 // these types usable as a sql.Scanner.
 //
 //	m := pgtype.NewMap()

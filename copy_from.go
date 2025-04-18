@@ -254,7 +254,7 @@ func (ct *copyFrom) buildCopyBuf(buf []byte, sd *gaussdbconn.StatementDescriptio
 	return false, buf, nil
 }
 
-// CopyFrom uses the PostgreSQL copy protocol to perform bulk data insertion. It returns the number of rows copied and
+// CopyFrom uses the GaussDB copy protocol to perform bulk data insertion. It returns the number of rows copied and
 // an error.
 //
 // CopyFrom requires all values use the binary format. A pgtype.Type that supports the binary format must be registered

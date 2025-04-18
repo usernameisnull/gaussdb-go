@@ -10,7 +10,7 @@ import (
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/internal/gaussdbio"
 )
 
-// CompositeIndexGetter is a type accessed by index that can be converted into a PostgreSQL composite.
+// CompositeIndexGetter is a type accessed by index that can be converted into a GaussDB composite.
 type CompositeIndexGetter interface {
 	// IsNull returns true if the value is SQL NULL.
 	IsNull() bool
@@ -19,7 +19,7 @@ type CompositeIndexGetter interface {
 	Index(i int) any
 }
 
-// CompositeIndexScanner is a type accessed by index that can be scanned from a PostgreSQL composite.
+// CompositeIndexScanner is a type accessed by index that can be scanned from a GaussDB composite.
 type CompositeIndexScanner interface {
 	// ScanNull sets the value to SQL NULL.
 	ScanNull() error
