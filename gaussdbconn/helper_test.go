@@ -24,7 +24,8 @@ func closeConn(t testing.TB, conn *gaussdbconn.GaussdbConn) {
 
 // Do a simple query to ensure the connection is still usable
 func ensureConnValid(t *testing.T, gaussdbConn *gaussdbconn.GaussdbConn) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// in github action may timeout,so increate from 30 to 70.
+	ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
 	result := gaussdbConn.ExecParams(ctx, "select generate_series(1,$1)", [][]byte{[]byte("3")}, nil, nil, nil).Read()
 	cancel()
 
