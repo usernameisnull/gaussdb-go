@@ -3,6 +3,7 @@ package gaussdbgo_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -135,4 +136,17 @@ func assertConfigsEqual(t *testing.T, expected, actual *gaussdbgo.ConnConfig, te
 			}
 		}
 	}
+}
+
+func lowerFirstLetterInError(s string) string {
+	if os.Getenv("IS_OPENGAUSS") != "true" || s == "" || strings.HasPrefix(s, "SQLSTATE") {
+		return s
+	}
+	prefix := ""
+	leftOver := s
+	if strings.HasPrefix(s, "ERROR: ") {
+		prefix = "ERROR: "
+		leftOver = strings.TrimPrefix(s, prefix)
+	}
+	return prefix + strings.ToLower(leftOver[:1]) + leftOver[1:]
 }

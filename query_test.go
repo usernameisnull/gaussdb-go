@@ -977,7 +977,7 @@ func TestQueryRowErrors(t *testing.T) {
 		scanArgs  []any
 		err       string
 	}{
-		// todo: gaussdb: 'ERROR: Type "badtype" does not exist. (SQLSTATE 42704)', opengauss: 'ERROR: type "badtype" does not exist (SQLSTATE 42704)'
+		// gaussdb: 'ERROR: Type "badtype" does not exist. (SQLSTATE 42704)', opengauss: 'ERROR: type "badtype" does not exist (SQLSTATE 42704)'
 		{"select $1::badtype", []any{"Jack"}, []any{&actual.i16}, `Type "badtype" does not exist`},
 		{"SYNTAX ERROR", []any{}, []any{&actual.i16}, "SQLSTATE 42601"},
 		{"select $1::text", []any{"Jack"}, []any{&actual.i16}, "cannot scan text (OID 25) in text format into *int16"},
@@ -991,7 +991,7 @@ func TestQueryRowErrors(t *testing.T) {
 		if err == nil {
 			t.Errorf("%d. Unexpected success (sql -> %v, queryArgs -> %v)", i, tt.sql, tt.queryArgs)
 		}
-		if err != nil && !strings.Contains(err.Error(), tt.err) {
+		if err != nil && !strings.Contains(err.Error(), lowerFirstLetterInError(tt.err)) {
 			t.Errorf("%d. Expected error to contain %s, but got %v (sql -> %v, queryArgs -> %v)", i, tt.err, err, tt.sql, tt.queryArgs)
 		}
 
@@ -1487,8 +1487,9 @@ func TestQueryContextErrorWhileReceivingRows(t *testing.T) {
 		}
 		rowCount++
 	}
-	// todo: opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
-	if rows.Err() == nil || rows.Err().Error() != "ERROR: Division by zero. (SQLSTATE 22012)" {
+	// opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
+	errStr := lowerFirstLetterInError("ERROR: Division by zero (SQLSTATE 22012)")
+	if rows.Err() == nil || rows.Err().Error() != errStr {
 		t.Fatalf("Expected division by zero error, but got %v", rows.Err())
 	}
 
@@ -1534,8 +1535,8 @@ func TestQueryRowContextErrorWhileReceivingRow(t *testing.T) {
 
 	var result int
 	err := conn.QueryRow(ctx, "select 10/0").Scan(&result)
-	// same as TestQueryContextErrorWhileReceivingRows
-	if err == nil || err.Error() != "ERROR: Division by zero. (SQLSTATE 22012)" {
+	// opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
+	if err == nil || err.Error() != lowerFirstLetterInError("ERROR: Division by zero (SQLSTATE 22012)") {
 		t.Fatalf("Expected division by zero error, but got %v", err)
 	}
 

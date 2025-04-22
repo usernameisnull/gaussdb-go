@@ -1019,9 +1019,8 @@ func TestConnSendBatchErrorDoesNotLeaveOrphanedPreparedStatement(t *testing.T) {
 		batch.Queue("select col1 from foo")
 		batch.Queue("select col1 from baz")
 		err := conn.SendBatch(ctx, batch).Close()
-		// todo: opengauss, gaussdb return different error.
-		//require.EqualError(t, err, `ERROR: relation "baz" does not exist on gaussdb (SQLSTATE 42P01)`)
-		require.Contains(t, err.Error(), `ERROR: Relation "baz" does not exist on`)
+		// opengauss, gaussdb return different error.
+		require.Contains(t, err.Error(), lowerFirstLetterInError(`ERROR: Relation "baz" does not exist on`))
 		var gaussdbConnErr *gaussdbconn.GaussdbError
 
 		ok := errors.As(err, &gaussdbConnErr)
