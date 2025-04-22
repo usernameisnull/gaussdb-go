@@ -424,7 +424,7 @@ func TestConnSendBatchWithPreparedStatementAndStatementCacheDisabled(t *testing.
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
@@ -899,7 +899,7 @@ func TestConnSendBatchNoStatementCache(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
@@ -914,7 +914,7 @@ func TestConnSendBatchPrepareStatementCache(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 
@@ -928,7 +928,7 @@ func TestConnSendBatchDescribeStatementCache(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.DescriptionCacheCapacity = 32
 
@@ -970,7 +970,7 @@ func TestSendBatchSimpleProtocol(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeSimpleProtocol
 
 	conn := mustConnect(t, config)
@@ -1042,7 +1042,7 @@ func ExampleConn_SendBatch() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return

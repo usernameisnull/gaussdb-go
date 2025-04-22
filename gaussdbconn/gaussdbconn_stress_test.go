@@ -8,20 +8,21 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestConnStress(t *testing.T) {
-	gaussdbConn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
 	actionCount := 10000
-	if s := os.Getenv("PGX_TEST_STRESS_FACTOR"); s != "" {
+	if s := os.Getenv(gaussdbgo.EnvGaussdbTestStressFactor); s != "" {
 		stressFactor, err := strconv.ParseInt(s, 10, 64)
-		require.Nil(t, err, "Failed to parse PGX_TEST_STRESS_FACTOR")
+		require.Nil(t, err, "Failed to parse GAUSSDB_TEST_STRESS_FACTOR")
 		actionCount *= int(stressFactor)
 	}
 

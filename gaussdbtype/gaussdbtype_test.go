@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 
@@ -24,8 +25,7 @@ var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 func init() {
 	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *gaussdbgo.ConnConfig {
-		//config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
-		config, err := gaussdbgo.ParseConfig("host=1.95.160.45 database=pgx_test user=pgx_md5 password=Gaussdb@123! sslmode=verify-ca sslrootcert=/root/daocloud/gaussdb-go/mine/ca.pem")
+		config, err := gaussdbgo.ParseConfig(os.Getenv("GAUSSDB_TEST_DATABASE"))
 		require.NoError(t, err)
 		return config
 	}

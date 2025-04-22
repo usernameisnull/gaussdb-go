@@ -68,7 +68,7 @@ type Config struct {
 	// OnNotification is a callback function called when a notification from the LISTEN/NOTIFY system is received.
 	OnNotification NotificationHandler
 
-	// OnGaussdbError is a callback function called when a Postgres error is received by the server. The default handler will close
+	// OnGaussdbError is a callback function called when a Gaussdb error is received by the server. The default handler will close
 	// the connection on any FATAL errors. If you override this handler you should call the previously set handler or ensure
 	// that you close on FATAL errors by returning false.
 	OnGaussdbError GaussdbErrorHandler

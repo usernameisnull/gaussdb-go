@@ -131,7 +131,7 @@ func TestHstoreCodec(t *testing.T) {
 		"form\\ffeed",
 		"carriage\rreturn",
 		"curly{}braces",
-		// Postgres on Mac OS X hstore parsing bug:
+		// Gaussdb on Mac OS X hstore parsing bug:
 		// ą = "\xc4\x85" in UTF-8; isspace(0x85) on Mac OS X returns true instead of false
 		"mac_bugą",
 	}

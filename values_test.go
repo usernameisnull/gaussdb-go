@@ -102,7 +102,7 @@ func TestJSONAndJSONBTranscode(t *testing.T) {
 func TestJSONAndJSONBTranscodeExtendedOnly(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	for _, typename := range []string{"json", "jsonb"} {
@@ -958,7 +958,7 @@ func TestEncodeTypeRename(t *testing.T) {
 // func TestRowDecodeBinary(t *testing.T) {
 // 	t.Parallel()
 
-// 	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+// 	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 // 	defer closeConn(t, conn)
 
 // 	tests := []struct {
@@ -1038,7 +1038,7 @@ order by a nulls first
 func TestScanIntoByteSlice(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 	// Success cases
 	for _, tt := range []struct {

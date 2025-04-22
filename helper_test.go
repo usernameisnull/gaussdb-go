@@ -19,7 +19,7 @@ var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 func init() {
 	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *gaussdbgo.ConnConfig {
-		config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		return config
 	}
@@ -139,7 +139,7 @@ func assertConfigsEqual(t *testing.T, expected, actual *gaussdbgo.ConnConfig, te
 }
 
 func lowerFirstLetterInError(s string) string {
-	if os.Getenv("IS_OPENGAUSS") != "true" || s == "" || strings.HasPrefix(s, "SQLSTATE") {
+	if os.Getenv(gaussdbgo.EnvIsOpengauss) != "true" || s == "" || strings.HasPrefix(s, "SQLSTATE") {
 		return s
 	}
 	prefix := ""

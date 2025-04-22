@@ -53,7 +53,7 @@ func TestTraceAcquire(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	config.ConnConfig.Tracer = tracer
 
@@ -108,7 +108,7 @@ func TestTraceRelease(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	config.ConnConfig.Tracer = tracer
 

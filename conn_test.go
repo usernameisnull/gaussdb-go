@@ -20,9 +20,9 @@ import (
 func TestCrateDBConnect(t *testing.T) {
 	t.Parallel()
 
-	connString := os.Getenv("PGX_TEST_CRATEDB_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestCratedbConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_CRATEDB_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestCratedbConnString)
 	}
 
 	conn, err := gaussdbgo.Connect(context.Background(), connString)
@@ -44,7 +44,7 @@ func TestCrateDBConnect(t *testing.T) {
 func TestConnect(t *testing.T) {
 	t.Parallel()
 
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	config := mustParseConfig(t, connString)
 
 	conn, err := gaussdbgo.ConnectConfig(context.Background(), config)
@@ -81,7 +81,7 @@ func TestConnect(t *testing.T) {
 func TestConnectWithPreferSimpleProtocol(t *testing.T) {
 	t.Parallel()
 
-	connConfig := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	connConfig := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	connConfig.DefaultQueryExecMode = gaussdbgo.QueryExecModeSimpleProtocol
 
 	conn := mustConnect(t, connConfig)
@@ -106,7 +106,7 @@ func TestConnectConfigRequiresConnConfigFromParseConfig(t *testing.T) {
 }
 
 func TestConfigContainsConnStr(t *testing.T) {
-	connStr := os.Getenv("PGX_TEST_DATABASE")
+	connStr := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	config, err := gaussdbgo.ParseConfig(connStr)
 	require.NoError(t, err)
 	assert.Equal(t, connStr, config.ConnString())
@@ -122,7 +122,7 @@ func TestConfigCopyReturnsEqualConfig(t *testing.T) {
 }
 
 func TestConfigCopyCanBeUsedToConnect(t *testing.T) {
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	original, err := gaussdbgo.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -376,7 +376,7 @@ func TestExecContextFailureWithoutCancelationWithArguments(t *testing.T) {
 func TestExecFailureCloseBefore(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	closeConn(t, conn)
 
 	_, err := conn.Exec(context.Background(), "select 1")
@@ -387,7 +387,7 @@ func TestExecFailureCloseBefore(t *testing.T) {
 func TestExecPerQuerySimpleProtocol(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -418,7 +418,7 @@ func TestExecPerQuerySimpleProtocol(t *testing.T) {
 func TestPrepare(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	_, err := conn.Prepare(context.Background(), "test", "select $1::varchar")
@@ -470,7 +470,7 @@ func TestPrepare(t *testing.T) {
 func TestPrepareBadSQLFailure(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	if _, err := conn.Prepare(context.Background(), "badSQL", "select foo"); err == nil {
@@ -617,7 +617,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 /*func TestListenNotify(t *testing.T) {
 	t.Parallel()
 
-	listener := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	listener := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, listener)
 
 	if listener.GaussdbConn().ParameterStatus("crdb_version") != "" {
@@ -626,7 +626,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 
 	mustExec(t, listener, "listen chat")
 
-	notifier := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	notifier := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, notifier)
 
 	mustExec(t, notifier, "notify chat")
@@ -667,7 +667,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 	t.Parallel()
 
 	func() {
-		conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+		conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		defer closeConn(t, conn)
 	}()
 
@@ -675,7 +675,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 	notifierDone := make(chan bool)
 	listening := make(chan bool)
 	go func() {
-		conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+		conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		defer closeConn(t, conn)
 		defer func() {
 			listenerDone <- true
@@ -722,7 +722,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 	}()
 
 	go func() {
-		conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+		conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		defer closeConn(t, conn)
 		defer func() {
 			notifierDone <- true
@@ -743,7 +743,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 //func TestListenNotifySelfNotification(t *testing.T) {
 //	t.Parallel()
 //
-//	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+//	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 //	defer closeConn(t, conn)
 //
 //	mustExec(t, conn, "listen self")
@@ -776,7 +776,7 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 // todo: conn.GaussdbConn().PID() not return the right pid.
 //func TestFatalRxError(t *testing.T) {
 //	t.Parallel()
-//	envVar := os.Getenv("PGX_TEST_DATABASE")
+//	envVar := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 //
 //	conn := mustConnectString(t, envVar)
 //	defer closeConn(t, conn)
@@ -816,10 +816,10 @@ func TestDeallocateMissingPreparedStatementStillClearsFromPreparedStatementMap(t
 //	// Run timing sensitive test many times
 //	for i := 0; i < 50; i++ {
 //		func() {
-//			conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+//			conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 //			defer closeConn(t, conn)
 //
-//			otherConn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+//			otherConn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 //			defer otherConn.Close(context.Background())
 //
 //			_, err := otherConn.Exec(context.Background(), "select pg_terminate_backend($1)", conn.GaussdbConn().PID())
@@ -917,7 +917,7 @@ func TestIdentifierSanitize(t *testing.T) {
 }
 
 func TestConnInitTypeMap(t *testing.T) {
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// spot check that the standard gaussdb type names aren't qualified
@@ -1149,7 +1149,7 @@ func TestLoadRangeType(t *testing.T) {
 func TestStmtCacheInvalidationConn(t *testing.T) {
 	ctx := context.Background()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// create a table and fill it with some data
@@ -1212,7 +1212,7 @@ func TestStmtCacheInvalidationConn(t *testing.T) {
 func TestStmtCacheInvalidationTx(t *testing.T) {
 	ctx := context.Background()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// create a table and fill it with some data
@@ -1366,7 +1366,7 @@ func TestConnDeallocateInvalidatedCachedStatementsInTransactionWithBatch(t *test
 
 	ctx := context.Background()
 
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	config := mustParseConfig(t, connString)
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 2

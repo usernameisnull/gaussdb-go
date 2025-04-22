@@ -20,7 +20,7 @@ func TestConnCopyWithAllQueryExecModes(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 			defer cancel()
 
-			cfg := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+			cfg := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			cfg.DefaultQueryExecMode = mode
 			conn := mustConnect(t, cfg)
 			defer closeConn(t, conn)
@@ -87,7 +87,7 @@ func TestConnCopyWithKnownOIDQueryExecModes(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 			defer cancel()
 
-			cfg := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+			cfg := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			cfg.DefaultQueryExecMode = mode
 			conn := mustConnect(t, cfg)
 			defer closeConn(t, conn)
@@ -150,7 +150,7 @@ func TestConnCopyFromSmall(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -209,7 +209,7 @@ func TestConnCopyFromSliceSmall(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -271,7 +271,7 @@ func TestConnCopyFromLarge(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -332,7 +332,7 @@ func TestConnCopyFromEnum(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	tx, err := conn.Begin(ctx)
@@ -406,7 +406,7 @@ func TestConnCopyFromJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	for _, typeName := range []string{"json", "jsonb"} {
@@ -486,7 +486,7 @@ func TestConnCopyFromFailServerSideMidway(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -565,7 +565,7 @@ func TestConnCopyFromFailServerSideMidwayAbortsWithoutWaiting(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -643,7 +643,7 @@ func TestConnCopyFromSlowFailRace(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -671,7 +671,7 @@ func TestConnCopyFromCopyFromSourceErrorMidway(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -734,7 +734,7 @@ func TestConnCopyFromCopyFromSourceErrorEnd(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -780,7 +780,7 @@ func TestConnCopyFromAutomaticStringConversion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -812,7 +812,7 @@ func TestConnCopyFromAutomaticStringConversionArray(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(
@@ -842,7 +842,7 @@ func TestConnCopyFromAutomaticStringConversionArray(t *testing.T) {
 func TestCopyFromFunc(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table foo(

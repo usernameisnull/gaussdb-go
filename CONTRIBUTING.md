@@ -12,8 +12,8 @@ that adds a dependency is no.
 
 ## Development Environment Setup
 
-gaussdb-go tests naturally require a GaussDB database. It will connect to the database specified in the `PGX_TEST_DATABASE`
-environment variable. The `PGX_TEST_DATABASE` environment variable can either be a URL or key-value pairs. In addition,
+gaussdb-go tests naturally require a GaussDB database. It will connect to the database specified in the `GAUSSDB_TEST_DATABASE`
+environment variable. The `GAUSSDB_TEST_DATABASE` environment variable can either be a URL or key-value pairs. In addition,
 the standard `PG*` environment variables will be respected. Consider using [direnv](https://github.com/direnv/direnv) to
 simplify environment variable handling.
 
@@ -30,10 +30,10 @@ gsql -c 'create database pgx_test DBCOMPATIBILITY 'PG'; create extension hstore;
 ```
 
 ```
-Ensure your `PGX_TEST_DATABASE` environment variable points to the database you just created and run the tests.
+Ensure your `GAUSSDB_TEST_DATABASE` environment variable points to the database you just created and run the tests.
 
 ```
-export PGX_TEST_DATABASE="host='your gaussdb host' database=pgx_test"
+export GAUSSDB_TEST_DATABASE="host='your gaussdb host' database=pgx_test"
 go test ./...
 ```
 
@@ -42,7 +42,7 @@ This will run the vast majority of the tests, but some tests will be skipped (e.
 ### Creating a New GaussDB Cluster Exclusively for Testing
 
 The following environment variables need to be set both for initial setup and whenever the tests are run. (direnv is
-highly recommended). Depending on your platform, you may need to change the host for `PGX_TEST_UNIX_SOCKET_CONN_STRING`.
+highly recommended). Depending on your platform, you may need to change the host for `GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING`.
 
 ```
 export PGPORT=5015
@@ -50,15 +50,15 @@ export PGUSER=root
 export PGDATABASE=pgx_test
 export POSTGRESQL_DATA_DIR=GaussDB
 
-export PGX_TEST_DATABASE="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export PGX_TEST_UNIX_SOCKET_CONN_STRING="host=/private/tmp database=pgx_test"
-export PGX_TEST_TCP_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export PGX_TEST_SCRAM_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_scram password=secret database=pgx_test"
-export PGX_TEST_MD5_PASSWORD_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export PGX_TEST_PLAIN_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_pw password=secret"
-export PGX_TEST_TLS_CONN_STRING="host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem"
-export PGX_SSL_PASSWORD=certpw
-export PGX_TEST_TLS_CLIENT_CONN_STRING="host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem database=pgx_test sslcert=`pwd`/.testdb/pgx_sslcert.crt sslkey=`pwd`/.testdb/pgx_sslcert.key"
+export GAUSSDB_TEST_DATABASE="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
+export GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING="host=/private/tmp database=pgx_test"
+export GAUSSDB_TEST_TCP_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
+export GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_scram password=secret database=pgx_test"
+export GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
+export GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_pw password=secret"
+export GAUSSDB_TEST_TLS_CONN_STRING="host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem"
+export GAUSSDB_SSL_PASSWORD=certpw
+export GAUSSDB_TEST_TLS_CLIENT_CONN_STRING="host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem database=pgx_test sslcert=`pwd`/.testdb/pgx_sslcert.crt sslkey=`pwd`/.testdb/pgx_sslcert.key"
 ```
 
 Create a new database cluster.

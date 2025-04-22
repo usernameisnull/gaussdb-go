@@ -25,7 +25,7 @@ import (
 )
 
 func openDB(t testing.TB) *sql.DB {
-	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	return stdlib.OpenDB(*config)
 }
@@ -45,7 +45,7 @@ func testWithAllQueryExecModes(t *testing.T, f func(t *testing.T, db *sql.DB)) {
 	} {
 		t.Run(mode.String(),
 			func(t *testing.T) {
-				config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+				config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 				require.NoError(t, err)
 
 				config.DefaultQueryExecMode = mode
@@ -115,7 +115,7 @@ func TestSQLOpen(t *testing.T) {
 		tt := tt
 
 		t.Run(tt.driverName, func(t *testing.T) {
-			db, err := sql.Open(tt.driverName, os.Getenv("PGX_TEST_DATABASE"))
+			db, err := sql.Open(tt.driverName, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			require.NoError(t, err)
 			closeDB(t, db)
 		})
@@ -123,7 +123,7 @@ func TestSQLOpen(t *testing.T) {
 }
 
 func TestSQLOpenFromPool(t *testing.T) {
-	pool, err := gaussdbxpool.New(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
 
@@ -436,6 +436,9 @@ func TestConnQueryFailure(t *testing.T) {
 }
 
 func TestConnSimpleSlicePassThrough(t *testing.T) {
+	if gaussdbgo.EnvIsOpengauss == "true" {
+		t.Skip("skip opengauss, not 'cardinality' function")
+	}
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		var n int64
 		err := db.QueryRow("select cardinality($1::text[])", []string{"a", "b", "c"}).Scan(&n)
@@ -1078,7 +1081,7 @@ func (l *testLogger) Log(ctx context.Context, lvl tracelog.LogLevel, msg string,
 }
 
 func TestRegisterConnConfig(t *testing.T) {
-	connConfig, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	connConfig, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	logger := &testLogger{}
@@ -1147,7 +1150,7 @@ func TestConnQueryRowConstraintErrors(t *testing.T) {
 }
 
 func TestOptionBeforeAfterConnect(t *testing.T) {
-	config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	var beforeConnConfigs []*gaussdbgo.ConnConfig
@@ -1222,7 +1225,7 @@ func TestRandomizeHostOrderFunc(t *testing.T) {
 func TestResetSessionHookCalled(t *testing.T) {
 	var mockCalled bool
 
-	connConfig, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	connConfig, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	db := stdlib.OpenDB(*connConfig, stdlib.OptionResetSession(func(ctx context.Context, conn *gaussdbgo.Conn) error {
@@ -1245,11 +1248,11 @@ func TestResetSessionHookCalled(t *testing.T) {
 // todo checkConn is deprecated, .PID() has problem similar to TestFatalTxError
 /*func TestCheckIdleConn(t *testing.T) {
 	// stdlib/sql.go#L102, register here
-	controllerConn, err := sql.Open("gaussdb", os.Getenv("PGX_TEST_DATABASE"))
+	controllerConn, err := sql.Open("gaussdb", os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeDB(t, controllerConn)
 
-	db, err := sql.Open("gaussdb", os.Getenv("PGX_TEST_DATABASE"))
+	db, err := sql.Open("gaussdb", os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeDB(t, db)
 

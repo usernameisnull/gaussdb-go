@@ -25,7 +25,7 @@ import (
 func TestConnQueryScan(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var sum, rowCount int32
@@ -60,7 +60,7 @@ func TestConnQueryScan(t *testing.T) {
 func TestConnQueryRowsFieldDescriptionsBeforeNext(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "select 'hello' as msg")
@@ -75,7 +75,7 @@ func TestConnQueryRowsFieldDescriptionsBeforeNext(t *testing.T) {
 /*func TestConnQueryWithoutResultSetCommandTag(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "create temporary table t (id serial);")
@@ -88,7 +88,7 @@ func TestConnQueryRowsFieldDescriptionsBeforeNext(t *testing.T) {
 func TestConnQueryScanWithManyColumns(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	columnCount := 1000
@@ -140,7 +140,7 @@ func TestConnQueryScanWithManyColumns(t *testing.T) {
 func TestConnQueryValues(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var rowCount int32
@@ -176,7 +176,7 @@ func TestConnQueryValues(t *testing.T) {
 func TestConnQueryValuesWhenUnableToDecode(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// Note that this relies on gaussdbtype.Record not supporting the text protocol. This seems safe as it is impossible to
@@ -198,7 +198,7 @@ func TestConnQueryValuesWithUnregisteredOID(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	tx, err := conn.Begin(ctx)
@@ -243,7 +243,7 @@ func TestConnQueryArgsAndScanWithUnregisteredOID(t *testing.T) {
 func TestConnQueryReadRowMultipleTimes(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var rowCount int32
@@ -287,7 +287,7 @@ func TestConnQueryReadRowMultipleTimes(t *testing.T) {
 func TestRowsScanDoesNotAllowScanningBinaryFormatValuesIntoString(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var s string
@@ -303,7 +303,7 @@ func TestRowsScanDoesNotAllowScanningBinaryFormatValuesIntoString(t *testing.T) 
 func TestConnQueryRawValues(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var rowCount int32
@@ -337,7 +337,7 @@ func TestConnQueryRawValues(t *testing.T) {
 func TestConnQueryCloseEarly(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// Immediately close query without reading any rows
@@ -374,7 +374,7 @@ func TestConnQueryCloseEarly(t *testing.T) {
 func TestConnQueryCloseEarlyWithErrorOnWire(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "select 1/(10-n) from generate_series(1,10) n")
@@ -391,7 +391,7 @@ func TestConnQueryCloseEarlyWithErrorOnWire(t *testing.T) {
 func TestConnQueryReadWrongTypeError(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// Read a single value incorrectly
@@ -427,7 +427,7 @@ func TestConnQueryReadWrongTypeError(t *testing.T) {
 func TestConnQueryReadTooManyValues(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// Read too many values
@@ -458,7 +458,7 @@ func TestConnQueryReadTooManyValues(t *testing.T) {
 func TestConnQueryScanIgnoreColumn(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "select 1::int8, 2::int8, 3::int8")
@@ -492,7 +492,7 @@ func TestConnQueryScanIgnoreColumn(t *testing.T) {
 func TestConnQueryDeferredError(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, `create temporary table t (
@@ -532,7 +532,7 @@ insert into t (id, n) values ('a', 1), ('b', 2), ('c', 3);`)
 func TestConnQueryErrorWhileReturningRows(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	for i := 0; i < 100; i++ {
@@ -566,7 +566,7 @@ func TestConnQueryErrorWhileReturningRows(t *testing.T) {
 func TestQueryEncodeError(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "select $1::integer", "wrong")
@@ -589,7 +589,7 @@ func TestQueryEncodeError(t *testing.T) {
 func TestQueryRowCoreTypes(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	type allTypes struct {
@@ -646,7 +646,7 @@ func TestQueryRowCoreTypes(t *testing.T) {
 func TestQueryRowCoreIntegerEncoding(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	type allTypes struct {
@@ -754,7 +754,7 @@ func TestQueryRowCoreIntegerEncoding(t *testing.T) {
 func TestQueryRowCoreIntegerDecoding(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	type allTypes struct {
@@ -928,7 +928,7 @@ func TestQueryRowCoreIntegerDecoding(t *testing.T) {
 func TestQueryRowCoreByteSlice(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	tests := []struct {
@@ -961,7 +961,7 @@ func TestQueryRowCoreByteSlice(t *testing.T) {
 func TestQueryRowErrors(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	type allTypes struct {
@@ -1002,7 +1002,7 @@ func TestQueryRowErrors(t *testing.T) {
 func TestQueryRowNoResults(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var n int32
@@ -1017,7 +1017,7 @@ func TestQueryRowNoResults(t *testing.T) {
 func TestQueryRowEmptyQuery(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -1032,7 +1032,7 @@ func TestQueryRowEmptyQuery(t *testing.T) {
 }
 
 func TestReadingValueAfterEmptyArray(t *testing.T) {
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var a []string
@@ -1052,7 +1052,7 @@ func TestReadingValueAfterEmptyArray(t *testing.T) {
 }
 
 func TestReadingNullByteArray(t *testing.T) {
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var a []byte
@@ -1067,7 +1067,7 @@ func TestReadingNullByteArray(t *testing.T) {
 }
 
 func TestReadingNullByteArrays(t *testing.T) {
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	rows, err := conn.Query(context.Background(), "select null::text union all select null::text")
@@ -1092,7 +1092,7 @@ func TestReadingNullByteArrays(t *testing.T) {
 }
 
 func TestQueryNullSliceIsSet(t *testing.T) {
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	a := []int32{1, 2, 3}
@@ -1109,7 +1109,7 @@ func TestQueryNullSliceIsSet(t *testing.T) {
 func TestConnQueryDatabaseSQLScanner(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var num sql.NullFloat64
@@ -1128,7 +1128,7 @@ func TestConnQueryDatabaseSQLScanner(t *testing.T) {
 func TestConnQueryDatabaseSQLDriverValuer(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	expected := sql.NullFloat64{Float64: 1234.567, Valid: true}
@@ -1144,7 +1144,7 @@ func TestConnQueryDatabaseSQLDriverValuer(t *testing.T) {
 func TestConnQueryDatabaseSQLDriverValuerWithAutoGeneratedPointerReceiver(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "create temporary table t(n numeric)")
@@ -1177,7 +1177,7 @@ func (v *nilPointerAsEmptyJSONObject) Value() (driver.Value, error) {
 func TestConnQueryDatabaseSQLDriverValuerCalledOnNilPointerImplementers(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "create temporary table t(v json not null)")
@@ -1226,7 +1226,7 @@ func (j *nilSliceAsEmptySlice) UnmarshalJSON(data []byte) error {
 func TestConnQueryDatabaseSQLDriverValuerCalledOnNilSliceImplementers(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "create temporary table t(v json not null)")
@@ -1282,7 +1282,7 @@ func (j *nilMapAsEmptyObject) UnmarshalJSON(data []byte) error {
 func TestConnQueryDatabaseSQLDriverValuerCalledOnNilMapImplementers(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "create temporary table t(v json not null)")
@@ -1316,7 +1316,7 @@ func TestConnQueryDatabaseSQLDriverValuerCalledOnNilMapImplementers(t *testing.T
 func TestConnQueryDatabaseSQLDriverScannerWithBinaryGaussdbTypeThatAcceptsSameType(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	var actual sql.NullString
@@ -1332,7 +1332,7 @@ func TestConnQueryDatabaseSQLDriverScannerWithBinaryGaussdbTypeThatAcceptsSameTy
 func TestConnQueryDatabaseSQLDriverValuerTextWhenBinaryIsPreferred(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	arg := sql.NullString{String: "1.234", Valid: true}
@@ -1351,7 +1351,7 @@ func TestConnQueryDatabaseSQLDriverValuerTextWhenBinaryIsPreferred(t *testing.T)
 func TestConnQueryDatabaseSQLNullFloat64NegativeZeroPointZero(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	tests := []float64{
@@ -1373,7 +1373,7 @@ func TestConnQueryDatabaseSQLNullFloat64NegativeZeroPointZero(t *testing.T) {
 func TestConnQueryDatabaseSQLNullX(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	type row struct {
@@ -1431,7 +1431,7 @@ func TestConnQueryDatabaseSQLNullX(t *testing.T) {
 func TestQueryContextSuccess(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1468,7 +1468,7 @@ func TestQueryContextSuccess(t *testing.T) {
 func TestQueryContextErrorWhileReceivingRows(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1506,7 +1506,7 @@ func TestQueryContextErrorWhileReceivingRows(t *testing.T) {
 func TestQueryRowContextSuccess(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1527,7 +1527,7 @@ func TestQueryRowContextSuccess(t *testing.T) {
 func TestQueryRowContextErrorWhileReceivingRow(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1546,7 +1546,7 @@ func TestQueryRowContextErrorWhileReceivingRow(t *testing.T) {
 func TestQueryCloseBefore(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	closeConn(t, conn)
 
 	_, err := conn.Query(context.Background(), "select 1")
@@ -1557,7 +1557,7 @@ func TestQueryCloseBefore(t *testing.T) {
 func TestScanRow(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	resultReader := conn.GaussdbConn().ExecParams(context.Background(), "select generate_series(1,$1)", [][]byte{[]byte("10")}, nil, nil, nil)
@@ -1582,7 +1582,7 @@ func TestScanRow(t *testing.T) {
 func TestConnSimpleProtocol(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// Test all supported low-level types
@@ -1986,7 +1986,7 @@ func TestConnSimpleProtocol(t *testing.T) {
 func TestConnSimpleProtocolRefusesNonUTF8ClientEncoding(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "set client_encoding to 'SQL_ASCII'")
@@ -2008,7 +2008,7 @@ func TestConnSimpleProtocolRefusesNonUTF8ClientEncoding(t *testing.T) {
 func TestConnSimpleProtocolRefusesNonStandardConformingStrings(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	mustExec(t, conn, "set standard_conforming_strings to off")
@@ -2030,7 +2030,7 @@ func TestConnSimpleProtocolRefusesNonStandardConformingStrings(t *testing.T) {
 func TestQueryErrorWithDisabledStatementCache(t *testing.T) {
 	t.Parallel()
 
-	config := mustParseConfig(t, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
@@ -2065,7 +2065,7 @@ func TestConnQueryQueryExecModeCacheDescribeSafeEvenWhenTypesChange(t *testing.T
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	_, err := conn.Exec(ctx, `create temporary table to_change (
@@ -2146,7 +2146,7 @@ func ExampleConn_Query() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return

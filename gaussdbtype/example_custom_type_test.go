@@ -40,7 +40,7 @@ func (src *Point) String() string {
 }
 
 func Example_customType() {
-	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return
