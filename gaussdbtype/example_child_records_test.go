@@ -24,7 +24,7 @@ func Example_childRecords() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return

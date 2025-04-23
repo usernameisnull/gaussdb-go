@@ -97,6 +97,9 @@ func TestXMLCodecPointerToPointerToString(t *testing.T) {
 }
 
 func TestXMLCodecDecodeValue(t *testing.T) {
+	if gaussdbx.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss,unsupported XML feature (SQLSTATE 0A000)")
+	}
 	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, _ testing.TB, conn *gaussdbx.Conn) {
 		for _, tt := range []struct {
 			sql      string

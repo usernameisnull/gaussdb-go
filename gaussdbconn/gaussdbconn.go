@@ -53,7 +53,7 @@ type LookupFunc func(ctx context.Context, host string) (addrs []string, err erro
 // BuildFrontendFunc is a function that can be used to create Frontend implementation for connection.
 type BuildFrontendFunc func(r io.Reader, w io.Writer) *gaussdbproto.Frontend
 
-// GaussdbErrorHandler is a function that handles errors returned from Postgres. This function must return true to keep
+// GaussdbErrorHandler is a function that handles errors returned from Gaussdb. This function must return true to keep
 // the connection open. Returning false will cause the connection to be closed immediately. You should return
 // false on any FATAL-severity errors. This will not receive network errors. The *GaussdbConn is provided so the handler is
 // aware of the origin of the error, but it must not invoke any query method.
@@ -991,7 +991,7 @@ func (gaussdbConn *GaussdbConn) CancelRequest(ctx context.Context) error {
 	var serverAddress string
 	if serverAddr.Network() == "unix" {
 		// for unix sockets, RemoteAddr() calls getpeername() which returns the name the
-		// server passed to bind(). For Postgres, this is always a relative path "./.s.PGSQL.5432"
+		// server passed to bind(). For Gaussdb, this is always a relative path "./.s.PGSQL.5432"
 		// so connecting to it will fail. Fall back to the config's value
 		serverNetwork, serverAddress = NetworkAddress(gaussdbConn.config.Host, gaussdbConn.config.Port)
 	} else {

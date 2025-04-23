@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -814,7 +815,7 @@ func TestConfigCopyOriginalConfigDidNotChange(t *testing.T) {
 }
 
 func TestConfigCopyCanBeUsedToConnect(t *testing.T) {
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	original, err := gaussdbconn.ParseConfig(connString)
 	require.NoError(t, err)
 

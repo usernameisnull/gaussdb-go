@@ -122,7 +122,7 @@ func (encodePlanHstoreCodecText) Encode(value any, buf []byte) (newBuf []byte, e
 	}
 
 	if len(hstore) == 0 {
-		// distinguish between empty and nil: Not strictly required by Postgres, since its protocol
+		// distinguish between empty and nil: Not strictly required by Gaussdb, since its protocol
 		// explicitly marks NULL column values separately. However, the Binary codec does this, and
 		// this means we can "round trip" Encode and Scan without data loss.
 		// nil: []byte(nil); empty: []byte{}

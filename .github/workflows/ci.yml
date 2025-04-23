@@ -89,15 +89,15 @@ jobs:
       #     ## limits ssh access and adds the ssh public key for the user which triggered the workflow
       #     limit-access-to-actor: true
       #   env:
-      #     PGX_TEST_DATABASE: ${{ matrix.pgx-test-database }}
-      #     PGX_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
-      #     PGX_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
-      #     PGX_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
-      #     PGX_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
-      #     PGX_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
-      #     PGX_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
-      #     PGX_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
-      #     PGX_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
+      #     GAUSSDB_TEST_DATABASE: ${{ matrix.pgx-test-database }}
+      #     GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
+      #     GAUSSDB_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
+      #     GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
+      #     GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
+      #     GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
+      #     GAUSSDB_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
+      #     GAUSSDB_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
+      #     GAUSSDB_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
 
       - name: Check formatting
         run: |
@@ -109,16 +109,16 @@ jobs:
         # parallel testing is disabled because somehow parallel testing causes Github Actions to kill the runner.
         run: go test -parallel=1 -race ./...
         env:
-          PGX_TEST_DATABASE: ${{ matrix.pgx-test-database }}
-          PGX_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
-          PGX_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
-          PGX_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
-          PGX_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
-          PGX_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
+          GAUSSDB_TEST_DATABASE: ${{ matrix.pgx-test-database }}
+          GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
+          GAUSSDB_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
+          GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
+          GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
+          GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
           # TestConnectTLS fails. However, it succeeds if I connect to the CI server with upterm and run it. Give up on that test for now.
-          # PGX_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
-          PGX_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
-          PGX_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
+          # GAUSSDB_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
+          GAUSSDB_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
+          GAUSSDB_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
 
   test-windows:
     name: Test Windows
@@ -153,4 +153,4 @@ jobs:
         # parallel testing is disabled because somehow parallel testing causes Github Actions to kill the runner.
         run: go test -parallel=1 -race  ./...
         env:
-          PGX_TEST_DATABASE: ${{ steps.postgres.outputs.connection-uri }}
+          GAUSSDB_TEST_DATABASE: ${{ steps.postgres.outputs.connection-uri }}

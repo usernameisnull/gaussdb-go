@@ -20,7 +20,7 @@ import (
 
 func BenchmarkConnectClose(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+		conn, err := gaussdbgo.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -33,7 +33,7 @@ func BenchmarkConnectClose(b *testing.B) {
 }
 
 func BenchmarkMinimalUnpreparedSelectWithoutStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
@@ -57,7 +57,7 @@ func BenchmarkMinimalUnpreparedSelectWithoutStatementCache(b *testing.B) {
 }
 
 func BenchmarkMinimalUnpreparedSelectWithStatementCacheModeDescribe(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
@@ -81,7 +81,7 @@ func BenchmarkMinimalUnpreparedSelectWithStatementCacheModeDescribe(b *testing.B
 }
 
 func BenchmarkMinimalUnpreparedSelectWithStatementCacheModePrepare(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
@@ -105,7 +105,7 @@ func BenchmarkMinimalUnpreparedSelectWithStatementCacheModePrepare(b *testing.B)
 }
 
 func BenchmarkMinimalPreparedSelect(b *testing.B) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	_, err := conn.Prepare(context.Background(), "ps1", "select $1::int8")
@@ -129,7 +129,7 @@ func BenchmarkMinimalPreparedSelect(b *testing.B) {
 }
 
 func BenchmarkMinimalGaussdbConnPreparedSelect(b *testing.B) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	gaussdbConn := conn.GaussdbConn()
@@ -164,7 +164,7 @@ func BenchmarkMinimalGaussdbConnPreparedSelect(b *testing.B) {
 }
 
 func BenchmarkPointerPointerWithNullValues(b *testing.B) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	_, err := conn.Prepare(context.Background(), "selectNulls", "select 1::int4, 'johnsmith', null::text, null::text, null::text, null::date, null::timestamptz")
@@ -224,7 +224,7 @@ func BenchmarkPointerPointerWithNullValues(b *testing.B) {
 }
 
 func BenchmarkPointerPointerWithPresentValues(b *testing.B) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	_, err := conn.Prepare(context.Background(), "selectNulls", "select 1::int4, 'johnsmith', 'johnsmith@example.com', 'John Smith', 'male', '1970-01-01'::date, '2015-01-01 00:00:00'::timestamptz")
@@ -374,7 +374,7 @@ func newBenchmarkWriteTableCopyFromSrc(count int) gaussdbgo.CopyFromSource {
 }
 
 func benchmarkWriteNRowsViaInsert(b *testing.B, n int) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	mustExec(b, conn, benchmarkWriteTableCreateSQL)
@@ -408,7 +408,7 @@ func benchmarkWriteNRowsViaInsert(b *testing.B, n int) {
 }
 
 func benchmarkWriteNRowsViaBatchInsert(b *testing.B, n int) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	mustExec(b, conn, benchmarkWriteTableCreateSQL)
@@ -520,7 +520,7 @@ func multiInsert(conn *gaussdbgo.Conn, tableName string, columnNames []string, r
 }
 
 func benchmarkWriteNRowsViaMultiInsert(b *testing.B, n int) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	mustExec(b, conn, benchmarkWriteTableCreateSQL)
@@ -556,7 +556,7 @@ func benchmarkWriteNRowsViaMultiInsert(b *testing.B, n int) {
 }
 
 func benchmarkWriteNRowsViaCopy(b *testing.B, n int) {
-	conn := mustConnect(b, mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE")))
+	conn := mustConnect(b, mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)))
 	defer closeConn(b, conn)
 
 	mustExec(b, conn, benchmarkWriteTableCreateSQL)
@@ -681,7 +681,7 @@ func BenchmarkWrite10000RowsViaCopy(b *testing.B) {
 }
 
 func BenchmarkMultipleQueriesNonBatchNoStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
@@ -693,7 +693,7 @@ func BenchmarkMultipleQueriesNonBatchNoStatementCache(b *testing.B) {
 }
 
 func BenchmarkMultipleQueriesNonBatchPrepareStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
@@ -705,7 +705,7 @@ func BenchmarkMultipleQueriesNonBatchPrepareStatementCache(b *testing.B) {
 }
 
 func BenchmarkMultipleQueriesNonBatchDescribeStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
@@ -743,7 +743,7 @@ func benchmarkMultipleQueriesNonBatch(b *testing.B, conn *gaussdbgo.Conn, queryC
 }
 
 func BenchmarkMultipleQueriesBatchNoStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeDescribeExec
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 0
@@ -755,7 +755,7 @@ func BenchmarkMultipleQueriesBatchNoStatementCache(b *testing.B) {
 }
 
 func BenchmarkMultipleQueriesBatchPrepareStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheStatement
 	config.StatementCacheCapacity = 32
 	config.DescriptionCacheCapacity = 0
@@ -767,7 +767,7 @@ func BenchmarkMultipleQueriesBatchPrepareStatementCache(b *testing.B) {
 }
 
 func BenchmarkMultipleQueriesBatchDescribeStatementCache(b *testing.B) {
-	config := mustParseConfig(b, os.Getenv("PGX_TEST_DATABASE"))
+	config := mustParseConfig(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	config.DefaultQueryExecMode = gaussdbgo.QueryExecModeCacheDescribe
 	config.StatementCacheCapacity = 0
 	config.DescriptionCacheCapacity = 32
@@ -817,7 +817,7 @@ func benchmarkMultipleQueriesBatch(b *testing.B, conn *gaussdbgo.Conn, queryCoun
 }
 
 func BenchmarkSelectManyUnknownEnum(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	ctx := context.Background()
@@ -863,7 +863,7 @@ func BenchmarkSelectManyUnknownEnum(b *testing.B) {
 }
 
 func BenchmarkSelectManyRegisteredEnum(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	ctx := context.Background()
@@ -917,12 +917,12 @@ func BenchmarkSelectManyRegisteredEnum(b *testing.B) {
 func getSelectRowsCounts(b *testing.B) []int64 {
 	var rowCounts []int64
 	{
-		s := os.Getenv("PGX_BENCH_SELECT_ROWS_COUNTS")
+		s := os.Getenv(gaussdbgo.EnvGaussdbBenchSelectRowsCounts)
 		if s != "" {
 			for _, p := range strings.Split(s, " ") {
 				n, err := strconv.ParseInt(p, 10, 64)
 				if err != nil {
-					b.Fatalf("Bad PGX_BENCH_SELECT_ROWS_COUNTS value: %v", err)
+					b.Fatalf("Bad %s value: %v", gaussdbgo.EnvGaussdbBenchSelectRowsCounts, err)
 				}
 				rowCounts = append(rowCounts, n)
 			}
@@ -948,7 +948,7 @@ type BenchRowSimple struct {
 }
 
 func BenchmarkSelectRowsScanSimple(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -986,7 +986,7 @@ type BenchRowStringBytes struct {
 }
 
 func BenchmarkSelectRowsScanStringBytes(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1024,7 +1024,7 @@ type BenchRowDecoder struct {
 }
 
 func BenchmarkSelectRowsScanDecoder(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1068,7 +1068,7 @@ func BenchmarkSelectRowsScanDecoder(b *testing.B) {
 }
 
 func BenchmarkSelectRowsGaussdbConnExecText(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1094,7 +1094,7 @@ func BenchmarkSelectRowsGaussdbConnExecText(b *testing.B) {
 }
 
 func BenchmarkSelectRowsGaussdbConnExecParams(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1135,7 +1135,7 @@ func BenchmarkSelectRowsGaussdbConnExecParams(b *testing.B) {
 }
 
 func BenchmarkSelectRowsSimpleCollectRowsRowToStructByPos(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1157,7 +1157,7 @@ func BenchmarkSelectRowsSimpleCollectRowsRowToStructByPos(b *testing.B) {
 }
 
 func BenchmarkSelectRowsSimpleAppendRowsRowToStructByPos(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1182,7 +1182,7 @@ func BenchmarkSelectRowsSimpleAppendRowsRowToStructByPos(b *testing.B) {
 }
 
 func BenchmarkSelectRowsSimpleCollectRowsRowToStructByName(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1204,7 +1204,7 @@ func BenchmarkSelectRowsSimpleCollectRowsRowToStructByName(b *testing.B) {
 }
 
 func BenchmarkSelectRowsSimpleAppendRowsRowToStructByName(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1229,7 +1229,7 @@ func BenchmarkSelectRowsSimpleAppendRowsRowToStructByName(b *testing.B) {
 }
 
 func BenchmarkSelectRowsGaussdbConnExecPrepared(b *testing.B) {
-	conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(b, conn)
 
 	rowCounts := getSelectRowsCounts(b)
@@ -1332,7 +1332,7 @@ func BenchmarkSelectRowsRawPrepared(b *testing.B) {
 			}
 			for _, format := range formats {
 				b.Run(format.name, func(b *testing.B) {
-					conn := mustConnectString(b, os.Getenv("PGX_TEST_DATABASE")).GaussdbConn()
+					conn := mustConnectString(b, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)).GaussdbConn()
 					defer conn.Close(context.Background())
 
 					_, err := conn.Prepare(context.Background(), "ps1", "select n, 'Adam', 'Smith ' || n, 'male', '1952-06-16'::date, 258, 72, '2001-01-28 01:02:03-05'::timestamptz from generate_series(100001, 100000 + $1) n", nil)

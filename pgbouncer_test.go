@@ -5,15 +5,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go"
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPgbouncerStatementCacheDescribe(t *testing.T) {
-	connString := os.Getenv("PGX_TEST_PGBOUNCER_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestPgbouncerConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_PGBOUNCER_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestPgbouncerConnString)
 	}
 
 	config := mustParseConfig(t, connString)
@@ -24,9 +24,9 @@ func TestPgbouncerStatementCacheDescribe(t *testing.T) {
 }
 
 func TestPgbouncerSimpleProtocol(t *testing.T) {
-	connString := os.Getenv("PGX_TEST_PGBOUNCER_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestPgbouncerConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_PGBOUNCER_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestPgbouncerConnString)
 	}
 
 	config := mustParseConfig(t, connString)

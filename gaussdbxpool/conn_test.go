@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxpool"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ func TestConnExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -33,7 +34,7 @@ func TestConnQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -50,7 +51,7 @@ func TestConnQueryRow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -67,7 +68,7 @@ func TestConnSendBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -84,7 +85,7 @@ func TestConnCopyFrom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 

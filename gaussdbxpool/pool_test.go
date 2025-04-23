@@ -19,7 +19,7 @@ func TestConnect(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	pool, err := gaussdbxpool.New(ctx, connString)
 	require.NoError(t, err)
 	assert.Equal(t, connString, pool.Config().ConnString())
@@ -30,7 +30,7 @@ func TestConnectConfig(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	config, err := gaussdbxpool.ParseConfig(connString)
 	require.NoError(t, err)
 	pool, err := gaussdbxpool.NewWithConfig(ctx, config)
@@ -53,7 +53,7 @@ func TestParseConfigExtractsPoolArguments(t *testing.T) {
 func TestConstructorIgnoresContext(t *testing.T) {
 	t.Parallel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	assert.NoError(t, err)
 	var cancel func()
 	config.BeforeConnect = func(context.Context, *gaussdbgo.ConnConfig) error {
@@ -95,7 +95,7 @@ func TestConfigCopyReturnsEqualConfig(t *testing.T) {
 }
 
 func TestConfigCopyCanBeUsedToConnect(t *testing.T) {
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	original, err := gaussdbxpool.ParseConfig(connString)
 	require.NoError(t, err)
 
@@ -112,7 +112,7 @@ func TestPoolAcquireAndConnRelease(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -127,7 +127,7 @@ func TestPoolAcquireAndConnHijack(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -155,11 +155,11 @@ func TestPoolAcquireAndConnHijack(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	controllerConn, err := gaussdbgo.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	controllerConn, err := gaussdbgo.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer controllerConn.Close(ctx)
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -208,7 +208,7 @@ func TestPoolAcquireFunc(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -226,7 +226,7 @@ func TestPoolAcquireFuncReturnsFnError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -242,7 +242,7 @@ func TestPoolBeforeConnect(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.BeforeConnect = func(ctx context.Context, cfg *gaussdbgo.ConnConfig) error {
@@ -266,7 +266,7 @@ func TestPoolAfterConnect(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.AfterConnect = func(ctx context.Context, c *gaussdbgo.Conn) error {
@@ -290,7 +290,7 @@ func TestPoolBeforeAcquire(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	acquireAttempts := 0
@@ -335,12 +335,12 @@ func TestPoolAfterRelease(t *testing.T) {
 	defer cancel()
 
 	func() {
-		pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+		pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		defer pool.Close()
 	}()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	afterReleaseCount := 0
@@ -376,12 +376,12 @@ func TestPoolBeforeClose(t *testing.T) {
 	defer cancel()
 
 	func() {
-		pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+		pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		defer pool.Close()
 	}()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	connPIDs := make(chan uint32, 5)
@@ -413,7 +413,7 @@ func TestPoolAcquireAllIdle(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -444,7 +444,7 @@ func TestPoolReset(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -472,7 +472,7 @@ func TestConnReleaseChecksMaxConnLifetime(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.MaxConnLifetime = 250 * time.Millisecond
@@ -499,7 +499,7 @@ func TestConnReleaseClosesBusyConn(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -530,7 +530,7 @@ func TestPoolBackgroundChecksMaxConnLifetime(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.MaxConnLifetime = 100 * time.Millisecond
@@ -558,7 +558,7 @@ func TestPoolBackgroundChecksMaxConnIdleTime(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.MaxConnLifetime = 1 * time.Minute
@@ -594,7 +594,7 @@ func TestPoolBackgroundChecksMinConns(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.HealthCheckPeriod = 100 * time.Millisecond
@@ -641,7 +641,7 @@ func TestPoolExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -654,7 +654,7 @@ func TestPoolQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -686,7 +686,7 @@ func TestPoolQueryRow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -704,7 +704,7 @@ func TestPoolQueryRowErrNoRows(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -718,7 +718,7 @@ func TestPoolQueryRowScanPanicReleasesConnection(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -736,7 +736,7 @@ func TestPoolSendBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -756,7 +756,7 @@ func TestPoolCopyFrom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -800,7 +800,7 @@ func TestConnReleaseClosesConnInFailedTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -835,11 +835,13 @@ func TestConnReleaseClosesConnInFailedTransaction(t *testing.T) {
 
 func TestConnReleaseClosesConnInTransaction(t *testing.T) {
 	t.Parallel()
-
+	if gaussdbgo.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss, the pid not changed")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -873,7 +875,7 @@ func TestConnReleaseDestroysClosedConn(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -905,7 +907,7 @@ func TestConnPoolQueryConcurrentLoad(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -931,7 +933,7 @@ func TestConnReleaseWhenBeginFail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -958,7 +960,7 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -1008,7 +1010,7 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	db, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	db, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -1055,7 +1057,7 @@ func TestIdempotentPoolClose(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	// Close the open pool.
@@ -1071,7 +1073,7 @@ func TestConnectEagerlyReachesMinPoolSize(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbxpool.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbxpool.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.MinConns = int32(12)
@@ -1112,7 +1114,7 @@ func TestPoolSendBatchBatchCloseTwice(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	pool, err := gaussdbxpool.New(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	pool, err := gaussdbxpool.New(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer pool.Close()
 

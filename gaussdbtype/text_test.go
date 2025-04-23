@@ -94,12 +94,15 @@ func TestTextCodecBPChar(t *testing.T) {
 func TestTextCodecACLItem(t *testing.T) {
 	ctr := defaultConnTestRunner
 	ctr.AfterConnect = func(ctx context.Context, t testing.TB, conn *gaussdbx.Conn) {}
-
+	str := "root=arwdDxt/root"
+	if gaussdbx.IsTestingWithOpengauss() {
+		str = "gaussdb=arwdDxt/gaussdb"
+	}
 	gaussdbxtest.RunValueRoundTripTests(context.Background(), t, ctr, nil, "aclitem", []gaussdbxtest.ValueRoundTripTest{
 		{
-			gaussdbtype.Text{String: "root=arwdDxt/root", Valid: true},
+			gaussdbtype.Text{String: str, Valid: true},
 			new(gaussdbtype.Text),
-			isExpectedEq(gaussdbtype.Text{String: "root=arwdDxt/root", Valid: true}),
+			isExpectedEq(gaussdbtype.Text{String: str, Valid: true}),
 		},
 		{gaussdbtype.Text{}, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},
 		{nil, new(gaussdbtype.Text), isExpectedEq(gaussdbtype.Text{})},

@@ -16,7 +16,7 @@ import (
 func TestTransactionSuccessfulCommit(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -58,7 +58,7 @@ func TestTransactionSuccessfulCommit(t *testing.T) {
 func TestTxCommitWhenTxBroken(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -104,7 +104,7 @@ func TestTxCommitWhenTxBroken(t *testing.T) {
 func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -150,14 +150,14 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 /*func TestTxCommitSerializationFailure(t *testing.T) {
 	t.Parallel()
 
-	c1 := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	c1 := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, c1)
 
 	if c1.GaussdbConn().ParameterStatus("crdb_version") != "" {
 		t.Skip("Skipping due to known server issue: (https://github.com/cockroachdb/cockroach/issues/60754)")
 	}
 
-	c2 := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	c2 := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, c2)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -209,7 +209,7 @@ func TestTxCommitWhenDeferredConstraintFailure(t *testing.T) {
 func TestTransactionSuccessfulRollback(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -251,7 +251,7 @@ func TestTransactionSuccessfulRollback(t *testing.T) {
 func TestTransactionRollbackFailsClosesConnection(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -270,7 +270,7 @@ func TestTransactionRollbackFailsClosesConnection(t *testing.T) {
 func TestBeginIsoLevels(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	// todo GaussDB目前功能上不支持此隔离级别，等价于REPEATABLE READ (参考：https://support.huaweicloud.com/intl/zh-cn/centralized-devg-v2-gaussdb/gaussdb_42_0501.html)
@@ -297,7 +297,7 @@ func TestBeginIsoLevels(t *testing.T) {
 func TestBeginFunc(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -326,7 +326,7 @@ func TestBeginFunc(t *testing.T) {
 func TestBeginFuncRollbackOnError(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -355,7 +355,7 @@ func TestBeginFuncRollbackOnError(t *testing.T) {
 func TestBeginReadOnly(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	tx, err := conn.BeginTx(context.Background(), gaussdbgo.TxOptions{AccessMode: gaussdbgo.ReadOnly})
@@ -393,7 +393,7 @@ func TestBeginTxBeginQuery(t *testing.T) {
 func TestTxNestedTransactionCommit(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -465,7 +465,7 @@ func TestTxNestedTransactionCommit(t *testing.T) {
 func TestTxNestedTransactionRollback(t *testing.T) {
 	t.Parallel()
 
-	conn := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	conn := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, conn)
 
 	createSql := `
@@ -527,7 +527,7 @@ func TestTxNestedTransactionRollback(t *testing.T) {
 func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 	t.Parallel()
 
-	db := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	db := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, db)
 
 	createSql := `
@@ -571,7 +571,7 @@ func TestTxBeginFuncNestedTransactionCommit(t *testing.T) {
 func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 	t.Parallel()
 
-	db := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	db := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, db)
 
 	createSql := `
@@ -611,7 +611,7 @@ func TestTxBeginFuncNestedTransactionRollback(t *testing.T) {
 func TestTxSendBatchClosed(t *testing.T) {
 	t.Parallel()
 
-	db := mustConnectString(t, os.Getenv("PGX_TEST_DATABASE"))
+	db := mustConnectString(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	defer closeConn(t, db)
 
 	tx, err := db.Begin(context.Background())

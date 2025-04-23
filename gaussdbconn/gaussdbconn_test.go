@@ -30,7 +30,7 @@ import (
 )
 
 // TODO: remove pgbouncer?
-const pgbouncerConnStringEnvVar = "PGX_TEST_PGBOUNCER_CONN_STRING"
+const pgbouncerConnStringEnvVar = gaussdbgo.EnvGaussdbTestPgbouncerConnString
 
 func TestConnect(t *testing.T) {
 	tests := []struct {
@@ -38,11 +38,11 @@ func TestConnect(t *testing.T) {
 		env  string
 	}{
 		// todo: unix socket to improve
-		//{"Unix socket", "PGX_TEST_UNIX_SOCKET_CONN_STRING"},
-		{"TCP", "PGX_TEST_TCP_CONN_STRING"},
-		{"Plain password", "PGX_TEST_PLAIN_PASSWORD_CONN_STRING"},
-		{"MD5 password", "PGX_TEST_MD5_PASSWORD_CONN_STRING"},
-		{"SCRAM password", "PGX_TEST_SCRAM_PASSWORD_CONN_STRING"},
+		//{"Unix socket", "GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING"},
+		{"TCP", gaussdbgo.EnvGaussdbTestTcpConnString},
+		{"Plain password", "GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING"},
+		{"MD5 password", "GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING"},
+		{"SCRAM password", "GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING"},
 	}
 
 	for _, tt := range tests {
@@ -70,11 +70,11 @@ func TestConnectWithOptions(t *testing.T) {
 		env  string
 	}{
 		// todo: unix socket to improve
-		//{"Unix socket", "PGX_TEST_UNIX_SOCKET_CONN_STRING"},
-		{"TCP", "PGX_TEST_TCP_CONN_STRING"},
-		{"Plain password", "PGX_TEST_PLAIN_PASSWORD_CONN_STRING"},
-		{"MD5 password", "PGX_TEST_MD5_PASSWORD_CONN_STRING"},
-		{"SCRAM password", "PGX_TEST_SCRAM_PASSWORD_CONN_STRING"},
+		//{"Unix socket", "GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING"},
+		{"TCP", gaussdbgo.EnvGaussdbTestTcpConnString},
+		{"Plain password", "GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING"},
+		{"MD5 password", "GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING"},
+		{"SCRAM password", "GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING"},
 	}
 
 	for _, tt := range tests {
@@ -105,9 +105,9 @@ func TestConnectTLS(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TLS_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTlsConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TLS_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTlsConnString)
 	}
 
 	conn, err := gaussdbconn.Connect(ctx, connString)
@@ -128,15 +128,15 @@ func TestConnectTLSPasswordProtectedClientCertWithSSLPassword(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TLS_CLIENT_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTlsClientConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TLS_CLIENT_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTlsClientConnString)
 	}
-	if os.Getenv("PGX_SSL_PASSWORD") == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_SSL_PASSWORD")
+	if os.Getenv(gaussdbgo.EnvGaussdbSslPassword) == "" {
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbSslPassword)
 	}
 
-	connString += " sslpassword=" + os.Getenv("PGX_SSL_PASSWORD")
+	connString += " sslpassword=" + os.Getenv(gaussdbgo.EnvGaussdbSslPassword)
 
 	conn, err := gaussdbconn.Connect(ctx, connString)
 	require.NoError(t, err)
@@ -156,13 +156,13 @@ func TestConnectTLSPasswordProtectedClientCertWithGetSSLPasswordConfigOption(t *
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TLS_CLIENT_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTlsClientConnString)
 	// todo: need client cert
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TLS_CLIENT_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTlsClientConnString)
 	}
-	if os.Getenv("PGX_SSL_PASSWORD") == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_SSL_PASSWORD")
+	if os.Getenv(gaussdbgo.EnvGaussdbSslPassword) == "" {
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbSslPassword)
 	}
 
 	var sslOptions gaussdbconn.ParseConfigOptions
@@ -345,13 +345,15 @@ func TestConnectTimeoutStuckOnTLSHandshake(t *testing.T) {
 
 func TestConnectInvalidUser(t *testing.T) {
 	t.Parallel()
-
+	if gaussdbgo.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss, different versions of the protocol were used, this error will not occur.")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTcpConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTcpConnString)
 	}
 
 	config, err := gaussdbconn.ParseConfig(connString)
@@ -388,7 +390,7 @@ func TestConnectCustomDialer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	dialed := false
@@ -409,9 +411,9 @@ func TestConnectCustomLookup(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTcpConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTcpConnString)
 	}
 
 	config, err := gaussdbconn.ParseConfig(connString)
@@ -435,9 +437,9 @@ func TestConnectCustomLookupWithPort(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTcpConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTcpConnString)
 	}
 
 	config, err := gaussdbconn.ParseConfig(connString)
@@ -472,7 +474,7 @@ func TestConnectWithRuntimeParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.RuntimeParams = map[string]string{
@@ -501,7 +503,7 @@ func TestConnectWithFallback(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	// Prepend current primary config to fallbacks
@@ -553,7 +555,7 @@ func TestConnectWithValidateConnect(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	dialCount := 0
@@ -595,7 +597,7 @@ func TestConnectWithValidateConnectTargetSessionAttrsReadWrite(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.ValidateConnect = gaussdbconn.ValidateConnectTargetSessionAttrsReadWrite
@@ -613,7 +615,7 @@ func TestConnectWithAfterConnect(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	config.AfterConnect = func(ctx context.Context, conn *gaussdbconn.GaussdbConn) error {
@@ -648,7 +650,7 @@ func TestConnPrepareSyntaxError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -665,7 +667,7 @@ func TestConnPrepareContextPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -686,7 +688,7 @@ func TestConnDeallocate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -714,7 +716,7 @@ func TestConnDeallocateSucceedsInAbortedTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -753,7 +755,7 @@ func TestConnDeallocateNonExistantStatementSucceeds(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -769,7 +771,7 @@ func TestConnExec(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -791,7 +793,7 @@ func TestConnExecEmpty(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -815,7 +817,7 @@ func TestConnExecMultipleQueries(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -843,7 +845,7 @@ func TestConnExecMultipleQueriesEagerFieldDescriptions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -874,7 +876,7 @@ func TestConnExecMultipleQueriesError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -899,7 +901,7 @@ func TestConnExecDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -930,7 +932,7 @@ func TestConnExecContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 	cancel()
@@ -958,7 +960,7 @@ func TestConnExecContextPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -977,7 +979,7 @@ func TestConnExecParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1004,7 +1006,7 @@ func TestConnExecParamsDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1034,7 +1036,7 @@ func TestConnExecParamsMaxNumberOfParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1060,7 +1062,7 @@ func TestConnExecParamsTooManyParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1086,7 +1088,7 @@ func TestConnExecParamsCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1117,7 +1119,7 @@ func TestConnExecParamsPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1136,7 +1138,7 @@ func TestConnExecParamsEmptySQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1154,7 +1156,7 @@ func TestResultReaderValuesHaveSameCapacityAsLength(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1182,7 +1184,7 @@ func TestResultReaderReadNil(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1199,7 +1201,7 @@ func TestConnExecPrepared(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1232,7 +1234,7 @@ func TestConnExecPreparedMaxNumberOfParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1264,7 +1266,7 @@ func TestConnExecPreparedTooManyParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1297,7 +1299,7 @@ func TestConnExecPreparedCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1329,7 +1331,7 @@ func TestConnExecPreparedPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1351,7 +1353,7 @@ func TestConnExecPreparedEmptySQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1372,7 +1374,7 @@ func TestConnExecBatch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1417,7 +1419,7 @@ func TestConnExecBatchWriteError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	var mockConn mockConnection
@@ -1453,7 +1455,7 @@ func TestConnExecBatchDeferredError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1486,7 +1488,7 @@ func TestConnExecBatchPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1519,7 +1521,7 @@ func TestConnExecBatchHuge(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1550,7 +1552,7 @@ func TestConnExecBatchImplicitTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1576,7 +1578,7 @@ func TestConnLocking(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1603,7 +1605,7 @@ func TestConnOnNotice(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	var notice *gaussdbconn.Notice
@@ -1637,7 +1639,7 @@ end$$;`)
 //	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 //	defer cancel()
 //
-//	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+//	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 //	require.NoError(t, err)
 //
 //	var msg string
@@ -1673,7 +1675,7 @@ end$$;`)
 //	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 //	defer cancel()
 //
-//	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+//	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 //	require.NoError(t, err)
 //
 //	var msg string
@@ -1708,7 +1710,7 @@ func TestConnWaitForNotificationPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
@@ -1728,7 +1730,7 @@ func TestConnWaitForNotificationTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	gaussdbConn, err := gaussdbconn.ConnectConfig(ctx, config)
@@ -1750,7 +1752,7 @@ func TestConnCopyToSmall(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1791,7 +1793,7 @@ func TestConnCopyToLarge(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1832,7 +1834,7 @@ func TestConnCopyToQueryError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1852,7 +1854,7 @@ func TestConnCopyToCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1878,7 +1880,7 @@ func TestConnCopyToPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1900,7 +1902,7 @@ func TestConnCopyFrom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1940,7 +1942,7 @@ func TestConnCopyFromBinary(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -1996,7 +1998,7 @@ func TestConnCopyFromCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2040,7 +2042,7 @@ func TestConnCopyFromPrecanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2080,7 +2082,7 @@ func TestConnCopyFromGzipReader(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2136,7 +2138,7 @@ func TestConnCopyFromQuerySyntaxError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2173,7 +2175,7 @@ func TestConnCopyFromQueryNoTableError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2193,7 +2195,7 @@ func TestConnCopyFromNoticeResponseReceivedMidStream(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 	// todo: gaussdb can't use temporary table here, complaints: Only support CREATE TRIGGER on regular row table. (SQLSTATE 0A000)
@@ -2244,9 +2246,9 @@ func TestConnCopyFromDataWriteAfterErrorAndReturn(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	connString := os.Getenv("PGX_TEST_DATABASE")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestDatabase)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_DATABASE")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestDatabase)
 	}
 
 	config, err := gaussdbconn.ParseConfig(connString)
@@ -2279,7 +2281,7 @@ func TestConnEscapeString(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2310,7 +2312,7 @@ func TestConnCancelRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2345,7 +2347,7 @@ func TestConnContextCanceledCancelsRunningQueryOnServer(t *testing.T) {
 	t.Run("postgres", func(t *testing.T) {
 		t.Parallel()
 
-		testConnContextCanceledCancelsRunningQueryOnServer(t, os.Getenv("PGX_TEST_DATABASE"), "postgres")
+		testConnContextCanceledCancelsRunningQueryOnServer(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase), "postgres")
 	})
 
 	t.Run("pgbouncer", func(t *testing.T) {
@@ -2424,7 +2426,7 @@ func TestHijackAndConstruct(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	origConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	origConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	err = origConn.SyncConn(ctx)
@@ -2459,7 +2461,7 @@ func TestConnCloseWhileCancellableQueryInProgress(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 
 	gaussdbConn.Exec(ctx, "select n from generate_series(1,10) n")
@@ -2544,7 +2546,7 @@ func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2579,9 +2581,9 @@ func TestConnLargeResponseWhileWritingDoesNotDeadlock(t *testing.T) {
 //
 //	// Intentionally using TCP connection for more predictable close behavior. (Not sure if Unix domain sockets would behave subtly different.)
 //
-//	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+//	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTcpConnString)
 //	if connString == "" {
-//		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+//		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTcpConnString)
 //	}
 //
 //	c1, err := gaussdbconn.Connect(ctx, connString)
@@ -2615,9 +2617,9 @@ func TestConnPing(t *testing.T) {
 
 	// Intentionally using TCP connection for more predictable close behavior. (Not sure if Unix domain sockets would behave subtly different.)
 
-	connString := os.Getenv("PGX_TEST_TCP_CONN_STRING")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbTestTcpConnString)
 	if connString == "" {
-		t.Skipf("Skipping due to missing environment variable %v", "PGX_TEST_TCP_CONN_STRING")
+		t.Skipf("Skipping due to missing environment variable %v", gaussdbgo.EnvGaussdbTestTcpConnString)
 	}
 
 	c1, err := gaussdbconn.Connect(ctx, connString)
@@ -2654,7 +2656,7 @@ func TestPipelinePrepare(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2729,7 +2731,7 @@ func TestPipelinePrepareError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2774,7 +2776,7 @@ func TestPipelinePrepareAndDeallocate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2818,7 +2820,7 @@ func TestPipelineQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2910,7 +2912,7 @@ func TestPipelinePrepareQuery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -2970,7 +2972,7 @@ func TestPipelineQueryErrorBetweenSyncs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3077,7 +3079,7 @@ func TestPipelineFlushForSingleRequests(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3176,7 +3178,7 @@ func TestPipelineFlushForRequestSeries(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3325,7 +3327,7 @@ func TestPipelineFlushWithError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3415,7 +3417,7 @@ func TestPipelineCloseReadsUnreadResults(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3453,7 +3455,7 @@ func TestPipelineCloseDetectsUnsyncedRequests(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3487,7 +3489,7 @@ func TestConnOngaussdbError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+	config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	config.OnGaussdbError = func(c *gaussdbconn.GaussdbConn, gaussdbErr *gaussdbconn.GaussdbError) bool {
 		require.NotNil(t, c)
@@ -3522,7 +3524,7 @@ func TestConnCustomData(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer closeConn(t, gaussdbConn)
 
@@ -3536,7 +3538,7 @@ func Example() {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	gaussdbConn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -3560,7 +3562,7 @@ func Example() {
 }
 
 func GetSSLPassword(ctx context.Context) string {
-	connString := os.Getenv("PGX_SSL_PASSWORD")
+	connString := os.Getenv(gaussdbgo.EnvGaussdbSslPassword)
 	return connString
 }
 
@@ -3832,7 +3834,7 @@ func TestDeadlineContextWatcherHandler(t *testing.T) {
 	t.Parallel()
 
 	t.Run("DeadlineExceeded with zero DeadlineDelay", func(t *testing.T) {
-		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.DeadlineContextWatcherHandler{Conn: conn.Conn()}
@@ -3853,7 +3855,7 @@ func TestDeadlineContextWatcherHandler(t *testing.T) {
 	})
 
 	t.Run("DeadlineExceeded with DeadlineDelay", func(t *testing.T) {
-		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.DeadlineContextWatcherHandler{Conn: conn.Conn(), DeadlineDelay: 500 * time.Millisecond}
@@ -3878,7 +3880,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 	t.Parallel()
 
 	t.Run("DeadlineExceeded cancels request after CancelRequestDelay", func(t *testing.T) {
-		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
@@ -3905,7 +3907,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 	})
 
 	t.Run("DeadlineExceeded - do not send cancel request when query finishes in grace period", func(t *testing.T) {
-		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
@@ -3930,7 +3932,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 	})
 
 	t.Run("DeadlineExceeded sets conn deadline with DeadlineDelay", func(t *testing.T) {
-		config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 			return &gaussdbconn.CancelRequestContextWatcherHandler{
@@ -3958,7 +3960,7 @@ func TestCancelRequestContextWatcherHandler(t *testing.T) {
 		t.Run(fmt.Sprintf("Stress %d", i), func(t *testing.T) {
 			t.Parallel()
 
-			config, err := gaussdbconn.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+			config, err := gaussdbconn.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			require.NoError(t, err)
 			config.BuildContextWatcherHandler = func(conn *gaussdbconn.GaussdbConn) ctxwatch.Handler {
 				return &gaussdbconn.CancelRequestContextWatcherHandler{

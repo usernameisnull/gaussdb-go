@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/stretchr/testify/require"
 )
@@ -16,8 +17,8 @@ func BenchmarkConnect(b *testing.B) {
 		env  string
 	}{
 		// todo: unix socket to improve
-		//{"Unix socket", "PGX_TEST_UNIX_SOCKET_CONN_STRING"},
-		{"TCP", "PGX_TEST_TCP_CONN_STRING"},
+		//{"Unix socket", "GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING"},
+		{"TCP", gaussdbgo.EnvGaussdbTestTcpConnString},
 	}
 
 	for _, bm := range benchmarks {
@@ -54,7 +55,7 @@ func BenchmarkExec(b *testing.B) {
 	for _, bm := range benchmarks {
 		bm := bm
 		b.Run(bm.name, func(b *testing.B) {
-			conn, err := gaussdbconn.Connect(bm.ctx, os.Getenv("PGX_TEST_DATABASE"))
+			conn, err := gaussdbconn.Connect(bm.ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			require.Nil(b, err)
 			defer closeConn(b, conn)
 
@@ -98,7 +99,7 @@ func BenchmarkExec(b *testing.B) {
 }
 
 func BenchmarkExecPossibleToCancel(b *testing.B) {
-	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.Nil(b, err)
 	defer closeConn(b, conn)
 
@@ -160,7 +161,7 @@ func BenchmarkExecPrepared(b *testing.B) {
 	for _, bm := range benchmarks {
 		bm := bm
 		b.Run(bm.name, func(b *testing.B) {
-			conn, err := gaussdbconn.Connect(bm.ctx, os.Getenv("PGX_TEST_DATABASE"))
+			conn, err := gaussdbconn.Connect(bm.ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 			require.Nil(b, err)
 			defer closeConn(b, conn)
 
@@ -198,7 +199,7 @@ func BenchmarkExecPrepared(b *testing.B) {
 }
 
 func BenchmarkExecPreparedPossibleToCancel(b *testing.B) {
-	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.Nil(b, err)
 	defer closeConn(b, conn)
 
@@ -239,7 +240,7 @@ func BenchmarkExecPreparedPossibleToCancel(b *testing.B) {
 }
 
 // func BenchmarkChanToSetDeadlinePossibleToCancel(b *testing.B) {
-// 	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+// 	conn, err := gaussdbconn.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 // 	require.Nil(b, err)
 // 	defer closeConn(b, conn)
 

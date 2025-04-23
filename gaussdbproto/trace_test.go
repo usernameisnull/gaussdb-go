@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbconn"
 	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbproto"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func TestTrace(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	conn, err := gaussdbconn.Connect(ctx, os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbconn.Connect(ctx, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	require.NoError(t, err)
 	defer conn.Close(ctx)
 

@@ -9,7 +9,7 @@ import (
 )
 
 func Example_json() {
-	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv("PGX_TEST_DATABASE"))
+	conn, err := gaussdbgo.Connect(context.Background(), os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 	if err != nil {
 		fmt.Printf("Unable to establish connection: %v", err)
 		return

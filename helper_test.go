@@ -3,6 +3,7 @@ package gaussdbgo_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 func init() {
 	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *gaussdbgo.ConnConfig {
-		config, err := gaussdbgo.ParseConfig(os.Getenv("PGX_TEST_DATABASE"))
+		config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		return config
 	}
@@ -135,4 +136,17 @@ func assertConfigsEqual(t *testing.T, expected, actual *gaussdbgo.ConnConfig, te
 			}
 		}
 	}
+}
+
+func lowerFirstLetterInError(s string) string {
+	if !gaussdbgo.IsTestingWithOpengauss() || s == "" || strings.HasPrefix(s, "SQLSTATE") {
+		return s
+	}
+	prefix := ""
+	leftOver := s
+	if strings.HasPrefix(s, "ERROR: ") {
+		prefix = "ERROR: "
+		leftOver = strings.TrimPrefix(s, prefix)
+	}
+	return prefix + strings.ToLower(leftOver[:1]) + leftOver[1:]
 }

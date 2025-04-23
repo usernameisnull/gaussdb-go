@@ -8,17 +8,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	gaussdbgo "github.com/HuaweiCloudDeveloper/gaussdb-go"
 )
 
 func getSelectRowsCounts(b *testing.B) []int64 {
 	var rowCounts []int64
 	{
-		s := os.Getenv("PGX_BENCH_SELECT_ROWS_COUNTS")
+		s := os.Getenv(gaussdbgo.EnvGaussdbBenchSelectRowsCounts)
 		if s != "" {
 			for _, p := range strings.Split(s, " ") {
 				n, err := strconv.ParseInt(p, 10, 64)
 				if err != nil {
-					b.Fatalf("Bad PGX_BENCH_SELECT_ROWS_COUNTS value: %v", err)
+					b.Fatalf("Bad %s value: %v", gaussdbgo.EnvGaussdbBenchSelectRowsCounts, err)
 				}
 				rowCounts = append(rowCounts, n)
 			}
