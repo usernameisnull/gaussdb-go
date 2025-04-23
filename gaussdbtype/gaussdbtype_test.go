@@ -25,7 +25,7 @@ var defaultConnTestRunner gaussdbxtest.ConnTestRunner
 func init() {
 	defaultConnTestRunner = gaussdbxtest.DefaultConnTestRunner()
 	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *gaussdbgo.ConnConfig {
-		config, err := gaussdbgo.ParseConfig(os.Getenv("GAUSSDB_TEST_DATABASE"))
+		config, err := gaussdbgo.ParseConfig(os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
 		require.NoError(t, err)
 		return config
 	}

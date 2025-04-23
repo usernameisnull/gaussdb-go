@@ -436,8 +436,8 @@ func TestConnQueryFailure(t *testing.T) {
 }
 
 func TestConnSimpleSlicePassThrough(t *testing.T) {
-	if gaussdbgo.EnvIsOpengauss == "true" {
-		t.Skip("skip opengauss, not 'cardinality' function")
+	if gaussdbgo.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss, no 'cardinality' function")
 	}
 	testWithAllQueryExecModes(t, func(t *testing.T, db *sql.DB) {
 		var n int64

@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/HuaweiCloudDeveloper/gaussdb-go/gaussdbxtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +29,7 @@ func mustConnect(t testing.TB, config *ConnConfig) *Conn {
 func TestStmtCacheSizeLimit(t *testing.T) {
 	const cacheLimit = 16
 
-	connConfig := mustParseConfig(t, os.Getenv(gaussdbgo.EnvGaussdbTestDatabase))
+	connConfig := mustParseConfig(t, os.Getenv(EnvGaussdbTestDatabase))
 	connConfig.StatementCacheCapacity = cacheLimit
 	conn := mustConnect(t, connConfig)
 	defer func() {

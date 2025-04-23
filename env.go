@@ -1,5 +1,7 @@
 package gaussdbgo
 
+import "os"
+
 // this just defines some environment variables that are used in the tests
 const (
 	EnvGaussdbTestDatabase            = "GAUSSDB_TEST_DATABASE"
@@ -13,3 +15,7 @@ const (
 	EnvGaussdbTestTlsConnString       = "GAUSSDB_TEST_TLS_CONN_STRING"
 	EnvIsOpengauss                    = "IS_OPENGAUSS"
 )
+
+func IsTestingWithOpengauss() bool {
+	return os.Getenv(EnvIsOpengauss) == "true"
+}

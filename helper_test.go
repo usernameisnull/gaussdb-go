@@ -139,7 +139,7 @@ func assertConfigsEqual(t *testing.T, expected, actual *gaussdbgo.ConnConfig, te
 }
 
 func lowerFirstLetterInError(s string) string {
-	if os.Getenv(gaussdbgo.EnvIsOpengauss) != "true" || s == "" || strings.HasPrefix(s, "SQLSTATE") {
+	if !gaussdbgo.IsTestingWithOpengauss() || s == "" || strings.HasPrefix(s, "SQLSTATE") {
 		return s
 	}
 	prefix := ""

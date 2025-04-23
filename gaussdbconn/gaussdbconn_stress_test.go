@@ -2,6 +2,7 @@ package gaussdbconn_test
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"os"
 	"runtime"
@@ -22,7 +23,7 @@ func TestConnStress(t *testing.T) {
 	actionCount := 10000
 	if s := os.Getenv(gaussdbgo.EnvGaussdbTestStressFactor); s != "" {
 		stressFactor, err := strconv.ParseInt(s, 10, 64)
-		require.Nil(t, err, "Failed to parse GAUSSDB_TEST_STRESS_FACTOR")
+		require.Nil(t, err, fmt.Sprintf("Failed to parse %s", gaussdbgo.EnvGaussdbTestStressFactor))
 		actionCount *= int(stressFactor)
 	}
 

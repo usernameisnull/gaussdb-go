@@ -922,7 +922,7 @@ func getSelectRowsCounts(b *testing.B) []int64 {
 			for _, p := range strings.Split(s, " ") {
 				n, err := strconv.ParseInt(p, 10, 64)
 				if err != nil {
-					b.Fatalf("Bad GAUSSDB_BENCH_SELECT_ROWS_COUNTS value: %v", err)
+					b.Fatalf("Bad %s value: %v", gaussdbgo.EnvGaussdbBenchSelectRowsCounts, err)
 				}
 				rowCounts = append(rowCounts, n)
 			}

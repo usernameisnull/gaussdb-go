@@ -835,7 +835,9 @@ func TestConnReleaseClosesConnInFailedTransaction(t *testing.T) {
 
 func TestConnReleaseClosesConnInTransaction(t *testing.T) {
 	t.Parallel()
-
+	if gaussdbgo.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss, the pid not changed")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 

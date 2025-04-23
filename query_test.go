@@ -1488,8 +1488,7 @@ func TestQueryContextErrorWhileReceivingRows(t *testing.T) {
 		rowCount++
 	}
 	// opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
-	errStr := lowerFirstLetterInError("ERROR: Division by zero (SQLSTATE 22012)")
-	if rows.Err() == nil || rows.Err().Error() != errStr {
+	if rows.Err() == nil || !strings.Contains(rows.Err().Error(), "SQLSTATE 22012") {
 		t.Fatalf("Expected division by zero error, but got %v", rows.Err())
 	}
 
@@ -1536,7 +1535,7 @@ func TestQueryRowContextErrorWhileReceivingRow(t *testing.T) {
 	var result int
 	err := conn.QueryRow(ctx, "select 10/0").Scan(&result)
 	// opengauss return 'ERROR: division by zero (SQLSTATE 22012)', gaussdb return 'ERROR: Division by zero. (SQLSTATE 22012)'
-	if err == nil || err.Error() != lowerFirstLetterInError("ERROR: Division by zero (SQLSTATE 22012)") {
+	if err == nil || !strings.Contains(err.Error(), "SQLSTATE 22012") {
 		t.Fatalf("Expected division by zero error, but got %v", err)
 	}
 

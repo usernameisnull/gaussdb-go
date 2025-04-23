@@ -345,8 +345,8 @@ func TestConnectTimeoutStuckOnTLSHandshake(t *testing.T) {
 
 func TestConnectInvalidUser(t *testing.T) {
 	t.Parallel()
-	if os.Getenv(gaussdbgo.EnvIsOpengauss) == "true" {
-		t.Skip("skip opengauss, use different protocol")
+	if gaussdbgo.IsTestingWithOpengauss() {
+		t.Skip("skip opengauss, different versions of the protocol were used, this error will not occur.")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
