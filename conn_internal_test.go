@@ -28,7 +28,7 @@ func mustConnect(t testing.TB, config *ConnConfig) *Conn {
 // This test examines the internals of *Conn so must be in the same package.
 func TestStmtCacheSizeLimit(t *testing.T) {
 	const cacheLimit = 16
-
+	fmt.Println(os.Getenv(EnvGaussdbTestDatabase))
 	connConfig := mustParseConfig(t, os.Getenv(EnvGaussdbTestDatabase))
 	connConfig.StatementCacheCapacity = cacheLimit
 	conn := mustConnect(t, connConfig)
