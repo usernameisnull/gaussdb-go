@@ -7,6 +7,8 @@ interval_check_time=10
 container_name="${CONTAINER_NAME}"
 password="${OPENGAUSS_PASSWORD}"
 port=${PORT}
+sql_file=${SQL_FILE}
+mounted_dir=${MOUNT_DIR_IN_CONTAINER}
 
 
 if [ -t 0 ]; then
@@ -15,10 +17,10 @@ else
   TTY_FLAG=""
 fi
 
-# verify can connect database by username and password, and show database version.
-function show_database_version() {
+# verify_sql_user_connection: verify that the username and password created using the SQL file can connect to the database.
+function verify_sql_created_user_connection() {
   set +e
-  docker exec -i ${TTY_FLAG} "${container_name}" bash -c "su - omm -c 'gsql -U gaussdb -p ${port} -W${password} -d postgres -c \"select version(); show server_version;\"'"
+  docker exec -i ${TTY_FLAG} "${container_name}" bash -c "su - omm -c 'gsql -U pgx_md5 -p ${port} -W${password} -d pgx_test -c \"select version(); show server_version;\"'"
   set -e
 }
 
@@ -40,9 +42,11 @@ while [ $retry_count -lt $max_retries ]; do
     echo "${output}"
 
     if [ $status -eq 0 ]; then
-      docker exec -i ${TTY_FLAG} "${container_name}" bash -c "su - omm -c 'gsql -U omm -c \"CREATE DATABASE pgx_test DBCOMPATIBILITY 'pg';\" -f /tmp/opengauss_setup.sql'"
+      # replace password
+      sudo sed -i "s/'{{OPENGAUSS_PASSWORD}}'/'${password}'/" "${mounted_dir}/${sql_file}"
+      docker exec -i ${TTY_FLAG} "${container_name}" bash -c "su - omm -c 'gsql -U omm -c \"CREATE DATABASE pgx_test DBCOMPATIBILITY 'pg';\" -f ${mounted_dir}/${sql_file}'"
       echo "Database initialization completed."
-      show_database_version
+      verify_sql_created_user_connection
       exit 0
     fi
 

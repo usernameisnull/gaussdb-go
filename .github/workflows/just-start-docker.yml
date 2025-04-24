@@ -19,7 +19,9 @@ jobs:
       OPENGAUSS_IMAGE: opengauss/opengauss:7.0.0-RC1.B023
       OPENGAUSS_PASSWORD: Gaussdb@789!
       MOUNT_DIR: /tmp
+      MOUNT_DIR_IN_CONTAINER: /tmp
       CONTAINER_NAME: opengauss
+      SQL_FILE: opengauss_setup.sql
       PORT: 5432
 
     steps:
@@ -45,7 +47,7 @@ jobs:
 
       - name: Copy setup.sql
         run: |
-          sudo cp -rf "${{ github.workspace }}/testsetup/opengauss_setup.sql" "${MOUNT_DIR}/"
+          sudo cp -rf "${{ github.workspace }}/testsetup/${{ env.SQL_FILE }}" "${MOUNT_DIR}/"
 
       - name: Run opengauss
         run: |
@@ -54,7 +56,7 @@ jobs:
             --privileged=true \
             -d \
             -e GS_PASSWORD=${OPENGAUSS_PASSWORD} \
-            -v ${MOUNT_DIR}:/tmp \
+            -v ${MOUNT_DIR}:${MOUNT_DIR_IN_CONTAINER} \
             -v "/var/run/docker.sock":"/var/run/docker.sock" \
             -p ${PORT}:${PORT} "${OPENGAUSS_IMAGE}"
 
