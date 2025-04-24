@@ -5,99 +5,40 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-
+  # Allow running this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      job:
+        options:
+          - test
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-22.04
-
-    strategy:
-      matrix:
-        go-version: ["1.22", "1.23"]
-        pg-version: [13, 14, 15, 16, 17, cockroachdb]
-        include:
-          - pg-version: 13
-            pgx-test-database: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-unix-socket-conn-string: "host=/var/run/postgresql dbname=pgx_test"
-            pgx-test-tcp-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-scram-password-conn-string: "host=127.0.0.1 user=pgx_scram password=secret dbname=pgx_test"
-            pgx-test-md5-password-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-plain-password-conn-string: "host=127.0.0.1 user=pgx_pw password=secret dbname=pgx_test"
-            pgx-test-tls-conn-string: "host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=/tmp/ca.pem dbname=pgx_test"
-            pgx-ssl-password: certpw
-            pgx-test-tls-client-conn-string: "host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=/tmp/ca.pem sslcert=/tmp/pgx_sslcert.crt sslkey=/tmp/pgx_sslcert.key dbname=pgx_test"
-          - pg-version: 14
-            pgx-test-database: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-unix-socket-conn-string: "host=/var/run/postgresql dbname=pgx_test"
-            pgx-test-tcp-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-scram-password-conn-string: "host=127.0.0.1 user=pgx_scram password=secret dbname=pgx_test"
-            pgx-test-md5-password-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-plain-password-conn-string: "host=127.0.0.1 user=pgx_pw password=secret dbname=pgx_test"
-            pgx-test-tls-conn-string: "host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=/tmp/ca.pem dbname=pgx_test"
-            pgx-ssl-password: certpw
-            pgx-test-tls-client-conn-string: "host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=/tmp/ca.pem sslcert=/tmp/pgx_sslcert.crt sslkey=/tmp/pgx_sslcert.key dbname=pgx_test"
-          - pg-version: 15
-            pgx-test-database: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-unix-socket-conn-string: "host=/var/run/postgresql dbname=pgx_test"
-            pgx-test-tcp-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-scram-password-conn-string: "host=127.0.0.1 user=pgx_scram password=secret dbname=pgx_test"
-            pgx-test-md5-password-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-plain-password-conn-string: "host=127.0.0.1 user=pgx_pw password=secret dbname=pgx_test"
-            pgx-test-tls-conn-string: "host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=/tmp/ca.pem dbname=pgx_test"
-            pgx-ssl-password: certpw
-            pgx-test-tls-client-conn-string: "host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=/tmp/ca.pem sslcert=/tmp/pgx_sslcert.crt sslkey=/tmp/pgx_sslcert.key dbname=pgx_test"
-          - pg-version: 16
-            pgx-test-database: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-unix-socket-conn-string: "host=/var/run/postgresql dbname=pgx_test"
-            pgx-test-tcp-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-scram-password-conn-string: "host=127.0.0.1 user=pgx_scram password=secret dbname=pgx_test"
-            pgx-test-md5-password-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-plain-password-conn-string: "host=127.0.0.1 user=pgx_pw password=secret dbname=pgx_test"
-            pgx-test-tls-conn-string: "host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=/tmp/ca.pem dbname=pgx_test"
-            pgx-ssl-password: certpw
-            pgx-test-tls-client-conn-string: "host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=/tmp/ca.pem sslcert=/tmp/pgx_sslcert.crt sslkey=/tmp/pgx_sslcert.key dbname=pgx_test"
-          - pg-version: 17
-            pgx-test-database: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-unix-socket-conn-string: "host=/var/run/postgresql dbname=pgx_test"
-            pgx-test-tcp-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-scram-password-conn-string: "host=127.0.0.1 user=pgx_scram password=secret dbname=pgx_test"
-            pgx-test-md5-password-conn-string: "host=127.0.0.1 user=pgx_md5 password=secret dbname=pgx_test"
-            pgx-test-plain-password-conn-string: "host=127.0.0.1 user=pgx_pw password=secret dbname=pgx_test"
-            pgx-test-tls-conn-string: "host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=/tmp/ca.pem dbname=pgx_test"
-            pgx-ssl-password: certpw
-            pgx-test-tls-client-conn-string: "host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=/tmp/ca.pem sslcert=/tmp/pgx_sslcert.crt sslkey=/tmp/pgx_sslcert.key dbname=pgx_test"
-          - pg-version: cockroachdb
-            pgx-test-database: "postgresql://root@127.0.0.1:26257/pgx_test?sslmode=disable&experimental_enable_temp_tables=on"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OPENGAUSS_IMAGE: opengauss/opengauss:7.0.0-RC1.B023
+      OPENGAUSS_PASSWORD: Gaussdb@789!
+      MOUNT_DIR: /tmp
+      MOUNT_DIR_IN_CONTAINER: /tmp
+      CONTAINER_NAME: opengauss
+      SQL_FILE: opengauss_setup.sql
+      PORT: 5432
 
     steps:
-      - name: Check out code into the Go module directory
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go ${{ matrix.go-version }}
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Set up Go 1.21
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Setup database server for testing
-        run: ci/setup_test.bash
-        env:
-          PGVERSION: ${{ matrix.pg-version }}
-
-      # - name: Setup upterm session
-      #   uses: lhotari/action-upterm@v1
-      #   with:
-      #     ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-      #     limit-access-to-actor: true
-      #   env:
-      #     GAUSSDB_TEST_DATABASE: ${{ matrix.pgx-test-database }}
-      #     GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
-      #     GAUSSDB_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
-      #     GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
-      #     GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
-      #     GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
-      #     GAUSSDB_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
-      #     GAUSSDB_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
-      #     GAUSSDB_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
+          go-version: 1.21
 
       - name: Check formatting
         run: |
@@ -105,52 +46,39 @@ jobs:
           git status
           git diff --exit-code
 
-      - name: Test
+      - name: Copy setup.sql
+        run: |
+          sudo cp -rf "${{ github.workspace }}/testsetup/${{ env.SQL_FILE }}" "${MOUNT_DIR}/"
+
+      - name: Run opengauss
+        run: |
+          docker run \
+            --name ${CONTAINER_NAME} \
+            --privileged=true \
+            -d \
+            -e GS_PASSWORD=${OPENGAUSS_PASSWORD} \
+            -v ${MOUNT_DIR}:${MOUNT_DIR_IN_CONTAINER} \
+            -v "/var/run/docker.sock":"/var/run/docker.sock" \
+            -p ${PORT}:${PORT} "${OPENGAUSS_IMAGE}"
+
+      - name: Check and create database and users
+        run: bash ci/initialize_database.sh
+
+      - name: Run tests
+        env:
+          IS_OPENGAUSS: true
+          PGDATABASE: pgx_test
+          PGPORT: 5432
+          PGUSER: gaussdb
+          PGHOST: localhost
+          POSTGRESQL_DATA_DIR: /var/lib/opengauss/data
+          GAUSSDB_TEST_CRATEDB_CONN_STRING: "host=localhost port=${{ env.PORT }} user=gaussdb dbname=pgx_test password=${{ env.OPENGAUSS_PASSWORD }}"
+          GAUSSDB_TEST_DATABASE: "host=localhost database=pgx_test user=pgx_md5 password=${{ env.OPENGAUSS_PASSWORD }}"
+          GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING: "host=localhost database=pgx_test user=pgx_md5 password=${{ env.OPENGAUSS_PASSWORD }}"
+          GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING: "host=localhost user=pgx_pw password=${{ env.OPENGAUSS_PASSWORD }}"
+          GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING: "host=localhost user=pgx_scram database=pgx_test password=${{ env.OPENGAUSS_PASSWORD }}"
+          GAUSSDB_TEST_TCP_CONN_STRING: "host=localhost database=pgx_test user=pgx_md5 password=${{ env.OPENGAUSS_PASSWORD }}"
         # parallel testing is disabled because somehow parallel testing causes Github Actions to kill the runner.
         run: go test -parallel=1 -race ./...
-        env:
-          GAUSSDB_TEST_DATABASE: ${{ matrix.pgx-test-database }}
-          GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING: ${{ matrix.pgx-test-unix-socket-conn-string }}
-          GAUSSDB_TEST_TCP_CONN_STRING: ${{ matrix.pgx-test-tcp-conn-string }}
-          GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-scram-password-conn-string }}
-          GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-md5-password-conn-string }}
-          GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING: ${{ matrix.pgx-test-plain-password-conn-string }}
-          # TestConnectTLS fails. However, it succeeds if I connect to the CI server with upterm and run it. Give up on that test for now.
-          # GAUSSDB_TEST_TLS_CONN_STRING: ${{ matrix.pgx-test-tls-conn-string }}
-          GAUSSDB_SSL_PASSWORD: ${{ matrix.pgx-ssl-password }}
-          GAUSSDB_TEST_TLS_CLIENT_CONN_STRING: ${{ matrix.pgx-test-tls-client-conn-string }}
 
-  test-windows:
-    name: Test Windows
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        go-version: ["1.22", "1.23"]
 
-    steps:
-      - name: Setup GaussDB
-        id: gaussdb
-        uses: ikalnytskyi/action-setup-postgres@v4
-        with:
-          database: pgx_test
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Initialize test database
-        run: |
-          psql -f testsetup/postgresql_setup.sql pgx_test
-        env:
-          PGSERVICE: ${{ steps.postgres.outputs.service-name }}
-        shell: bash
-
-      - name: Test
-        # parallel testing is disabled because somehow parallel testing causes Github Actions to kill the runner.
-        run: go test -parallel=1 -race  ./...
-        env:
-          GAUSSDB_TEST_DATABASE: ${{ steps.postgres.outputs.connection-uri }}
