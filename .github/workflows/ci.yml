@@ -61,7 +61,7 @@ jobs:
             -v "/var/run/docker.sock":"/var/run/docker.sock" \
             -p ${PORT}:${PORT} "${OPENGAUSS_IMAGE}"
 
-      - name: Check and create database and users
+      - name: initialize database
         run: bash ci/initialize_database.sh
 
       - name: Run tests
