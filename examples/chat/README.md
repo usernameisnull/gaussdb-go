@@ -8,13 +8,13 @@ between them.
 
 ## Connection configuration
 
-The database connection is configured via DATABASE_URL and standard GaussDB environment variables (PGHOST, PGUSER, etc.)
+The database connection is configured via DATABASE_URL and standard GaussDB environment variables (GAUSSDB_HOST, GAUSSDB_USER, etc.)
 
 You can either export them then run chat:
 
-    export PGHOST=/private/tmp
+    export GAUSSDB_HOST=/private/tmp
     ./chat
 
 Or you can prefix the chat execution with the environment variables:
 
-    PGHOST=/private/tmp ./chat
+    GAUSSDB_HOST=/private/tmp ./chat

@@ -14,8 +14,7 @@ that adds a dependency is no.
 
 gaussdb-go tests naturally require a GaussDB database. It will connect to the database specified in the `GAUSSDB_TEST_DATABASE`
 environment variable. The `GAUSSDB_TEST_DATABASE` environment variable can either be a URL or key-value pairs. In addition,
-the standard `PG*` environment variables will be respected. Consider using [direnv](https://github.com/direnv/direnv) to
-simplify environment variable handling.
+the standard `GAUSSDB_*` environment variables will be respected. 
 
 ### Using an Existing GaussDB Cluster
 
@@ -26,14 +25,14 @@ authentication methods).
 Create and setup a test database:
 
 ```
-gsql -c 'create database pgx_test DBCOMPATIBILITY 'PG'; create extension hstore;'
+gsql -c 'create database gaussdbgo_test DBCOMPATIBILITY 'PG'; create extension hstore;'
 ```
 
 ```
 Ensure your `GAUSSDB_TEST_DATABASE` environment variable points to the database you just created and run the tests.
 
 ```
-export GAUSSDB_TEST_DATABASE="host='your gaussdb host' database=pgx_test"
+export GAUSSDB_TEST_DATABASE="host='your gaussdb host' database=gaussdbgo_test"
 go test ./...
 ```
 
@@ -45,20 +44,20 @@ The following environment variables need to be set both for initial setup and wh
 highly recommended). Depending on your platform, you may need to change the host for `GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING`.
 
 ```
-export PGPORT=5015
-export PGUSER=root
-export PGDATABASE=pgx_test
-export POSTGRESQL_DATA_DIR=GaussDB
+export GAUSSDB_PORT=5015
+export GAUSSDB_USER=root
+export GAUSSDB_DATABASE=gaussdbgo_test
+export GAUSSDB_DATA_DIR=/var/lib/opengauss/data
 
-export GAUSSDB_TEST_DATABASE="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING="host=/private/tmp database=pgx_test"
-export GAUSSDB_TEST_TCP_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_scram password=secret database=pgx_test"
-export GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
-export GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING="host=127.0.0.1 user=pgx_pw password=secret"
-export GAUSSDB_TEST_TLS_CONN_STRING="host=localhost user=pgx_ssl password=secret sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem"
+export GAUSSDB_TEST_DATABASE="host=127.0.0.1 database=gaussdbgo_test user=gaussdbgo_md5 password=secret"
+export GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING="host=/private/tmp database=gaussdbgo_test"
+export GAUSSDB_TEST_TCP_CONN_STRING="host=127.0.0.1 database=gaussdbgo_test user=gaussdbgo_md5 password=secret"
+export GAUSSDB_TEST_SCRAM_PASSWORD_CONN_STRING="host=127.0.0.1 user=gaussdbgo_scram password=secret database=gaussdbgo_test"
+export GAUSSDB_TEST_MD5_PASSWORD_CONN_STRING="host=127.0.0.1 database=gaussdbgo_test user=gaussdbgo_md5 password=secret"
+export GAUSSDB_TEST_PLAIN_PASSWORD_CONN_STRING="host=127.0.0.1 user=gaussdbgo_pw password=secret"
+export GAUSSDB_TEST_TLS_CONN_STRING="host=localhost user=gaussdbgo_ssl password=secret sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem"
 export GAUSSDB_SSL_PASSWORD=certpw
-export GAUSSDB_TEST_TLS_CLIENT_CONN_STRING="host=localhost user=pgx_sslcert sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem database=pgx_test sslcert=`pwd`/.testdb/pgx_sslcert.crt sslkey=`pwd`/.testdb/pgx_sslcert.key"
+export GAUSSDB_TEST_TLS_CLIENT_CONN_STRING="host=localhost user=gaussdbgo_sslcert sslmode=verify-full sslrootcert=`pwd`/.testdb/ca.pem database=gaussdbgo_test sslcert=`pwd`/.testdb/gaussdbgo_sslcert.crt sslkey=`pwd`/.testdb/gaussdbgo_sslcert.key"
 ```
 
 Create a new database cluster.
@@ -67,7 +66,7 @@ Create a new database cluster.
 initdb --locale=en_US -E UTF-8 --username=postgres .testdb/$POSTGRESQL_DATA_DIR
 
 echo "listen_addresses = '127.0.0.1'" >> .testdb/$POSTGRESQL_DATA_DIR/GaussDB.conf
-echo "port = $PGPORT" >> .testdb/$POSTGRESQL_DATA_DIR/GaussDB.conf
+echo "port = $GAUSSDB_PORT" >> .testdb/$POSTGRESQL_DATA_DIR/GaussDB.conf
 cat testsetup/postgresql_ssl.conf >> .testdb/$POSTGRESQL_DATA_DIR/GaussDB.conf
 cp testsetup/pg_hba.conf .testdb/$POSTGRESQL_DATA_DIR/pg_hba.conf
 
@@ -101,7 +100,7 @@ psql --no-psqlrc -f testsetup/postgresql_setup.sql
 
 ### Optional Tests
 
-gaussdb-go supports multiple connection types and means of authentication. These tests are optional. They will only run if the
-appropriate environment variables are set. In addition, there may be tests specific to particular GaussDB versions,
+gaussdb-go supports multiple connection types and means of authentication. These tests are optional. They will only run 
+if theappropriate environment variables are set. In addition, there may be tests specific to particular GaussDB versions,
 non-GaussDB servers (e.g. CockroachDB), or connection poolers (e.g. PgBouncer). `go test ./... -v | grep SKIP` to see
 if any tests are being skipped.

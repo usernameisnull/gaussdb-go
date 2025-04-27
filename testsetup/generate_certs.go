@@ -88,7 +88,7 @@ func main() {
 	clientCert := &x509.Certificate{
 		SerialNumber: big.NewInt(3),
 		Subject: pkix.Name{
-			CommonName: "pgx_sslcert",
+			CommonName: "gaussdbgo_sslcert",
 		},
 		NotBefore:   time.Now(),
 		NotAfter:    time.Now().AddDate(20, 0, 0),
@@ -106,12 +106,12 @@ func main() {
 		panic(err)
 	}
 
-	err = writeEncryptedPrivateKey("pgx_sslcert.key", clientCertPrivKey, "certpw")
+	err = writeEncryptedPrivateKey("gaussdbgo_sslcert.key", clientCertPrivKey, "certpw")
 	if err != nil {
 		panic(err)
 	}
 
-	err = writeCertificate("pgx_sslcert.crt", clientBytes)
+	err = writeCertificate("gaussdbgo_sslcert.crt", clientBytes)
 	if err != nil {
 		panic(err)
 	}

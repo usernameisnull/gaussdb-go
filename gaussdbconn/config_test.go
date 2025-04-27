@@ -26,7 +26,7 @@ func skipOnWindows(t *testing.T) {
 }
 
 func getDefaultPort(t *testing.T) uint16 {
-	if envGaussdbPORT := os.Getenv("PGPORT"); envGaussdbPORT != "" {
+	if envGaussdbPORT := os.Getenv("GAUSSDB_PORT"); envGaussdbPORT != "" {
 		p, err := strconv.ParseUint(envGaussdbPORT, 10, 16)
 		require.NoError(t, err)
 		return uint16(p)
@@ -35,7 +35,7 @@ func getDefaultPort(t *testing.T) uint16 {
 }
 
 func getDefaultUser(t *testing.T) string {
-	if gaussdbUser := os.Getenv("PGUSER"); gaussdbUser != "" {
+	if gaussdbUser := os.Getenv("GAUSSDB_USER"); gaussdbUser != "" {
 		return gaussdbUser
 	}
 
@@ -930,17 +930,18 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 		}
 	}
 	// TODO: What are the corresponding environment variable names for these in GaussDB?
-	gaussdbEnvvars := []string{"PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGAPPNAME", "PGSSLMODE", "PGCONNECT_TIMEOUT", "PGSSLSNI"}
+	gaussdbEnvVars := []string{"GAUSSDB_HOST", "GAUSSDB_PORT", "GAUSSDB_DATABASE", "GAUSSDB_USER", "GAUSSDB_PASSWORD",
+		"GAUSSDB_APPNAME", "GAUSSDB_SSLMODE", "GAUSSDB_CONNECT_TIMEOUT", "GAUSSDB_SSLSNI"}
 
 	tests := []struct {
 		name    string
-		envvars map[string]string
+		envVars map[string]string
 		config  *gaussdbconn.Config
 	}{
 		{
 			// not testing no environment at all as that would use default host and that can vary.
-			name:    "PGHOST only",
-			envvars: map[string]string{"PGHOST": "123.123.123.123"},
+			name:    "GAUSSDB_HOST only",
+			envVars: map[string]string{"GAUSSDB_HOST": "123.123.123.123"},
 			config: &gaussdbconn.Config{
 				User: osUserName,
 				Host: "123.123.123.123",
@@ -960,15 +961,15 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 		},
 		{
 			name: "All non-TLS environment",
-			envvars: map[string]string{
-				"PGHOST":            "123.123.123.123",
-				"PGPORT":            "7777",
-				"PGDATABASE":        "foo",
-				"PGUSER":            "bar",
-				"PGPASSWORD":        "baz",
-				"PGCONNECT_TIMEOUT": "10",
-				"PGSSLMODE":         "disable",
-				"PGAPPNAME":         "gaussdbxtest",
+			envVars: map[string]string{
+				"GAUSSDB_HOST":            "123.123.123.123",
+				"GAUSSDB_PORT":            "7777",
+				"GAUSSDB_DATABASE":        "foo",
+				"GAUSSDB_USER":            "bar",
+				"GAUSSDB_PASSWORD":        "baz",
+				"GAUSSDB_CONNECT_TIMEOUT": "10",
+				"GAUSSDB_SSLMODE":         "disable",
+				"GAUSSDB_APPNAME":         "gaussdbxtest",
 			},
 			config: &gaussdbconn.Config{
 				Host:           "123.123.123.123",
@@ -983,10 +984,10 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 		},
 		{
 			name: "SNI can be disabled via environment variable",
-			envvars: map[string]string{
-				"PGHOST":    "test.foo",
-				"PGSSLMODE": "require",
-				"PGSSLSNI":  "0",
+			envVars: map[string]string{
+				"GAUSSDB_HOST":    "test.foo",
+				"GAUSSDB_SSLMODE": "require",
+				"GAUSSDB_SSLSNI":  "0",
 			},
 			config: &gaussdbconn.Config{
 				User: osUserName,
@@ -1001,8 +1002,8 @@ func TestParseConfigEnvLibpq(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		for _, env := range gaussdbEnvvars {
-			t.Setenv(env, tt.envvars[env])
+		for _, env := range gaussdbEnvVars {
+			t.Setenv(env, tt.envVars[env])
 		}
 
 		config, err := gaussdbconn.ParseConfig("")

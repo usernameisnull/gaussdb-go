@@ -152,6 +152,7 @@ func isAbsolutePath(path string) bool {
 func NetworkAddress(host string, port uint16) (network, address string) {
 	if isAbsolutePath(host) {
 		network = "unix"
+		// opengauss still use this name, don't change it.
 		address = filepath.Join(host, ".s.PGSQL.") + strconv.FormatInt(int64(port), 10)
 	} else {
 		network = "tcp"
@@ -161,7 +162,7 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 }
 
 // ParseConfig builds a *Config from connString with similar behavior to the GaussDB standard C library libpq. It
-// uses the same defaults as libpq (e.g. port=5432) and understands most PG* environment variables. ParseConfig closely
+// uses the same defaults as libpq (e.g. port=5432) and understands most GAUSSDB_* environment variables. ParseConfig closely
 // matches the parsing behavior of libpq. connString may either be in URL format or keyword = value format.
 //
 //	# Example Keyword/Value
@@ -184,22 +185,22 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 // ParseConfig currently recognizes the following environment variable and their parameter key word equivalents passed
 // via database URL or keyword/value:
 //
-//	PGHOST
-//	PGPORT
-//	PGDATABASE
-//	PGUSER
-//	PGPASSWORD
-//	PGPASSFILE
-//	PGSERVICE
-//	PGSERVICEFILE
-//	PGSSLMODE
-//	PGSSLCERT
-//	PGSSLKEY
-//	PGSSLROOTCERT
-//	PGSSLPASSWORD
-//	PGAPPNAME
-//	PGCONNECT_TIMEOUT
-//	PGTARGETSESSIONATTRS
+//	GAUSSDB_HOST
+//	GAUSSDB_PORT
+//	GAUSSDB_DATABASE
+//	GAUSSDB_USER
+//	GAUSSDB_PASSWORD
+//	GAUSSDB_PASSFILE
+//	GAUSSDB_SERVICE
+//	GAUSSDB_SERVICEFILE
+//	GAUSSDB_SSLMODE
+//	GAUSSDB_SSLCERT
+//	GAUSSDB_SSLKEY
+//	GAUSSDB_SSLROOTCERT
+//	GAUSSDB_SSLPASSWORD
+//	GAUSSDB_APPNAME
+//	GAUSSDB_CONNECT_TIMEOUT
+//	GAUSSDB_TARGETSESSIONATTRS
 //
 // The sslmode "prefer" (the default), sslmode "allow", and multiple hosts are implemented via the Fallbacks field of
 // the Config struct. If TLSConfig is manually changed it will not affect the fallbacks. For example, in the case of
@@ -211,7 +212,7 @@ func NetworkAddress(host string, port uint16) (network, address string) {
 // In addition, ParseConfig accepts the following options:
 //
 //   - servicefile.
-//     libpq only reads servicefile from the PGSERVICEFILE environment variable. ParseConfig accepts servicefile as a
+//     libpq only reads servicefile from the GAUSSDB_SERVICEFILE environment variable. ParseConfig accepts servicefile as a
 //     part of the connection string.
 func ParseConfig(connString string) (*Config, error) {
 	var parseConfigOptions ParseConfigOptions
@@ -420,23 +421,23 @@ func parseEnvSettings() map[string]string {
 	settings := make(map[string]string)
 
 	nameMap := map[string]string{
-		"PGHOST":               "host",
-		"PGPORT":               "port",
-		"PGDATABASE":           "database",
-		"PGUSER":               "user",
-		"PGPASSWORD":           "password",
-		"PGPASSFILE":           "passfile",
-		"PGAPPNAME":            "application_name",
-		"PGCONNECT_TIMEOUT":    "connect_timeout",
-		"PGSSLMODE":            "sslmode",
-		"PGSSLKEY":             "sslkey",
-		"PGSSLCERT":            "sslcert",
-		"PGSSLSNI":             "sslsni",
-		"PGSSLROOTCERT":        "sslrootcert",
-		"PGSSLPASSWORD":        "sslpassword",
-		"PGTARGETSESSIONATTRS": "target_session_attrs",
-		"PGSERVICE":            "service",
-		"PGSERVICEFILE":        "servicefile",
+		"GAUSSDB_HOST":               "host",
+		"GAUSSDB_PORT":               "port",
+		"GAUSSDB_DATABASE":           "database",
+		"GAUSSDB_USER":               "user",
+		"GAUSSDB_PASSWORD":           "password",
+		"GAUSSDB_PASSFILE":           "passfile",
+		"GAUSSDB_APPNAME":            "application_name",
+		"GAUSSDB_CONNECT_TIMEOUT":    "connect_timeout",
+		"GAUSSDB_SSLMODE":            "sslmode",
+		"GAUSSDB_SSLKEY":             "sslkey",
+		"GAUSSDB_SSLCERT":            "sslcert",
+		"GAUSSDB_SSLSNI":             "sslsni",
+		"GAUSSDB_SSLROOTCERT":        "sslrootcert",
+		"GAUSSDB_SSLPASSWORD":        "sslpassword",
+		"GAUSSDB_TARGETSESSIONATTRS": "target_session_attrs",
+		"GAUSSDB_SERVICE":            "service",
+		"GAUSSDB_SERVICEFILE":        "servicefile",
 	}
 
 	for envname, realname := range nameMap {
