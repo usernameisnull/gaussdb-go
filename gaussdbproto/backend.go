@@ -47,7 +47,7 @@ type Backend struct {
 
 const (
 	minStartupPacketLen = 4     // minStartupPacketLen is a single 32-bit int version or code.
-	maxStartupPacketLen = 10000 // maxStartupPacketLen is MAX_STARTUP_PACKET_LENGTH from PG source.
+	maxStartupPacketLen = 10000 // maxStartupPacketLen is MAX_STARTUP_PACKET_LENGTH from GAUSSDB source.
 )
 
 // NewBackend creates a new Backend.
