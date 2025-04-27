@@ -45,10 +45,10 @@ The following environment variables need to be set both for initial setup and wh
 highly recommended). Depending on your platform, you may need to change the host for `GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING`.
 
 ```
-export PGPORT=5015
-export PGUSER=root
-export PGDATABASE=pgx_test
-export POSTGRESQL_DATA_DIR=GaussDB
+export GAUSSDB_PORT=5015
+export GAUSSDB_USER=root
+export GAUSSDB_DATABASE=pgx_test
+export GAUSSDB_DATA_DIR=/var/lib/opengauss/data
 
 export GAUSSDB_TEST_DATABASE="host=127.0.0.1 database=pgx_test user=pgx_md5 password=secret"
 export GAUSSDB_TEST_UNIX_SOCKET_CONN_STRING="host=/private/tmp database=pgx_test"

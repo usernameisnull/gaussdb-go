@@ -19,16 +19,16 @@ Build todo:
 
 ## Connection configuration
 
-The database connection is configured via DATABASE_URL and standard GaussDB environment variables (PGHOST, PGUSER, etc.)
+The database connection is configured via DATABASE_URL and standard GaussDB environment variables (GAUSSDB_HOST, GAUSSDB_USER, etc.)
 
 You can either export them then run todo:
 
-    export PGDATABASE=todo
+    export GAUSSDB_DATABASE=todo
     ./todo list
 
 Or you can prefix the todo execution with the environment variables:
 
-    PGDATABASE=todo ./todo list
+    GAUSSDB_DATABASE=todo ./todo list
 
 ## Add a todo item
 
@@ -55,7 +55,7 @@ Or you can prefix the todo execution with the environment variables:
     CREATE TABLE
     Time: 6.363 ms
     jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ go build
-    jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ export PGDATABASE=todo
+    jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ export GAUSSDB_DATABASE=todo
     jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ ./todo list
     jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ ./todo add 'Learn Go'
     jack@hk-47~/dev/go/src/github.com/HuaweiCloudDeveloper/gaussdb-go/examples/todo$ ./todo list

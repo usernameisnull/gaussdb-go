@@ -258,7 +258,7 @@ func (b *Backend) Receive() (FrontendMessage, error) {
 // SetAuthType sets the authentication type in the backend.
 // Since multiple message types can start with 'p', SetAuthType allows
 // contextual identification of FrontendMessages. For example, in the
-// PG message flow documentation for PasswordMessage:
+// GAUSSDB message flow documentation for PasswordMessage:
 //
 //			Byte1('p')
 //
